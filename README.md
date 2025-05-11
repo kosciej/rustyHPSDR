@@ -10,11 +10,12 @@ I am using WDSP as an extern C library so you need to install my port of WDSP on
 
 Download and compile WDSP
 
+...
 git clone https://github.com/g0orx/wdsp.git
 cd wdsp
 make clean
 make
 sudo make install
-
+...
 
 

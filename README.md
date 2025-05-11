@@ -4,7 +4,7 @@ My first attempt at a Rust application.
 
 This is very early code to implement a UI in Rust using gtk4-rs to implement a Radio for the OpenHPSDR Protocols.
 
-The current code only implements a Receiver. It does work with Protocol 1 and Protocol 2 radios including the Hermes Lite.
+The current code only implements a Receiver. It does work with Protocol 1 and Protocol 2 radios including the Hermes Lite. I will be adding more features including Transmit over the next few weeks.
 
 I am using WDSP as an extern C library so you need to install my port of WDSP on [github](https://github.com/g0orx/wdsp.git). I have not currently implemented a Rust wrappper so all the calls on have to wrapped with "unsafe { ... }".
 

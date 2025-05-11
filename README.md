@@ -37,3 +37,6 @@ cargo clean
 cargo build
 </pre>
 
+![rustyHPSDR](https://github.com/g0orx/rustyHPSDR/blob/master/images/screenshot1.png)
+
+![rustyHPSDR](https://github.com/g0orx/rustyHPSDR/blob/master/images/screenshot2.png)

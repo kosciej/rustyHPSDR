@@ -8,10 +8,12 @@ The current code only implements a Receiver. It does work with Protocol 1 and Pr
 
 I am using WDSP as an extern C library so you need to install my port of WDSP on [github](https://github.com/g0orx/wdsp.git). I have not currently implemented a Rust wrappper so all the calls on have to wrapped with "unsafe { ... }".
 
+You will need to install Ruist and Cargo.
+
 # pre-requisites for WDSP
 <pre>
 sudo apt install -y libfftw3-dev
-</pre>pre>
+</pre>
 
 # Download and compile WDSP
 <pre>
@@ -22,4 +24,16 @@ make
 sudo make install
 </pre>
 
+# pre-requisites for rustyHPSDR
+<pre>
+sudo apt install -y libgtk-3-dev
+</pre>
+
+# Download and compile rustyHPSDR
+<pre>
+git clone https://github.com/g0orx/rustyHPSDR.git
+cd rusyHPSDR
+cargo clean
+cargo build
+</pre>
 

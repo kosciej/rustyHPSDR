@@ -354,8 +354,38 @@ impl Radio {
         step_combo.pack_start(&step_renderer, true);
         step_combo.add_attribute(&step_renderer, "text", 1); // 1 is the index of the text column
 
-        step_combo.set_active(Some(7)); // 1KHz
+        let r = radio.lock().unwrap();
+        step_combo.set_active(Some(r.receiver[0].step_index as u32));
+        drop(r);
         tune_step_frame.set_child(Some(&step_combo));
+
+        let step_combo_radio = Arc::clone(&radio);
+        step_combo.connect_changed(move |step_combo| {
+            let mut r = step_combo_radio.lock().unwrap();
+            let index = step_combo.active().unwrap_or(0);
+            let mut step = 1000.0;
+            match index {
+                0 => step = 1.0,
+                1 => step = 10.0,
+                2 => step = 25.0,
+                3 => step = 50.0,
+                4 => step = 100.0,
+                5 => step = 250.0,
+                6 => step = 500.0,
+                7 => step = 1000.0,
+                8 => step = 5000.0,
+                9 => step = 9000.0,
+                10 => step = 10000.0,
+                11 => step = 100000.0,
+                12 => step = 250000.0,
+                13 => step = 500000.0,
+                14 => step = 1000000.0,
+                _ => step = 1000.0,
+            }
+            r.receiver[0].step_index = index as usize;
+            r.receiver[0].step = step;
+        });
+
 
         let meter_frame = Frame::new(Some("S Meter"));
         let meter_label = Label::new(Some("-121 dBm"));

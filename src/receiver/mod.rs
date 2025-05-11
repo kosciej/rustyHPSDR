@@ -34,6 +34,7 @@ pub struct Receiver {
     pub filters: u32,
     pub frequency_a: f32,
     pub frequency_b: f32,
+    pub step_index: usize,
     pub step: f32,
     pub ctun:  bool,
     pub ctun_frequency: f32,
@@ -87,6 +88,7 @@ impl Receiver {
         let filters: u32 = 0x01100002; // for Band20
         let frequency_a: f32 = 14175000.0;
         let frequency_b: f32 = 14250000.0;
+        let step_index: usize = 7; // 1KHz
         let step: f32 = 1000.0; // 1KHz
         let ctun: bool = false;
         let ctun_frequency: f32 = 0.0;
@@ -120,7 +122,7 @@ impl Receiver {
         let remote_audio_buffer_offset: usize = 4;
         let attenuation: i32 = 0;
 
-        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_high, spectrum_low, spectrum_step, waterfall_high, waterfall_low, afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation/*, spectrum_display, waterfall_display*/ };
+        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_high, spectrum_low, spectrum_step, waterfall_high, waterfall_low, afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation/*, spectrum_display, waterfall_display*/ };
 
         rx
     }

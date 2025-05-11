@@ -10,6 +10,10 @@ I am using WDSP as an extern C library so you need to install my port of WDSP on
 
 You will need to install Rust and Cargo. See [Rust install](https://www.rust-lang.org/tools/install) for information on istalling Rust and Cargo.
 
+<img>https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot1.png</img>
+
+<img>https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot2.png</img>
+
 # pre-requisites for WDSP
 <pre>
 sudo apt install -y libfftw3-dev

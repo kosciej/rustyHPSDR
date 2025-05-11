@@ -6,8 +6,15 @@ This is very early code to implement a UI in Rust using gtk4-rs to implement a R
 
 The current code only implements a Receiver. It does work with Protocol 1 and Protocol 2 radios including the Hermes Lite.
 
-I am using WDSP as an extern C library so you need to install my port of WDSP on [github](https://github.com/g0orx/wdsp.git). I have not currently implemented a Rust wrappper so all the calls on have to wrapped with unsafe { ... }.
+I am using WDSP as an extern C library so you need to install my port of WDSP on [github](https://github.com/g0orx/wdsp.git). I have not currently implemented a Rust wrappper so all the calls on have to wrapped with "unsafe { ... }".
 
+Download and compile WDSP
+
+git clone https://github.com/g0orx/wdsp.git
+cd wdsp
+make clean
+make
+sudo make install
 
 
 

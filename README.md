@@ -26,7 +26,7 @@ sudo make install
 
 # pre-requisites for rustyHPSDR
 <pre>
-sudo apt install -y libgtk-3-dev
+sudo apt install -y libgtk-4-dev
 </pre>
 
 # Download and compile rustyHPSDR

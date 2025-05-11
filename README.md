@@ -10,7 +10,7 @@ I am using WDSP as an extern C library so you need to install my port of WDSP on
 
 You will need to install Rust and Cargo. See [Rust install](https://www.rust-lang.org/tools/install) for information on istalling Rust and Cargo.
 
-# When the application is run it will discovery all the HPSDR compatable deives on the nework interfaces.
+# When the application is run it will discovery all the HPSDR compatable devices on the nework interfaces.
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/discovery.png">
 

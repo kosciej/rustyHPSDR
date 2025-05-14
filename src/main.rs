@@ -45,7 +45,6 @@ fn main() {
                 Some(i) => {
                     let device = discovery_vec_for_close[(i-1) as usize];
                     println!("Selected: {:?}", device);
-                    //let mut radio = Radio::load(device);
                     let radio = Arc::new(Mutex::new(Radio::load(device)));
                     Radio::run(&radio, &main_window_for_close, device);
 

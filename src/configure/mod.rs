@@ -9,7 +9,7 @@ use crate::bands::BandInfo;
 use crate::receiver::Receiver;
 use crate::radio::Radio;
 
-pub fn create_configure_dialog(parent: &ApplicationWindow, band_info: Rc<RefCell<Vec<BandInfo>>>, radio: &Arc<Mutex<Radio>>) -> Window {
+pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Radio>>) -> Window {
 
     let window = Window::builder()
         .title("rustyHPSDR Discovery")
@@ -36,7 +36,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, band_info: Rc<RefCell
 
     display_grid.set_column_homogeneous(true);
     display_grid.set_row_homogeneous(true);
-
+/*
     let band_title = Label::new(Some("Band"));
     display_grid.attach(&band_title, 0, 0, 1, 1);
     let spectrum_low_title = Label::new(Some("Spectrum Low"));
@@ -54,7 +54,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, band_info: Rc<RefCell
         let band_label = Label::new(Some(info.label.as_str()));
         display_grid.attach(&band_label, 0, row, 1, 1);
 
-        let spectrum_low_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
+        let spectrum_low_spin_button = SpinButton::with_range(-140.0, -40.0, 5.0);
         spectrum_low_spin_button.set_value(info.spectrum_low.into());
         let info_clone_spectrum_low = band_info.clone();
         let radio_for_spectrum_low = radio.clone();
@@ -67,7 +67,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, band_info: Rc<RefCell
         });
         display_grid.attach(&spectrum_low_spin_button, 1, row, 1, 1);
 
-        let spectrum_high_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
+        let spectrum_high_spin_button = SpinButton::with_range(-140.0, -40.0, 5.0);
         spectrum_high_spin_button.set_value(info.spectrum_high.into());
         let info_clone_spectrum_high = band_info.clone();
         let radio_for_spectrum_high = radio.clone();
@@ -109,6 +109,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, band_info: Rc<RefCell
     }
 
     notebook.append_page(&display_grid, Some(&display_label));
+*/
 
     let button_box = gtk::Box::new(Orientation::Horizontal, 5);
     button_box.set_halign(gtk::Align::End);

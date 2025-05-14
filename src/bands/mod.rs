@@ -2,13 +2,16 @@ use gtk::prelude::*;
 use gtk::{Button, Grid};
 use std::cell::RefCell;
 use std::rc::Rc;
-use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 use std::{
     env, fs,
     path::{PathBuf},
 };
 
+use serde::{Deserialize, Serialize};
+
 use crate::discovery::Device;
+use crate::radio::Radio;
 use crate::modes::Modes;
 use crate::filters::Filters;
 
@@ -33,7 +36,7 @@ pub enum Bands {
 }
 
 impl Bands {
-    pub fn from_u32(value: u32) -> Option<Self> {
+    pub fn from_usize(value: usize) -> Option<Self> {
         match value {
             0 => Some(Bands::Band2200),
             1 => Some(Bands::Band630),
@@ -54,8 +57,8 @@ impl Bands {
         }
     }
 
-    pub fn to_i32(&self) -> i32 {
-        *self as i32
+    pub fn to_usize(&self) -> usize {
+        *self as usize
     }
 }
 
@@ -69,6 +72,7 @@ pub struct BandInfo {
     pub label: String,
     pub low: f32,
     pub high: f32,
+    pub current: f32,
     pub filters: u32,
     pub spectrum_low: f32,
     pub spectrum_high: f32,
@@ -81,89 +85,26 @@ pub struct BandInfo {
 impl BandInfo {
     pub fn new() -> Vec<BandInfo> {
         let data = vec![
-            BandInfo{ band: Bands::Band2200, label: String::from("2200"), low: 135700.0, high: 137800.0, filters: 0x00001000, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band630, label: String::from("630"), low: 472000.0, high: 479000.0, filters: 0x00001000, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band160, label: String::from("160"), low: 1800000.0, high: 2000000.0, filters: 0x01800040, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band80, label: String::from("80"), low: 3500000.0, high: 3800000.0, filters: 0x01400020, spectrum_low: -100.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band60, label: String::from("60"), low: 5330500.0, high: 5403500.0, filters: 0x01200020, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band40, label: String::from("40"), low: 7000000.0, high: 7300000.0, filters: 0x01200010, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band30, label: String::from("30"), low: 10100000.0, high: 10150000.0, filters: 0x01200010, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band20, label: String::from("20"), low: 14000000.0, high: 14350000.0, filters: 0x01100002, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band17, label: String::from("17"), low: 18068000.0, high: 18168000.0, filters: 0x81000002, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band15, label: String::from("15"), low: 21000000.0, high: 21450000.0, filters: 0x81000002, spectrum_low: -130.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band12, label: String::from("12"), low: 24890000.0, high: 24990000.0, filters: 0x41000004, spectrum_low: -130.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band10, label: String::from("10"), low: 28000000.0, high: 29700000.0, filters: 0x41000004, spectrum_low: -130.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band6, label: String::from("6"), low: 50000000.0, high: 54000000.0, filters: 0x21000008, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
-            BandInfo{ band: Bands::BandGEN, label: String::from("GEN"), low: 100000.0, high: 62000000.0, filters: 0x20001000, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::AM, filter: Filters::F3},
-            BandInfo{ band: Bands::BandWWV, label: String::from("WWV"), low: 10000000.0, high: 10000000.0, filters: 0x20001000, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::SAM, filter: Filters::F3},
+            BandInfo{ band: Bands::Band2200, label: String::from("2200"), low: 135700.0, high: 137800.0, current: 135750.0, filters: 0x00001000, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band630, label: String::from("630"), low: 472000.0, high: 479000.0, current: 472500.0, filters: 0x00001000, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band160, label: String::from("160"), low: 1800000.0, high: 2000000.0, current: 1900000.0, filters: 0x01800040, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band80, label: String::from("80"), low: 3500000.0, high: 3800000.0, current: 3750000.0, filters: 0x01400020, spectrum_low: -100.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band60, label: String::from("60"), low: 5330500.0, high: 5403500.0, current: 5365500.0,  filters: 0x01200020, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band40, label: String::from("40"), low: 7000000.0, high: 7300000.0, current: 7150000.0, filters: 0x01200010, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band30, label: String::from("30"), low: 10100000.0, high: 10150000.0, current: 10125000.0, filters: 0x01200010, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band20, label: String::from("20"), low: 14000000.0, high: 14350000.0, current: 14175000.0, filters: 0x01100002, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band17, label: String::from("17"), low: 18068000.0, high: 18168000.0, current: 18118000.0, filters: 0x81000002, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band15, label: String::from("15"), low: 21000000.0, high: 21450000.0, current: 21215000.0, filters: 0x81000002, spectrum_low: -130.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band12, label: String::from("12"), low: 24890000.0, high: 24990000.0, current: 24940000.0, filters: 0x41000004, spectrum_low: -130.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band10, label: String::from("10"), low: 28000000.0, high: 29700000.0, current: 28300000.0, filters: 0x41000004, spectrum_low: -130.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band6, label: String::from("6"), low: 50000000.0, high: 54000000.0, current: 52000000.0, filters: 0x21000008, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
+            BandInfo{ band: Bands::BandGEN, label: String::from("GEN"), low: 100000.0, high: 62000000.0, current: 11700000.0, filters: 0x20001000, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::AM, filter: Filters::F3},
+            BandInfo{ band: Bands::BandWWV, label: String::from("WWV"), low: 10000000.0, high: 10000000.0, current: 10000000.0, filters: 0x20001000, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::SAM, filter: Filters::F3},
         ];
         data
     }
 
-    fn config_file_path(device: &Device) -> PathBuf {
-        let d = format!("{:02X}-{:02X}-{:02X}-{:02X}-{:02X}-{:02X}", device.mac[0], device.mac[1], device.mac[2], device.mac[3], device.mac[4], device.mac[5]);
-        let app_name = env!("CARGO_PKG_NAME");
-        let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-        config_dir.join(app_name).join(d).join("config_vector.ron")
-    }
-
-    pub fn load(device: &Device) -> Vec<Self> {
-        let path = Self::config_file_path(device);
-        if path.exists() {
-            match fs::read_to_string(&path) {
-                Ok(s) => match ron::from_str(&s) {
-                    Ok(data_vec) => {
-                        println!("Successfully loaded vector of data from {:?}", path);
-                        data_vec
-                    }
-                    Err(e) => {
-                        eprintln!("Error deserializing vector of data from {:?}: {}", path, e);
-                        println!("Using default vector of configurations.");
-                        //vec![Self::default(); 10]
-                        Self::new()
-                    }
-                },
-                Err(e) => {
-                    eprintln!("Error reading config file {:?}: {}", path, e);
-                    println!("Using default vector of configurations.");
-                    //vec![Self::default(); 10]
-                    Self::new()
-                }
-            }
-        } else {
-            println!("Config file not found at {:?}. Using default vector of configurations.", path);
-            //vec![Self::default(); 10]
-            Self::new()
-        }
-    }
-
-    pub fn save(data_vector: &RefCell<Vec<Self>>, device: &Device) {
-        let borrowed_data = data_vector.borrow();
-        let path = Self::config_file_path(device);
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
-                if let Err(e) = fs::create_dir_all(parent) {
-                    eprintln!("Error creating config directory {:?}: {}", parent, e);
-                    return;
-                }
-            }
-        }
-        //match ron::to_string(data_vector, PrettyConfig::default()) {
-        match ron::to_string(&*borrowed_data) {
-            Ok(s) => {
-                if let Err(e) = fs::write(&path, s) {
-                    eprintln!("Error writing config file {:?}: {}", path, e);
-                } else {
-                    println!("Successfully saved vector of data to {:?}", path);
-                }
-            }
-            Err(e) => {
-                eprintln!("Error serializing vector of data: {}", e);
-            }
-        }
-    }
 }
-
 
 pub struct BandGrid {
     pub grid: Grid,
@@ -173,7 +114,8 @@ pub struct BandGrid {
 }
 
 impl BandGrid {
-    pub fn new(bandinfo: Rc<RefCell<Vec<BandInfo>>>) -> Self {
+    pub fn new(radio: Arc<Mutex<Radio>>) -> Self {
+        let r = radio.lock().unwrap();
         // Create a grid
         let grid = Grid::new();
         grid.set_row_homogeneous(true);
@@ -191,7 +133,7 @@ impl BandGrid {
 
         let cols = 3;
         
-        for (i, info) in bandinfo.borrow().iter().enumerate() {
+        for (i, info) in r.band_info.iter().enumerate() {
             let row = i / cols;
             let col = i % cols;
             

@@ -44,11 +44,11 @@ pub struct Receiver {
     pub snb: bool,
     pub fps: f32,
     pub spectrum_width: i32,
-    pub spectrum_high: f32,
-    pub spectrum_low: f32,
+    //pub spectrum_high: f32,
+    //pub spectrum_low: f32,
     pub spectrum_step: f32,
-    pub waterfall_high: f32,
-    pub waterfall_low: f32,
+    //pub waterfall_high: f32,
+    //pub waterfall_low: f32,
     pub afgain:  f32,
     pub agc: AGC,
     pub agcgain:  f32,
@@ -75,7 +75,7 @@ pub struct Receiver {
 
 impl Receiver {
 
-    pub fn new(chan: u8) -> Receiver {
+    pub fn new(chan: u8, band_info: &Vec<BandInfo>) -> Receiver {
         let channel: i32 = chan as i32;
         let buffer_size: usize = 1024;
         let fft_size: i32 = 2048;
@@ -98,11 +98,11 @@ impl Receiver {
         let snb: bool = false;
         let fps = 25.0;
         let spectrum_width: i32 = 1024;
-        let spectrum_high: f32 = -40.0;
-        let spectrum_low: f32 = -140.0;
+        //let spectrum_high: f32 = band_info[band.to_usize()].spectrum_high;
+        //let spectrum_low: f32 = band_info[band.to_usize()].spectrum_low;
         let spectrum_step: f32 = 10.0;
-        let waterfall_high: f32 = -70.0;
-        let waterfall_low: f32 = -110.0;
+        //let waterfall_high: f32 = band_info[band.to_usize()].waterfall_high;
+        //let waterfall_low: f32 = band_info[band.to_usize()].waterfall_low;
         let afgain: f32 = 0.5;
         let agc: AGC = AGC::SLOW;
         let agcgain: f32 = 80.0;
@@ -122,61 +122,9 @@ impl Receiver {
         let remote_audio_buffer_offset: usize = 4;
         let attenuation: i32 = 0;
 
-        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_high, spectrum_low, spectrum_step, waterfall_high, waterfall_low, afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation/*, spectrum_display, waterfall_display*/ };
+        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, /*spectrum_high, spectrum_low,*/ spectrum_step, /*waterfall_high, waterfall_low,*/ afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation/*, spectrum_display, waterfall_display*/ };
 
         rx
-    }
-
-    fn config_file_path(device: &Device) -> PathBuf {
-        let d = format!("{:02X}-{:02X}-{:02X}-{:02X}-{:02X}-{:02X}", device.mac[0], device.mac[1], device.mac[2], device.mac[3], device.mac[4], device.mac[5]);
-        let app_name = env!("CARGO_PKG_NAME");
-        let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));  
-        config_dir.join(app_name).join(d).join("receiver.ron")
-    }
-
-    pub fn load(device: &Device) -> Self {
-        let path = Self::config_file_path(device);
-        if path.exists() {
-            match fs::read_to_string(&path) {
-                Ok(s) => match ron::from_str(&s) {
-                    Ok(rx) => {
-                        rx
-                    }
-                    Err(e) => {
-                        Self::new(0)
-                    }
-                },
-                Err(e) => {
-                    Self::new(0)
-                }
-            }
-        } else {
-            Self::new(0)
-        }
-    }
-
-    pub fn save(&self, device: &Device) {
-        let path = Self::config_file_path(device);
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
-                if let Err(e) = fs::create_dir_all(parent) {
-                    return;
-                }
-            }
-        }
-
-        match ron::to_string(self) {
-            Ok(s) => {
-                if let Err(e) = fs::write(&path, s) {
-                    eprintln!("Error writing config file {:?}: {}", path, e);
-                } else {
-                    println!("Successfully saved data to {:?}", path);
-                }
-            }
-            Err(e) => {
-                eprintln!("Error serializing data: {}", e);
-            }
-        }
     }
 
     pub fn init(&mut self) {

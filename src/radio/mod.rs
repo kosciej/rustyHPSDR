@@ -1,12 +1,14 @@
 use gtk::prelude::*;
 use gtk::{Adjustment, Align, Application, ApplicationWindow, Button, CellRendererText, CheckButton, ComboBox, ComboBoxText,  DrawingArea, Entry, Frame, Grid, Label, ListBox, ListBoxRow, ListStore, Orientation, Scale, ScrolledWindow, SpinButton, ToggleButton, TreeModel, Widget, Window};
-use gtk::{EventController, EventControllerScroll, EventControllerScrollFlags, GestureClick};
+use gtk::{EventController, EventControllerMotion, EventControllerScroll, EventControllerScrollFlags, GestureClick};
 use gtk::glib::Propagation;
 use gtk::cairo::{Context, LineCap, LineJoin, LinearGradient}; 
+use gtk::gdk::Cursor; 
 use gdk_pixbuf::Pixbuf;
 use gdk_pixbuf::Colorspace;
 use glib::ControlFlow::Continue;
 
+use std::cell::Cell;
 use std::cell::RefCell;
 use std::cmp::min;
 use std::fmt::Write;
@@ -68,10 +70,10 @@ impl Radio {
         let supported_receivers = device.supported_receivers;
         let receivers: u8 = 1;
         let mut receiver: Vec<Receiver> = Vec::new();
+        let mut band_info = BandInfo::new();
         for i in 0..receivers {
-            receiver.push(Receiver::new(i));
+            receiver.push(Receiver::new(i, &band_info));
         }
-        let band_info = BandInfo::new();
         let radio = Radio {
             name,
             supported_receivers,
@@ -101,23 +103,25 @@ impl Radio {
 
         main_grid.set_column_homogeneous(true);
         main_grid.set_row_homogeneous(true);
+        main_grid.set_hexpand(true);
+        main_grid.set_vexpand(true);
 
         // add the main window grid
         content.append(&main_grid);
 
         // setup default information
         //let mut rx = Arc::new(Mutex::new(r.receiver[0].clone()));
-        let band_info = Rc::new(RefCell::new(BandInfo::new()));
+        //let mut band_info = Rc::new(RefCell::new(BandInfo::new()));
 
         let mut configure_button = Button::with_label("Configure");
         let main_window_for_configure = main_window.clone();
-        let band_info_for_configure = band_info.clone();
+        //let band_info_for_configure = band_info.clone();
         let radio_for_configure = Arc::clone(&radio);
         configure_button.connect_clicked(move |_| {
             let main_window_for_dialog = main_window_for_configure.clone();
-            let band_info_for_dialog = band_info_for_configure.clone();
+            //let band_info_for_dialog = band_info_for_configure.clone();
             let radio_for_dialog = Arc::clone(&radio_for_configure);
-            let configure_dialog = create_configure_dialog(&main_window_for_dialog, band_info_for_dialog, &radio_for_dialog);
+            let configure_dialog = create_configure_dialog(&main_window_for_dialog, &radio_for_dialog);
             configure_dialog.present();
         });
 
@@ -399,15 +403,46 @@ impl Radio {
         spectrum_display.set_vexpand(true);
         spectrum_display.set_content_width(1024);
         spectrum_display.set_content_height(250);
-  
+
+        let last_mouse_x = Rc::new(Cell::new(0.0));
+
+        let cursor_nsresize = Cursor::from_name("ns-resize", None);
+        let motion_event_controller_spectrum = EventControllerMotion::new();
+        spectrum_display.add_controller(motion_event_controller_spectrum.clone());
+        let spectrum_display_for_motion_event = spectrum_display.clone();
+        let last_mouse_x_clone = last_mouse_x.clone();
+        motion_event_controller_spectrum.connect_motion(
+            move |controller, x, y| {
+                last_mouse_x_clone.set(x);
+                if x < 40.0 {
+                    spectrum_display_for_motion_event.set_cursor(cursor_nsresize.as_ref());
+                } else {
+                    spectrum_display_for_motion_event.set_cursor(None); // default
+                }
+            }
+        );
 
         let scroll_controller_spectrum = EventControllerScroll::new(
             EventControllerScrollFlags::VERTICAL | EventControllerScrollFlags::KINETIC
         );
         let radio_clone = Arc::clone(&radio);
         let f = vfo_a_frequency.clone();
+        let last_mouse_x_clone = last_mouse_x.clone();
         scroll_controller_spectrum.connect_scroll(move |controller, dx, dy| {
-            spectrum_waterfall_scroll(&radio_clone, &f, dy);
+            if last_mouse_x_clone.get() < 40.0 {
+                // adjust spectrum low and high
+                let mut r = radio_clone.lock().unwrap();
+                let b = r.receiver[0].band.to_usize();
+                if dy < 0.0 {
+                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low + 5.0;
+                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high + 5.0;
+                } else {
+                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low - 5.0;
+                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high - 5.0;
+                }
+            } else {
+                spectrum_waterfall_scroll(&radio_clone, &f, dy);
+            }
             Propagation::Proceed
         });
         spectrum_display.add_controller(scroll_controller_spectrum.clone());
@@ -423,7 +458,6 @@ impl Radio {
         });
         vfo_a_frequency.add_controller(scroll_controller_a);
 
-        //let click_gesture = GestureClick::new();
         let spectrum_click_gesture = Rc::new(GestureClick::new());
         let spectrum_click_gesture_clone_for_callback = spectrum_click_gesture.clone();
         let radio_clone = Arc::clone(&radio);
@@ -489,12 +523,11 @@ impl Radio {
 
         let band_frame = Frame::new(Some("Band"));
         main_grid.attach(&band_frame, 11, 0, 2, 2);
-        let band_info_clone = band_info.clone();
-        let band_grid = Rc::new(RefCell::new(BandGrid::new(band_info_clone)));
+        
+        let radio_clone = Arc::clone(&radio);
+        let band_grid = Rc::new(RefCell::new(BandGrid::new(radio_clone)));
         let band_grid_ref = band_grid.borrow().get_widget().clone();
         band_frame.set_child(Some(&band_grid_ref));
-
-
 
         let mode_frame = Frame::new(Some("Mode"));
         main_grid.attach(&mode_frame, 11, 2, 2, 2);
@@ -509,23 +542,21 @@ impl Radio {
         filter_frame.set_child(Some(&filter_grid_ref));
 
         let mut band_grid_for_callback = band_grid.borrow_mut();
-        let band_info_for_callback = band_info.clone();
         let mode_grid_for_callback = mode_grid.clone();
         let filter_grid_for_callback = filter_grid.clone();
         let radio_for_callback = Arc::clone(&radio);
         let vfo_a_frequency_for_callback = vfo_a_frequency.clone();
-        let r = radio.lock().unwrap();
-        let band = r.receiver[0].band.to_i32() as usize;
+        let mut r = radio.lock().unwrap();
+        let band = r.receiver[0].band.to_usize();
         drop(r);
         band_grid_for_callback.set_callback(move|index| {
+            // save current band info
             let mut r = radio_for_callback.lock().unwrap();
-            r.receiver[0].band = Bands::from_u32(index as u32).expect("Failed to get band from index");
-            let band_info = &band_info_for_callback.borrow()[index];
-            r.receiver[0].frequency_a = band_info.low + ((band_info.high - band_info.low) / 2.0);
-            r.receiver[0].spectrum_low = band_info.spectrum_low;
-            r.receiver[0].spectrum_high = band_info.spectrum_high;
-            r.receiver[0].waterfall_low = band_info.waterfall_low;
-            r.receiver[0].waterfall_high = band_info.waterfall_high;
+            let b = r.receiver[0].band.to_usize();
+            r.band_info[b].current = r.receiver[0].frequency_a;
+            // get new band info
+            r.receiver[0].band = Bands::from_usize(index).expect("invalid band index");
+            r.receiver[0].frequency_a = r.band_info[index].current;
             if r.receiver[0].ctun {
                 r.receiver[0].ctun_frequency = r.receiver[0].frequency_a;
                 unsafe {
@@ -535,16 +566,16 @@ impl Radio {
             }
 
             if !r.receiver[0].filters_manual {
-                r.receiver[0].filters = band_info_for_callback.borrow()[index].filters;
+                r.receiver[0].filters = r.band_info[index].filters;
             }
 
             let filter_grid_mut = filter_grid_for_callback.borrow_mut();
             let mode_grid_mut = mode_grid_for_callback.borrow_mut();
-            mode_grid_mut.set_active_index(band_info.mode.to_usize());
-            filter_grid_mut.update_filter_buttons(band_info.mode.to_usize());
-            filter_grid_mut.set_active_index(band_info.filter.to_usize());
-            r.receiver[0].mode = band_info.mode.to_usize();
-            let (low, high) = filter_grid_mut.get_filter_values(band_info.mode.to_usize(), band_info.filter.to_usize());
+            mode_grid_mut.set_active_index(r.band_info[index].mode.to_usize());
+            filter_grid_mut.update_filter_buttons(r.band_info[index].mode.to_usize());
+            filter_grid_mut.set_active_index(r.band_info[index].filter.to_usize());
+            r.receiver[0].mode = r.band_info[index].mode.to_usize();
+            let (low, high) = filter_grid_mut.get_filter_values(r.band_info[index].mode.to_usize(), r.band_info[index].filter.to_usize());
 
             r.receiver[0].filter_low = low;
             r.receiver[0].filter_high = high;
@@ -831,7 +862,7 @@ impl Radio {
         let spectrum_display_for_timeout = spectrum_display.clone();
         let waterfall_display_for_timeout = waterfall_display.clone();
         let radio_clone_for_timeout = Arc::clone(&radio);
-        let band_info_for_timeout = band_info.clone();
+        //let band_info_for_timeout = band_info.clone();
         let pixbuf_for_timeout = pixbuf.clone();
         glib::timeout_add_local(Duration::from_millis(update_interval as u64), move || {
             let mut pixels = vec![0.0; spectrum_display_for_timeout.width() as usize];
@@ -842,16 +873,13 @@ impl Radio {
             }
             if flag != 0 {
                 let radio_clone_for_draw = radio_clone_for_timeout.clone(); 
-                let band_info_for_draw = band_info_for_timeout.clone();
+                //let band_info_for_draw = band_info_for_timeout.clone();
                 let meter_label_for_draw = meter_label.clone();
                 let pixbuf_for_draw = pixbuf_for_timeout.clone();
                 let waterfall_display_for_draw = waterfall_display_for_timeout.clone();
                 spectrum_display_for_timeout.set_draw_func(move |da, cr, width, height|{
                     {
-                        let r = radio_clone_for_draw.lock().unwrap();
-                        let band_info = &band_info_for_draw.borrow()[r.receiver[0].band.to_i32() as usize];
-                        drop(r);
-                        draw_spectrum(da, cr, width, height, &radio_clone_for_draw, &pixels, band_info);
+                        draw_spectrum(da, cr, width, height, &radio_clone_for_draw, &pixels);
                         let pixbuf_for_waterfall = pixbuf_for_draw.clone();
                         update_waterfall(width, height, &radio_clone_for_draw, &pixbuf_for_waterfall, &pixels);
                     }
@@ -953,11 +981,6 @@ fn format_u32_with_separators(value: u32) -> String {
 fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, f: &Label, x: f64, width: i32) {
     let mut r = radio.lock().unwrap();
         
-    if x<20.0 {
-        r.receiver[0].spectrum_low = r.receiver[0].spectrum_low - 1.0
-    } else if x > (width-20) as f64 {
-        r.receiver[0].spectrum_low = r.receiver[0].spectrum_low + 1.0
-    } else {
     let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
     let frequency_high = r.receiver[0].frequency_a + (r.receiver[0].sample_rate/2) as f32;
     let hz_per_pixel=(frequency_high - frequency_low) as f32 / width as f32;
@@ -977,7 +1000,6 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, f: &Label, x: f64, widt
         r.receiver[0].frequency_a = f1;
         let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
         f.set_label(&formatted_value);
-    }
     }
 }
 
@@ -1007,12 +1029,13 @@ fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64) {
     }
 }
 
-fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixels: &Vec<f32>, band_info: &BandInfo) {
+fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixels: &Vec<f32>) {
     cr.set_source_rgb(0.0, 0.0, 0.0);
     cr.paint().unwrap();
-                      
+
     let r = radio.lock().unwrap();   
-    let dbm_per_line: f32 = height as f32/(r.receiver[0].spectrum_high-r.receiver[0].spectrum_low);
+    let b = r.receiver[0].band.to_usize();
+    let dbm_per_line: f32 = height as f32/(r.band_info[b].spectrum_high-r.band_info[b].spectrum_low);
 
     cr.set_source_rgb(1.0, 1.0, 0.0);                   
     cr.set_line_width(1.0);
@@ -1051,14 +1074,14 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
 
     // draw the band limits
     cr.set_source_rgb(1.0, 0.0, 0.0);
-    if frequency_low < band_info.low && frequency_high > band_info.low {
-        let x = (band_info.low - frequency_low) / hz_per_pixel;
+    if frequency_low < r.band_info[b].low && frequency_high > r.band_info[b].low {
+        let x = (r.band_info[b].low - frequency_low) / hz_per_pixel;
         cr.move_to( x.into(), 0.0);
         cr.line_to( x.into(), height.into());
     }
 
-    if frequency_low < band_info.high && frequency_high > band_info.high {
-        let x = (band_info.high - frequency_low) / hz_per_pixel;
+    if frequency_low < r.band_info[b].high && frequency_high > r.band_info[b].high {
+        let x = (r.band_info[b].high - frequency_low) / hz_per_pixel;
         cr.move_to( x.into(), 0.0);
         cr.line_to( x.into(), height.into());
     }
@@ -1067,8 +1090,8 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
 
     // draw signal levels
     cr.set_source_rgb(0.5, 0.5, 0.5);
-    for i in (r.receiver[0].spectrum_low as i32 .. r.receiver[0].spectrum_high as i32).step_by(r.receiver[0].spectrum_step as usize) {
-        let y = (r.receiver[0].spectrum_high - i as f32) * dbm_per_line;
+    for i in (r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32).step_by(r.receiver[0].spectrum_step as usize) {
+        let y = (r.band_info[b].spectrum_high - i as f32) * dbm_per_line;
         cr.move_to(0.0, y.into());
         cr.line_to(width as f64, y.into());
         let text = format!("{}dbm", i);
@@ -1081,16 +1104,16 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
 
     cr.set_source_rgb(1.0, 1.0, 0.0);
     for (i, &pixel) in pixels.iter().enumerate() {
-        let mut y = ((r.receiver[0].spectrum_high - pixel as f32) * dbm_per_line).floor();
+        let mut y = ((r.band_info[b].spectrum_high - pixel as f32) * dbm_per_line).floor();
         cr.line_to(i as f64, y.into());
     }
     cr.line_to(width as f64, height as f64);
 
     let pattern = LinearGradient::new(0.0, (height-20) as f64, 0.0, 0.0);
     let mut s9: f32 = -73.0;
-    s9 = ((r.receiver[0].spectrum_high - s9)
+    s9 = ((r.band_info[b].spectrum_high - s9)
                   * (height-20) as f32
-                / (r.receiver[0].spectrum_high - r.receiver[0].spectrum_low)).floor();
+                / (r.band_info[b].spectrum_high - r.band_info[b].spectrum_low)).floor();
     s9 = 1.0-(s9/(height-20) as f32);
 
     pattern.add_color_stop_rgb(0.0,0.0,1.0,0.0); // Green
@@ -1142,6 +1165,7 @@ fn update_waterfall(width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixbuf: 
             let new_pixbuf = old_pixbuf.clone();
             unsafe {
                 let pixels = new_pixbuf.pixels();
+
                 let row_size = width * 3;
 
                 for y in (0..height - 1).rev() { // Iterate in reverse order
@@ -1152,13 +1176,14 @@ fn update_waterfall(width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixbuf: 
 
                 let w = min(width,new_pixels.len().try_into().unwrap());
                 for x in 0..w {
+                    let b = r.receiver[0].band.to_usize();
                     let mut value: f32 = (new_pixels[x as usize] as f32);
-                    if value < r.receiver[0].waterfall_low {
-                        value = r.receiver[0].waterfall_low;
-                    } else if value > r.receiver[0].waterfall_high {
-                        value = r.receiver[0].waterfall_high;
+                    if value < r.band_info[b].waterfall_low {
+                        value = r.band_info[b].waterfall_low;
+                    } else if value > r.band_info[b].waterfall_high {
+                        value = r.band_info[b].waterfall_high;
                     }
-                    let percent = 100.0 / ((r.receiver[0].waterfall_high - r.receiver[0].waterfall_low) / (value-r.receiver[0].waterfall_low));
+                    let percent = 100.0 / ((r.band_info[b].waterfall_high - r.band_info[b].waterfall_low) / (value-r.band_info[b].waterfall_low));
                     let mut r = 0.0;
                     let mut g = 0.0;
                     let mut b = 0.0;

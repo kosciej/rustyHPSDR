@@ -14,14 +14,6 @@ You will need to install Rust and Cargo. See [Rust install](https://www.rust-lan
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/discovery.png">
 
-# When a device is selected and Start is pressed you may see the following popup window. You can either just leave it and wait for the radio to start or click on Wait to make the popup window go away. I am working on fixing this ...
-
-<img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/wait.png">
-
-<img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot1.png">
-
-<img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot2.png">
-
 # pre-requisites for WDSP
 <pre>
 sudo apt install -y libfftw3-dev
@@ -47,5 +39,10 @@ git clone https://github.com/g0orx/rustyHPSDR.git
 cd rusyHPSDR
 cargo clean
 cargo build
+</pre>
+
+# Running rustyHPSDR
+<pre>
+cargo run
 </pre>
 

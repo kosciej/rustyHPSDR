@@ -8,7 +8,7 @@ The current code only implements a Receiver. It does work with Protocol 1 and Pr
 
 I am using WDSP as an extern C library so you need to install my port of WDSP on [github](https://github.com/g0orx/wdsp.git). I have not currently implemented a Rust wrappper so all the calls to it have to be wrapped with "unsafe { ... }".
 
-You will need to install Rust and Cargo. See [Rust install](https://www.rust-lang.org/tools/install) for information on istalling Rust and Cargo.
+You will need to install Rust and Cargo. See [Rust install](https://www.rust-lang.org/tools/install) for information on installing Rust and Cargo.
 
 # When the application is run it will first discovery all the HPSDR compatable devices on the nework interfaces.
 

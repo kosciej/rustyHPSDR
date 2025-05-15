@@ -55,6 +55,7 @@ fn main() {
                         r.save(device);
                         Propagation::Proceed
                     });
+                    main_window_for_close.present();
                     },
                 None => {
                     println!("None selected");
@@ -65,7 +66,7 @@ fn main() {
         });
         discovery_dialog.present();
 
-        main_window.present();
+        //main_window.present();
     });
 
     application.run();

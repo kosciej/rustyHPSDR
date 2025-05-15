@@ -104,7 +104,7 @@ impl Receiver {
         //let waterfall_high: f32 = band_info[band.to_usize()].waterfall_high;
         //let waterfall_low: f32 = band_info[band.to_usize()].waterfall_low;
         let afgain: f32 = 0.5;
-        let agc: AGC = AGC::SLOW;
+        let agc: AGC = AGC::FAST;
         let agcgain: f32 = 80.0;
         let agcslope: i32 = 35;
         let agcchangethreshold: i32 = 0;

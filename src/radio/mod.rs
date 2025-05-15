@@ -404,16 +404,16 @@ impl Radio {
         spectrum_display.set_content_width(1024);
         spectrum_display.set_content_height(250);
 
-        let last_mouse_x = Rc::new(Cell::new(0.0));
+        let last_spectrum_x = Rc::new(Cell::new(0.0));
 
         let cursor_nsresize = Cursor::from_name("ns-resize", None);
         let motion_event_controller_spectrum = EventControllerMotion::new();
         spectrum_display.add_controller(motion_event_controller_spectrum.clone());
         let spectrum_display_for_motion_event = spectrum_display.clone();
-        let last_mouse_x_clone = last_mouse_x.clone();
+        let last_spectrum_x_clone = last_spectrum_x.clone();
         motion_event_controller_spectrum.connect_motion(
             move |controller, x, y| {
-                last_mouse_x_clone.set(x);
+                last_spectrum_x_clone.set(x);
                 if x < 40.0 {
                     spectrum_display_for_motion_event.set_cursor(cursor_nsresize.as_ref());
                 } else {
@@ -427,9 +427,9 @@ impl Radio {
         );
         let radio_clone = Arc::clone(&radio);
         let f = vfo_a_frequency.clone();
-        let last_mouse_x_clone = last_mouse_x.clone();
+        let last_spectrum_x_clone = last_spectrum_x.clone();
         scroll_controller_spectrum.connect_scroll(move |controller, dx, dy| {
-            if last_mouse_x_clone.get() < 40.0 {
+            if last_spectrum_x_clone.get() < 40.0 {
                 // adjust spectrum low and high
                 let mut r = radio_clone.lock().unwrap();
                 let b = r.receiver[0].band.to_usize();
@@ -489,13 +489,45 @@ impl Radio {
         waterfall_display.set_content_width(1024);
         waterfall_display.set_content_height(250);
 
+        let last_waterfall_x = Rc::new(Cell::new(0.0));
+
+        let cursor_nsresize = Cursor::from_name("ns-resize", None);
+        let motion_event_controller_waterfall = EventControllerMotion::new();
+        waterfall_display.add_controller(motion_event_controller_waterfall.clone());
+        let waterfall_display_for_motion_event = waterfall_display.clone();
+        let last_waterfall_x_clone = last_waterfall_x.clone();
+        motion_event_controller_waterfall.connect_motion(
+            move |controller, x, y| {
+                last_waterfall_x_clone.set(x);
+                if x < 40.0 {
+                    waterfall_display_for_motion_event.set_cursor(cursor_nsresize.as_ref());
+                } else {
+                    waterfall_display_for_motion_event.set_cursor(None); // default
+                }
+            }
+        );
+
         let scroll_controller_waterfall = EventControllerScroll::new(
             EventControllerScrollFlags::VERTICAL
         );
         let radio_clone = Arc::clone(&radio);
         let f = vfo_a_frequency.clone();
+        let last_waterfall_x_clone = last_waterfall_x.clone();
         scroll_controller_waterfall.connect_scroll(move |controller, dx, dy| {
-            spectrum_waterfall_scroll(&radio_clone, &f, dy);
+            if last_waterfall_x_clone.get() < 40.0 {
+                // adjust spectrum low and high
+                let mut r = radio_clone.lock().unwrap();
+                let b = r.receiver[0].band.to_usize();
+                if dy < 0.0 {
+                    r.band_info[b].waterfall_low = r.band_info[b].waterfall_low + 1.0;
+                    r.band_info[b].waterfall_high = r.band_info[b].waterfall_high + 1.0;
+                } else {
+                    r.band_info[b].waterfall_low = r.band_info[b].waterfall_low - 1.0;
+                    r.band_info[b].waterfall_high = r.band_info[b].waterfall_high - 1.0;
+                }
+            } else {
+                spectrum_waterfall_scroll(&radio_clone, &f, dy);
+            }
             Propagation::Proceed
         });
         waterfall_display.add_controller(scroll_controller_waterfall.clone());

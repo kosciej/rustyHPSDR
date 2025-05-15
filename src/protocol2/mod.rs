@@ -124,9 +124,6 @@ impl Protocol2 {
                                             unsafe {
                                                 fexchange0(r.receiver[ddc].channel, raw_ptr, audio_ptr, &mut result);
                                             }
-                                            if result != 0 {
-                                                println!("fexchange0: result={}",result);
-                                            }
                                             unsafe {
                                                 Spectrum0(1, r.receiver[ddc].channel, 0, 0, raw_ptr);
                                             }

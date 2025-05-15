@@ -36,7 +36,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Rad
 
     display_grid.set_column_homogeneous(true);
     display_grid.set_row_homogeneous(true);
-/*
+
     let band_title = Label::new(Some("Band"));
     display_grid.attach(&band_title, 0, 0, 1, 1);
     let spectrum_low_title = Label::new(Some("Spectrum Low"));
@@ -48,68 +48,70 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Rad
     let waterfall_high_title = Label::new(Some("Waterfall High"));
     display_grid.attach(&waterfall_high_title, 4, 0, 1, 1);
 
-    for (i, info) in band_info.borrow().iter().enumerate() {
+    let r = radio.lock().unwrap();
+    let band_info = r.band_info.clone();
+    drop(r);
+    
+    let band_info = radio.lock().unwrap().band_info.clone();
+
+    for (i, info) in band_info.iter().enumerate() {
 
         let row = (i+1) as i32;
         let band_label = Label::new(Some(info.label.as_str()));
         display_grid.attach(&band_label, 0, row, 1, 1);
 
-        let spectrum_low_spin_button = SpinButton::with_range(-140.0, -40.0, 5.0);
+        let spectrum_low_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
         spectrum_low_spin_button.set_value(info.spectrum_low.into());
-        let info_clone_spectrum_low = band_info.clone();
-        let radio_for_spectrum_low = radio.clone();
-        spectrum_low_spin_button.connect_value_changed(move |spin_button| {
-            info_clone_spectrum_low.borrow_mut()[i].spectrum_low = spin_button.value() as f32;
-            let mut r = radio_for_spectrum_low.lock().unwrap();
-            if r.receiver[0].band == info_clone_spectrum_low.borrow_mut()[i].band {
-                r.receiver[0].spectrum_low = info_clone_spectrum_low.borrow_mut()[i].spectrum_low
-            }
-        });
         display_grid.attach(&spectrum_low_spin_button, 1, row, 1, 1);
 
-        let spectrum_high_spin_button = SpinButton::with_range(-140.0, -40.0, 5.0);
-        spectrum_high_spin_button.set_value(info.spectrum_high.into());
-        let info_clone_spectrum_high = band_info.clone();
-        let radio_for_spectrum_high = radio.clone();
-        spectrum_high_spin_button.connect_value_changed(move |spin_button| {
-            info_clone_spectrum_high.borrow_mut()[i].spectrum_high = spin_button.value() as f32;
-            let mut r = radio_for_spectrum_high.lock().unwrap();
-            if r.receiver[0].band == info_clone_spectrum_high.borrow_mut()[i].band {
-                r.receiver[0].spectrum_high = info_clone_spectrum_high.borrow_mut()[i].spectrum_high
-            }
+        let radio_clone = Arc::clone(&radio);
+        let band_index = i;
+        spectrum_low_spin_button.connect_value_changed(move |spin_button| {
+            let value = spin_button.value() as f32;
+            let mut radio_lock = radio_clone.lock().unwrap();
+            radio_lock.band_info[band_index].spectrum_low = value;
         });
+
+        let spectrum_high_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
+        spectrum_high_spin_button.set_value(info.spectrum_high.into());
         display_grid.attach(&spectrum_high_spin_button, 2, row, 1, 1);
+
+        let radio_clone = Arc::clone(&radio);
+        let band_index = i;
+        spectrum_high_spin_button.connect_value_changed(move |spin_button| {
+            let value = spin_button.value() as f32;
+            let mut radio_lock = radio_clone.lock().unwrap();
+            radio_lock.band_info[band_index].spectrum_high = value;
+        });
 
         let waterfall_low_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
         waterfall_low_spin_button.set_value(info.waterfall_low.into());
-        let info_clone_waterfall_low = band_info.clone();
-        let radio_for_waterfall_low = radio.clone();
-        waterfall_low_spin_button.connect_value_changed(move |spin_button| {
-            info_clone_waterfall_low.borrow_mut()[i].waterfall_low = spin_button.value() as f32;
-            let mut r = radio_for_waterfall_low.lock().unwrap();
-            if r.receiver[0].band == info_clone_waterfall_low.borrow_mut()[i].band {
-                r.receiver[0].waterfall_low = info_clone_waterfall_low.borrow_mut()[i].waterfall_low
-            }
-        });
         display_grid.attach(&waterfall_low_spin_button, 3, row, 1, 1);
+
+        let radio_clone = Arc::clone(&radio);
+        let band_index = i;
+        waterfall_low_spin_button.connect_value_changed(move |spin_button| {
+            let value = spin_button.value() as f32;
+            let mut radio_lock = radio_clone.lock().unwrap();
+            radio_lock.band_info[band_index].waterfall_low = value;
+        });
 
         let waterfall_high_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
         waterfall_high_spin_button.set_value(info.waterfall_high.into());
-        let info_clone_waterfall_high = band_info.clone();
-        let radio_for_waterfall_high = radio.clone();
-        waterfall_high_spin_button.connect_value_changed(move |spin_button| {
-            info_clone_waterfall_high.borrow_mut()[i].waterfall_high = spin_button.value() as f32;
-            let mut r = radio_for_waterfall_high.lock().unwrap();
-            if r.receiver[0].band == info_clone_waterfall_high.borrow_mut()[i].band {
-                r.receiver[0].waterfall_high = info_clone_waterfall_high.borrow_mut()[i].waterfall_high
-            }
-        });
         display_grid.attach(&waterfall_high_spin_button, 4, row, 1, 1);
+
+        let radio_clone = Arc::clone(&radio);
+        let band_index = i;
+        waterfall_high_spin_button.connect_value_changed(move |spin_button| {
+            let value = spin_button.value() as f32;
+            let mut radio_lock = radio_clone.lock().unwrap();
+            radio_lock.band_info[band_index].waterfall_high = value;
+        });
 
     }
 
     notebook.append_page(&display_grid, Some(&display_label));
-*/
+
 
     let button_box = gtk::Box::new(Orientation::Horizontal, 5);
     button_box.set_halign(gtk::Align::End);

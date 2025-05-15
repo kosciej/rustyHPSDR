@@ -128,10 +128,8 @@ impl Receiver {
     }
 
     pub fn init(&mut self) {
-        println!("Receiver::init allocate buffers");
         self.iq_input_buffer = vec![0.0; (2*self.buffer_size) as usize];
         self.samples = 0;
-        println!("Receiver::init iq_input_buffer: {}", self.iq_input_buffer.len());
         self.local_audio_buffer = vec![0.0; self.local_audio_buffer_size*2];
         self.local_audio_buffer_offset = 0;
         self.remote_audio_buffer = vec![0u8; self.remote_audio_buffer_size];
@@ -141,7 +139,6 @@ impl Receiver {
         let c_string = CString::new(empty_string).expect("CString::new failed");
         let c_char_ptr: *mut c_char = c_string.into_raw();
         unsafe {
-            println!("OpenChannel {}", self.channel);
             OpenChannel(self.channel, self.buffer_size as i32, self.fft_size, self.sample_rate, self.dsp_rate, self.output_rate, 0, 1, 0.010, 0.025, 0.0, 0.010, 0);
             create_anbEXT(self.channel, 1, self.buffer_size as i32, self.sample_rate.into(), 0.0001, 0.0001, 0.0001, 0.05, 20.0);
             create_nobEXT(self.channel,1,0,self.buffer_size as i32,self.sample_rate.into(),0.0001,0.0001,0.0001,0.05,20.0);
@@ -179,9 +176,7 @@ impl Receiver {
             SetRXASNBARun(self.channel, self.snb.into()); //self.snb);
 
             let mut result: c_int = 0;
-            println!("XCreateAnalyzer");
             XCreateAnalyzer(0,&mut result,262144,1,1,c_char_ptr);
-            println!("XCreateAnalyzer result: {}",result);
             self.init_analyzer();
             SetDisplayDetectorMode(0, 0, DETECTOR_MODE_AVERAGE.try_into().expect("SetDisplayDetectorMode failed!"));
             SetDisplayAverageMode(0, 0,  AVERAGE_MODE_LOG_RECURSIVE.try_into().expect("SetDisplayAverageMode failed!"));
@@ -207,7 +202,6 @@ impl Receiver {
 
     pub fn init_analyzer(&self) {
         let mut flp = [0];
-        println!("SetAnalyzer: width={}", self.spectrum_width);
         let keep_time: f32 = 0.1;
         let fft_size = 8192; 
         let max_w = fft_size + min((keep_time * self.fps) as i32, (keep_time * fft_size as f32  * self.fps) as i32);

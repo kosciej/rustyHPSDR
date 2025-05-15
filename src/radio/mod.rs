@@ -434,11 +434,11 @@ impl Radio {
                 let mut r = radio_clone.lock().unwrap();
                 let b = r.receiver[0].band.to_usize();
                 if dy < 0.0 {
-                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low + 5.0;
-                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high + 5.0;
+                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low + 1.0;
+                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high + 1.0;
                 } else {
-                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low - 5.0;
-                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high - 5.0;
+                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low - 1.0;
+                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high - 1.0;
                 }
             } else {
                 spectrum_waterfall_scroll(&radio_clone, &f, dy);
@@ -471,7 +471,6 @@ impl Radio {
 
         let radio_clone = Arc::clone(&radio);
         spectrum_display.connect_resize(move |_, width, height| {
-            println!("Spectrum resized to: {}x{}", width, height);
 /*
             let mut r = rx_clone.lock().unwrap();
             println!("Spectrum resized to: {}x{}", width, height);
@@ -545,9 +544,8 @@ impl Radio {
 
         let radio_clone = Arc::clone(&radio);
         waterfall_display.connect_resize(move |_, width, height| {
-            println!("Waterfall resized to: {}x{}", width, height);
             let mut r = radio_clone.lock().unwrap();
-            println!("Waterfall resized to: {}x{}", width, height);
+            //println!("Waterfall resized to: {}x{}", width, height);
             r.receiver[0].spectrum_width = width;
             r.receiver[0].init_analyzer();
         });
@@ -919,7 +917,8 @@ impl Radio {
                     unsafe {
                         let r = radio_clone_for_draw.lock().unwrap();
                         let meter_db = GetRXAMeter(r.receiver[0].channel,rxaMeterType_RXA_S_AV as i32);
-                        let label_text = format!("{} dBm", meter_db as i32);
+                        let s = (meter_db + 121.0) / 6.0;
+                        let label_text = format!("S{} ({} dBm)", s as i32, meter_db as i32);
                         meter_label_for_draw.set_label(&label_text);
                     }
 
@@ -1122,13 +1121,16 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
 
     // draw signal levels
     cr.set_source_rgb(0.5, 0.5, 0.5);
-    for i in (r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32).step_by(r.receiver[0].spectrum_step as usize) {
-        let y = (r.band_info[b].spectrum_high - i as f32) * dbm_per_line;
-        cr.move_to(0.0, y.into());
-        cr.line_to(width as f64, y.into());
-        let text = format!("{}dbm", i);
-        cr.move_to( 5.0, (y-2.0).into());
-        let _ = cr.show_text(&text);
+    //for i in (r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32).step_by(r.receiver[0].spectrum_step as usize) {
+    for i in (r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32) {
+        if i % r.receiver[0].spectrum_step as i32 == 0 {
+            let y = (r.band_info[b].spectrum_high - i as f32) * dbm_per_line;
+            cr.move_to(0.0, y.into());
+            cr.line_to(width as f64, y.into());
+            let text = format!("{}dbm", i);
+            cr.move_to( 5.0, (y-2.0).into());
+            let _ = cr.show_text(&text);
+        }
     }
     cr.stroke().unwrap();
 

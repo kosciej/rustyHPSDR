@@ -28,7 +28,6 @@ pub struct Protocol2 {
 impl Protocol2 {
 
     pub fn new(device: Device, radio: Arc<Mutex<Radio>> ) -> Protocol2 {
-        println!("Protocol2::new");
         let socket = UdpSocket::bind("0.0.0.0:0").expect("bind failed");
         setsockopt(&socket, ReusePort, &true).unwrap();
         setsockopt(&socket, ReuseAddr, &true).unwrap();
@@ -53,13 +52,11 @@ impl Protocol2 {
     }
 
     pub fn run(&mut self, device: Device, radio: Arc<Mutex<Radio>>) {
-        println!("Protocol2::run");
         let r = radio.lock().unwrap();
 
         let mut buffer = vec![0; 65536];
         let mut audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
 
-        println!("Protocol2::setup output stream");
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
         sink.play();

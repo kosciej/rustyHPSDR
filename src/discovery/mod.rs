@@ -43,8 +43,6 @@ pub fn protocol1_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
     let _res = setsockopt(&socket, ReusePort, &true);
     let _res = setsockopt(&socket, ReuseAddr, &true);
 
-    println!("p1_discovery: socket: {:?}", socket);
-
     let mut _discover:[u8; 63] = [0xEF,0xFE,0x02,
                                   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
                                   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -123,7 +121,6 @@ pub fn protocol1_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
                            },
                     }
                     add_device(devices,src,local_addr,buf[10],1,buf[9],buf[2],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
-                    println!("Added Protocol 1 Device iface={}",local_addr);
                 } else {
                     println!("Expected 60 bytes but Received: {:?} From {:?}",amt,src);
                 }
@@ -145,7 +142,6 @@ pub fn protocol2_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
     let _res = setsockopt(&socket, ReusePort, &true);
     let _res = setsockopt(&socket, ReuseAddr, &true);
 
-    println!("p2_discovery: socket: {:?}", socket);
 
     let mut _discover:[u8; 60] = [0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
                                 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -226,7 +222,6 @@ pub fn protocol2_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
                     }
                     let local_addr = socket.local_addr().expect("failed to get local address");
                     add_device(devices,src,local_addr,buf[11],2,buf[13],buf[4],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
-                    println!("Added Protocol 2 Device iface={}",local_addr);
                 } else {
                     println!("Expected 60 bytes but Received: {:?} From {:?}",amt,src);
                 }
@@ -242,14 +237,7 @@ pub fn protocol2_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
 pub fn discover(devices: &mut Vec<Device>) {
     let network_interfaces = NetworkInterface::show().unwrap();
     for itf in network_interfaces.iter() {
-        println!("Interfaces: {}",itf.addr.len());
         if itf.addr.len()>0 {
-            println!("{:?}", itf.addr[0].ip());
-            if itf.addr[0].ip().is_ipv4() {
-                println!("Is IPV4");
-            } else {
-                println!("Is NOT IPV4");
-            }
             let std::net::IpAddr::V4(ip_addr) = itf.addr[0].ip() else { todo!() };
             let socket_address = SocketAddr::new(std::net::IpAddr::V4(ip_addr),0);
             protocol1_discovery(devices, socket_address);
@@ -316,9 +304,6 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: 
 
           _=>radio = "Unknown Protocol",
         }
-
-        //let d = format!("device-{},ip={},mac={:02X?},protocol={},version={},status={}",radio,val.address,val.mac,val.protocol,val.version,val.status);
-        //println!("{}",d);
 
         let ip=format!("{}",val.address);
         let mac=format!("{:02X?}",val.mac);

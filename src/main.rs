@@ -22,8 +22,6 @@ fn main() {
         let mut discovery_vec: Vec<Device> = Vec::new();
         discover(&mut discovery_vec);
 
-        println!("discovered {} devices", discovery_vec.len());
-
         let main_window = ApplicationWindow::builder()
             .application(app)
             .title("rustyHPSDR")
@@ -44,17 +42,22 @@ fn main() {
             match index {
                 Some(i) => {
                     let device = discovery_vec_for_close[(i-1) as usize];
-                    println!("Selected: {:?}", device);
                     let radio = Arc::new(Mutex::new(Radio::load(device)));
-                    Radio::run(&radio, &main_window_for_close, device);
 
+                    let mut radio_clone_for_show = radio.clone();
+                    let main_window_clone_for_show = main_window_for_close.clone();
+                    main_window_for_close.connect_show(move |_| {
+                        Radio::run(&radio_clone_for_show, &main_window_clone_for_show, device);
+                    });
+                    
                     let mut radio_clone_for_close = radio.clone();
                     let main_window_clone_for_close = main_window_for_close.clone();
-                    main_window_clone_for_close.connect_close_request(move |_| {
+                    main_window_for_close.connect_close_request(move |_| {
                         let r = radio_clone_for_close.lock().unwrap();
                         r.save(device);
                         Propagation::Proceed
                     });
+
                     main_window_for_close.present();
                     },
                 None => {
@@ -64,9 +67,9 @@ fn main() {
             }
             Propagation::Proceed
         });
+
         discovery_dialog.present();
 
-        //main_window.present();
     });
 
     application.run();

@@ -1,3 +1,20 @@
+/*
+    Copyright (C) 2025  John Melton G0ORX/N6LYT
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 use gtk::prelude::*;
 use gtk::{Adjustment, Align, Application, ApplicationWindow, Button, CellRendererText, CheckButton, ComboBox, ComboBoxText,  DrawingArea, Entry, Frame, Grid, Label, ListBox, ListBoxRow, ListStore, Orientation, Scale, ScrolledWindow, SpinButton, ToggleButton, TreeModel, Widget, Window};
 use gtk::{EventController, EventControllerMotion, EventControllerScroll, EventControllerScrollFlags, GestureClick};
@@ -87,8 +104,66 @@ impl Radio {
 
     pub fn run(radio: &Arc<Mutex<Radio>>, main_window: &ApplicationWindow, device: Device) {
 
-        //let mut r = radio.lock().unwrap();
         let content = gtk::Box::new(Orientation::Vertical, 0);
+
+        let provider = gtk::CssProvider::new();
+        provider.load_from_data(
+            ".vfo-a-label {
+                font-family: FreeSans;
+                font-size: 28px;
+                color: green;
+             }
+             .vfo-b-label {
+                font-family: FreeSans;
+                font-size: 28px;
+                color: orange;
+             }
+             .s-meter-label {
+                font-family: FreeSans;
+                font-size: 28px;
+                color: red;
+             }
+            .active-button {
+                color: orange;
+                border-radius: 5px;
+                border-style: solid;
+                border-width: 1px;
+                padding-top: 0px;
+                padding-right: 0px;
+                padding-bottom: 0px;
+                padding-left: 0px;
+                font-family: FreeSans;
+                font-size: small;
+                margin-top: 0px;
+                margin-bottom: 0px;
+                min-height: 0px;
+                background-image: none;
+             }
+             .inactive-button {
+                color: black;
+                border-radius: 5px;
+                border-style: solid;
+                border-width: 1px;
+                padding-top: 0px;
+                padding-right: 0px;
+                padding-bottom: 0px;
+                padding-left: 0px;
+                font-family: FreeSans;
+                font-size: small;
+                margin-top: 0px;
+                margin-bottom: 0px;
+                min-height: 0px;
+                background-image: none;
+             }
+             button.orange {
+                 color: orange;
+             }",
+        );
+        gtk::StyleContext::add_provider_for_display(
+            &gtk::gdk::Display::default().unwrap(),
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
 
         let main_grid = Grid::builder()
             .margin_start(0)
@@ -132,59 +207,6 @@ impl Radio {
 
         let vfo_a_frequency = Label::new(Some("00.000.000"));
         vfo_a_frequency.set_css_classes(&["vfo-a-label"]);
-        let provider = gtk::CssProvider::new();
-        provider.load_from_data(
-            ".vfo-a-label {
-                font-family: FreeSans;
-                font-size: 28px;
-                color: green;
-             }
-             .vfo-b-label {
-                font-family: FreeSans;
-                font-size: 28px;
-                color: orange;
-             }
-            .active-button {
-                color: orange;
-                border-radius: 5px;
-                border-style: solid;
-                border-width: 1px;
-                padding-top: 0px;
-                padding-right: 0px;
-                padding-bottom: 0px;
-                padding-left: 0px;
-                font-family: FreeSans;
-                font-size: small;
-                margin-top: 0px;
-                margin-bottom: 0px;
-                min-height: 0px;
-                background-image: none;
-             }
-             .inactive-button {
-                color: black;
-                border-radius: 5px;
-                border-style: solid;
-                border-width: 1px;
-                padding-top: 0px;
-                padding-right: 0px;
-                padding-bottom: 0px;
-                padding-left: 0px;
-                font-family: FreeSans;
-                font-size: small;
-                margin-top: 0px;
-                margin-bottom: 0px;
-                min-height: 0px;
-                background-image: none;
-             }
-             button.orange {
-                 color: orange;
-             }",
-        );
-        gtk::StyleContext::add_provider_for_display(
-            &gtk::gdk::Display::default().unwrap(),
-            &provider,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
 
         vfo_a_frame.set_child(Some(&vfo_a_frequency));
         {
@@ -393,6 +415,7 @@ impl Radio {
 
         let meter_frame = Frame::new(Some("S Meter"));
         let meter_label = Label::new(Some("-121 dBm"));
+        meter_label.set_css_classes(&["s-meter-label"]);
         meter_frame.set_child(Some(&meter_label));
 
         main_grid.attach(&meter_frame, 9, 0, 2, 1);
@@ -914,13 +937,14 @@ impl Radio {
                         update_waterfall(width, height, &radio_clone_for_draw, &pixbuf_for_waterfall, &pixels);
                     }
 
+                    let mut meter_db = -121.0;
+                    let r = radio_clone_for_draw.lock().unwrap();
                     unsafe {
-                        let r = radio_clone_for_draw.lock().unwrap();
-                        let meter_db = GetRXAMeter(r.receiver[0].channel,rxaMeterType_RXA_S_AV as i32);
-                        let s = (meter_db + 121.0) / 6.0;
-                        let label_text = format!("S{} ({} dBm)", s as i32, meter_db as i32);
-                        meter_label_for_draw.set_label(&label_text);
+                        meter_db = GetRXAMeter(r.receiver[0].channel,rxaMeterType_RXA_S_AV as i32);
                     }
+                    let s = (meter_db + 121.0) / 6.0;
+                    let label_text = format!("S{} ({} dBm)", s as i32, meter_db as i32);
+                    meter_label_for_draw.set_label(&label_text);
 
                     let pixbuf_for_waterfall_draw = pixbuf_for_draw.clone();
                     waterfall_display_for_draw.set_draw_func(move |_da, cr, width, height| {
@@ -1122,7 +1146,7 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
     // draw signal levels
     cr.set_source_rgb(0.5, 0.5, 0.5);
     //for i in (r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32).step_by(r.receiver[0].spectrum_step as usize) {
-    for i in (r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32) {
+    for i in r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32 {
         if i % r.receiver[0].spectrum_step as i32 == 0 {
             let y = (r.band_info[b].spectrum_high - i as f32) * dbm_per_line;
             cr.move_to(0.0, y.into());
@@ -1211,7 +1235,7 @@ fn update_waterfall(width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixbuf: 
                 let w = min(width,new_pixels.len().try_into().unwrap());
                 for x in 0..w {
                     let b = r.receiver[0].band.to_usize();
-                    let mut value: f32 = (new_pixels[x as usize] as f32);
+                    let mut value: f32 = new_pixels[x as usize] as f32;
                     if value < r.band_info[b].waterfall_low {
                         value = r.band_info[b].waterfall_low;
                     } else if value > r.band_info[b].waterfall_high {

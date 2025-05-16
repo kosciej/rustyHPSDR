@@ -1,3 +1,20 @@
+/*
+    Copyright (C) 2025  John Melton G0ORX/N6LYT
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 use gtk::prelude::*;
 use gtk::{Button, Label, ListBox, ListBoxRow, Orientation, Window};
 use network_interface::NetworkInterface;
@@ -331,9 +348,11 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: 
     let button_box = gtk::Box::new(Orientation::Horizontal, 5);
     button_box.set_halign(gtk::Align::End);
 
-    let start_button = Button::builder().label("Start").build();
+    let rediscover_button = Button::builder().label("Discover").build();
     let cancel_button = Button::builder().label("Cancel").build();
+    let start_button = Button::builder().label("Start").build();
 
+    button_box.append(&rediscover_button);
     button_box.append(&cancel_button);
     button_box.append(&start_button);
 
@@ -356,6 +375,14 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: 
 
     let window_clone = window.clone();
     cancel_button.connect_clicked(move |_| {
+        window_clone.close();
+    });
+
+    let window_clone = window.clone();
+    let selected_index_for_rediscover = selected_index.clone();
+    rediscover_button.connect_clicked(move |_| {
+        let index = -1;
+        *selected_index_for_rediscover.borrow_mut() = Some(index);
         window_clone.close();
     });
 

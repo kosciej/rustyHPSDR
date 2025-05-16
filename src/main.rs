@@ -90,12 +90,7 @@ fn main() {
                 }
                 Propagation::Proceed
             });
-
             discovery_dialog.present();
-
-            println!("After dialog present");
-
     });
-
     application.run();
 }

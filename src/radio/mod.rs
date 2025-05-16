@@ -77,6 +77,7 @@ pub struct Radio {
     pub receivers: u8,
     pub receiver: Vec<Receiver>,
     pub band_info: Vec<BandInfo>,
+    pub s_meter_dbm: f64,
 }
 
 impl Radio {
@@ -91,12 +92,15 @@ impl Radio {
         for i in 0..receivers {
             receiver.push(Receiver::new(i, &band_info));
         }
+        let s_meter_dbm = -121.0;
+
         let radio = Radio {
             name,
             supported_receivers,
             receivers,
             receiver,
-            band_info
+            band_info,
+            s_meter_dbm,
         };
 
         radio
@@ -414,12 +418,67 @@ impl Radio {
 
 
         let meter_frame = Frame::new(Some("S Meter"));
-        let meter_label = Label::new(Some("-121 dBm"));
-        meter_label.set_css_classes(&["s-meter-label"]);
-        meter_frame.set_child(Some(&meter_label));
-
+        //let meter_label = Label::new(Some("-121 dBm"));
+        //meter_label.set_css_classes(&["s-meter-label"]);
+        //meter_frame.set_child(Some(&meter_label));
+        let meter_display = DrawingArea::new();
+        meter_frame.set_child(Some(&meter_display));
         main_grid.attach(&meter_frame, 9, 0, 2, 1);
 
+        meter_display.connect_resize(move |_, width, height| {
+            println!("meter_display resized to: {}x{}", width, height);
+        });
+
+        let radio_for_meter_draw = Arc::clone(&radio);
+        meter_display.set_draw_func(move |da, cr, width, height| {
+            let mut r = radio_for_meter_draw.lock().unwrap();
+            cr.set_source_rgb (1.0, 1.0, 1.0);
+            cr.paint().unwrap();
+            if width >= 114 {
+                let offset = 5.0;
+                let db = 1.0; // size in pixels of each dbm
+
+                cr.set_source_rgb(0.0, 1.0, 0.0);
+                cr.rectangle(offset, height as f64 - 30.0, (r.s_meter_dbm + 121.0) + db, 10.0);
+
+                let _ = cr.fill();
+                cr.set_source_rgb (0.0, 0.0, 0.0);
+                for i in 0..54 {
+                    cr.move_to(offset+(i as f64 * db),height as f64-20.0);
+                    if i%18 == 0 {
+                        cr.line_to(offset+(i as f64 * db),height as f64-30.0);
+                    } else if i%6 == 0 {
+                        cr.line_to(offset+(i as f64 * db),height as f64-25.0);
+                    }
+                } 
+                //cr.stroke().unwrap();
+                cr.move_to(offset+(54.0*db),height as f64-20.0);
+                cr.line_to(offset+(54.0*db),height as f64-30.0);
+                cr.move_to(offset+(74.0*db),height as f64-20.0);
+                cr.line_to(offset+(74.0*db),height as f64-30.0);
+                cr.move_to(offset+(94.0*db),height as f64-20.0);
+                cr.line_to(offset+(94.0*db),height as f64-30.0);
+                cr.move_to(offset+(114.0*db),height as f64-20.0);
+                cr.line_to(offset+(114.0*db),height as f64-30.0);
+                cr.stroke().unwrap();
+
+                cr.move_to(offset+(18.0*db)-3.0,40.0);
+                let _ = cr.show_text("3");
+                cr.move_to(offset+(36.0*db)-3.0,40.0);
+                let _ = cr.show_text("6");
+                cr.move_to(offset+(54.0*db)-3.0,40.0);
+                let _ = cr.show_text("9");
+                cr.move_to(offset+(74.0*db)-9.0,40.0);
+                let _ = cr.show_text("+20");
+                cr.move_to(offset+(94.0*db)-9.0,40.0);
+                let _ = cr.show_text("+40");
+                cr.move_to(offset+(114.0*db)-9.0,40.0);
+                let _ = cr.show_text("+60");
+
+
+
+            }
+        });
         
         let spectrum_display = DrawingArea::new();
         spectrum_display.set_hexpand(true);
@@ -914,6 +973,7 @@ impl Radio {
         drop(r);
         let spectrum_display_for_timeout = spectrum_display.clone();
         let waterfall_display_for_timeout = waterfall_display.clone();
+        let meter_display_for_timeout = meter_display.clone();
         let radio_clone_for_timeout = Arc::clone(&radio);
         //let band_info_for_timeout = band_info.clone();
         let pixbuf_for_timeout = pixbuf.clone();
@@ -926,8 +986,8 @@ impl Radio {
             }
             if flag != 0 {
                 let radio_clone_for_draw = radio_clone_for_timeout.clone(); 
-                //let band_info_for_draw = band_info_for_timeout.clone();
-                let meter_label_for_draw = meter_label.clone();
+                //let meter_label_for_draw = meter_label.clone();
+                let meter_display_for_draw = meter_display_for_timeout.clone();
                 let pixbuf_for_draw = pixbuf_for_timeout.clone();
                 let waterfall_display_for_draw = waterfall_display_for_timeout.clone();
                 spectrum_display_for_timeout.set_draw_func(move |da, cr, width, height|{
@@ -937,14 +997,13 @@ impl Radio {
                         update_waterfall(width, height, &radio_clone_for_draw, &pixbuf_for_waterfall, &pixels);
                     }
 
-                    let mut meter_db = -121.0;
-                    let r = radio_clone_for_draw.lock().unwrap();
+                    let mut r = radio_clone_for_draw.lock().unwrap();
                     unsafe {
-                        meter_db = GetRXAMeter(r.receiver[0].channel,rxaMeterType_RXA_S_AV as i32);
+                        r.s_meter_dbm = GetRXAMeter(r.receiver[0].channel,rxaMeterType_RXA_S_AV as i32);
                     }
-                    let s = (meter_db + 121.0) / 6.0;
-                    let label_text = format!("S{} ({} dBm)", s as i32, meter_db as i32);
-                    meter_label_for_draw.set_label(&label_text);
+                    //let s = (meter_db + 121.0) / 6.0;
+                    //let label_text = format!("S{} ({} dBm)", s as i32, meter_db as i32);
+                    //meter_label_for_draw.set_label(&label_text);
 
                     let pixbuf_for_waterfall_draw = pixbuf_for_draw.clone();
                     waterfall_display_for_draw.set_draw_func(move |_da, cr, width, height| {
@@ -954,6 +1013,7 @@ impl Radio {
 
                 spectrum_display_for_timeout.queue_draw();
                 waterfall_display_for_timeout.queue_draw();
+                meter_display_for_timeout.queue_draw();
             }
 
             Continue
@@ -1278,3 +1338,5 @@ fn update_waterfall(width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixbuf: 
     *pixbuf.borrow_mut() = Some(new_pixbuf);
 }
 
+fn update_meter(radio: &Arc<Mutex<Radio>>, meter_display: &DrawingArea, meter_db: f64) {
+}

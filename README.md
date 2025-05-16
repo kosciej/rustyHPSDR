@@ -14,6 +14,12 @@ You will need to install Rust and Cargo. See [Rust install](https://www.rust-lan
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/discovery.png">
 
+# If you get this after clicking on Start and before the Radio starts running
+
+<img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/wait.png">
+
+You can either just wait or click on Wait to close the dialog or you can change the timeout value by install dconf-editor and change the /org/gnome/mutter/check-alive_timeout value form the default of 5000 to 60000.
+
 # When a device is selected and Start button clicked the radio will start running
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot1.png">

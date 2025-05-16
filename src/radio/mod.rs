@@ -87,7 +87,7 @@ impl Radio {
         let supported_receivers = device.supported_receivers;
         let receivers: u8 = 1;
         let mut receiver: Vec<Receiver> = Vec::new();
-        let mut band_info = BandInfo::new();
+        let band_info = BandInfo::new();
         for i in 0..receivers {
             receiver.push(Receiver::new(i, &band_info));
         }

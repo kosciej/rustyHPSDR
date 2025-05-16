@@ -41,17 +41,19 @@ fn main() {
             .title("rustyHPSDR")
             .build();
 
-            let mut discovery_vec: Vec<Device> = Vec::new();
-            discover(&mut discovery_vec);
+            //let mut discovery_vec: Vec<Device> = Vec::new();
+            let discovery_data = Rc::new(RefCell::new(Vec::new()));
+            //discover(&mut discovery_vec);
 
             let selected_index: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
 
             let main_window_clone = main_window.clone();
             let selected_index_for_discovery_dialog = selected_index.clone();
-            let discovery_dialog = create_discovery_dialog(Some(&main_window_clone), &discovery_vec, selected_index_for_discovery_dialog);
+            let discovery_data_clone = Rc::clone(&discovery_data);
+            let discovery_dialog = create_discovery_dialog(Some(&main_window_clone), discovery_data_clone, selected_index_for_discovery_dialog);
 
             let selected_index_for_close = selected_index.clone();
-            let discovery_vec_for_close = discovery_vec.clone();
+            let discovery_data_for_close =Rc::clone(&discovery_data);
             let app_for_close = app.clone();
             let main_window_for_close = main_window.clone();
             discovery_dialog.connect_close_request(move |_| {
@@ -59,7 +61,7 @@ fn main() {
                 match index {
                     Some(i) => {
                         if i >= 0 {
-                            let device = discovery_vec_for_close[(i-1) as usize];
+                            let device = discovery_data_for_close.borrow()[(i-1) as usize];
                             let radio = Arc::new(Mutex::new(Radio::load(device)));
 
                             let mut radio_clone_for_show = radio.clone();
@@ -90,6 +92,8 @@ fn main() {
             });
 
             discovery_dialog.present();
+
+            println!("After dialog present");
 
     });
 

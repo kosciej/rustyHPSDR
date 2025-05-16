@@ -46,11 +46,11 @@ pub struct Device {
 }
 
 
-fn add_device(devices: &mut Vec<Device>, address: SocketAddr, my_address: SocketAddr, device: u8,protocol: u8,version:u8,status: u8,mac: [u8;6],supported_receivers: u8,supported_transmitters: u8,adcs: u8,frequency_min: u64,frequency_max: u64) {
-    devices.push(Device{address,my_address,device,protocol,version,status,mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max});
+fn add_device(devices: Rc<RefCell<Vec<Device>>>, address: SocketAddr, my_address: SocketAddr, device: u8,protocol: u8,version:u8,status: u8,mac: [u8;6],supported_receivers: u8,supported_transmitters: u8,adcs: u8,frequency_min: u64,frequency_max: u64) {
+    devices.borrow_mut().push(Device{address,my_address,device,protocol,version,status,mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max});
 }
 
-pub fn protocol1_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
+pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: SocketAddr) {
     //let socket = UdpSocket::bind("0.0.0.0:0").expect("bind failed");
     let socket = UdpSocket::bind(socket_addr).expect("bind failed");
     socket.set_broadcast(true).expect("set_broadcast call failed");
@@ -137,9 +137,8 @@ pub fn protocol1_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
                         _=>{ // UNKNOWN - use defaults
                            },
                     }
-                    add_device(devices,src,local_addr,buf[10],1,buf[9],buf[2],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
+                    add_device(Rc::clone(&devices),src,local_addr,buf[10],1,buf[9],buf[2],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
                 } else {
-                    println!("Expected 60 bytes but Received: {:?} From {:?}",amt,src);
                 }
             },
             Err(_e) => {
@@ -150,7 +149,7 @@ pub fn protocol1_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
     drop(socket);
 }
 
-pub fn protocol2_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
+pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: SocketAddr) {
     //let socket = UdpSocket::bind("0.0.0.0:0").expect("bind failed");
     let socket = UdpSocket::bind(socket_addr).expect("bind failed");
     socket.set_broadcast(true).expect("set_broadcast call failed");
@@ -238,7 +237,7 @@ pub fn protocol2_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
                            },
                     }
                     let local_addr = socket.local_addr().expect("failed to get local address");
-                    add_device(devices,src,local_addr,buf[11],2,buf[13],buf[4],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
+                    add_device(Rc::clone(&devices),src,local_addr,buf[11],2,buf[13],buf[4],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
                 } else {
                     println!("Expected 60 bytes but Received: {:?} From {:?}",amt,src);
                 }
@@ -251,19 +250,20 @@ pub fn protocol2_discovery(devices: &mut Vec<Device>, socket_addr: SocketAddr) {
     drop(socket);
 }
 
-pub fn discover(devices: &mut Vec<Device>) {
+pub fn discover(devices: Rc<RefCell<Vec<Device>>>) {
+    devices.borrow_mut().clear();
     let network_interfaces = NetworkInterface::show().unwrap();
     for itf in network_interfaces.iter() {
         if itf.addr.len()>0 {
             let std::net::IpAddr::V4(ip_addr) = itf.addr[0].ip() else { todo!() };
             let socket_address = SocketAddr::new(std::net::IpAddr::V4(ip_addr),0);
-            protocol1_discovery(devices, socket_address);
-            protocol2_discovery(devices, socket_address);
+            protocol1_discovery(Rc::clone(&devices), socket_address);
+            protocol2_discovery(Rc::clone(&devices), socket_address);
         }
     }
 }
 
-pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: &Vec<Device>, selected_index: Rc<RefCell<Option<i32>>>) -> Window {
+pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, discovery_data: Rc<RefCell<Vec<Device>>>, selected_index: Rc<RefCell<Option<i32>>>) -> Window {
 
     let window = Window::builder()
         .title("rustyHPSDR Discovery")
@@ -275,6 +275,7 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: 
         .build();
 
 
+
     let list = ListBox::builder()
             .margin_top(5)
             .margin_end(5)
@@ -284,11 +285,15 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: 
 
     list.set_vexpand(true);
 
+    let discovery_data_clone = Rc::clone(&discovery_data);
+    discover(discovery_data_clone);
+    populate_list_box(&list.clone(), Rc::clone(&discovery_data));
+/*
     let header = create_discovery_row(&["Device", "IP", "MAC", "Protocol", "Version", "Status"], true);
     header.set_sensitive(false); // Disable selection
     list.append(&header);
 
-    let discovery_iter = devices.iter();
+    let discovery_iter = discovery_data.borrow().clone().into_iter();
     let mut radio = "Unknown";
     for val in discovery_iter {
         match val.protocol {
@@ -338,8 +343,9 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: 
         let row = create_discovery_row(&[radio, &ip, &mac, &protocol, &version, &status], false);
         list.append(&row);
     }
+*/
 
-    if devices.len() > 0 {
+    if discovery_data.borrow().len() > 0 {
         if let Some(first_radio_row) = list.row_at_index(1) {
             first_radio_row.activate();
         }
@@ -348,7 +354,7 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: 
     let button_box = gtk::Box::new(Orientation::Horizontal, 5);
     button_box.set_halign(gtk::Align::End);
 
-    let rediscover_button = Button::builder().label("Discover").build();
+    let rediscover_button = Button::builder().label("Rediscover").build();
     let cancel_button = Button::builder().label("Cancel").build();
     let start_button = Button::builder().label("Start").build();
 
@@ -363,8 +369,9 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: 
 
     let window_clone = window.clone();
     let selected_index_for_start = selected_index.clone();
+    let list_clone = list.clone();
     start_button.connect_clicked(move |_| {
-        if let Some(selected_row) = list.selected_row() {
+        if let Some(selected_row) = list_clone.selected_row() {
             let index = selected_row.index();
             *selected_index_for_start.borrow_mut() = Some(index);
         } else {
@@ -380,13 +387,80 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, devices: 
 
     let window_clone = window.clone();
     let selected_index_for_rediscover = selected_index.clone();
+    //let mut devices_for_rediscover = devices.clone();
+    let discovery_data_clone = Rc::clone(&discovery_data);
+    let list_clone = list.clone();
     rediscover_button.connect_clicked(move |_| {
-        let index = -1;
-        *selected_index_for_rediscover.borrow_mut() = Some(index);
-        window_clone.close();
+        let discovery_data_clone_clone = Rc::clone(&discovery_data_clone);
+        discover(discovery_data_clone_clone);
+        populate_list_box(&list_clone.clone(), Rc::clone(&discovery_data_clone));
     });
 
     window
+}
+
+fn populate_list_box(list: &ListBox, discovery_data: Rc<RefCell<Vec<Device>>>) {
+
+    // Remove any existing rows
+    while let Some(row) = list.row_at_index(0) {
+        list.remove(&row);
+    }
+
+    // add the Devices
+    let header = create_discovery_row(&["Device", "IP", "MAC", "Protocol", "Version", "Status"], true);
+    header.set_sensitive(false); // Disable selection
+    list.append(&header);
+
+    let discovery_iter = discovery_data.borrow().clone().into_iter();
+    let mut radio = "Unknown";
+    for val in discovery_iter {
+        match val.protocol {
+          1=>match val.device {
+                 0=>radio = "METIS",
+                 1=>radio = "HERMES",
+                 2=>radio = "GRIFFIN",
+                 4=>radio = "ANGELIA",
+                 5=>radio = "ORION",
+                 6=> {
+                     if val.version < 42 {
+                         radio = "HERMES LITE 1";
+                     } else {
+                         radio = "HERMES LITE 2";
+                     }
+                     },
+                 10=>radio = "ORION2",
+                 _=>radio = "Unknown Radio",
+             },
+          2=>match val.device {
+                 0=>radio = "ATLAS",
+                 1=>radio = "HERMES",
+                 2=>radio = "HERMES2",
+                 3=>radio = "ANGELIA",
+                 4=>radio = "ORION",
+                 5=>radio = "ORION2",
+                 6=>radio = "HERMES_LITE",
+                 _=>radio = "Unknown Radio",
+             },
+
+          _=>radio = "Unknown Protocol",
+        }
+
+        let ip=format!("{}",val.address);
+        let mac=format!("{:02X?}",val.mac);
+        let protocol=format!("{}",val.protocol);
+        let version=format!("{}.{}",val.version/10,val.version%10);
+        let mut status = "None";
+        if val.status == 2 {
+            status = "Available";
+        } else if val.status == 3 {
+            status = "In Use";
+        } else {
+            status = "Unknown";
+        }
+
+        let row = create_discovery_row(&[radio, &ip, &mac, &protocol, &version, &status], false);
+        list.append(&row);
+    }
 }
 
 fn create_discovery_row(columns: &[&str], is_header: bool) -> ListBoxRow {

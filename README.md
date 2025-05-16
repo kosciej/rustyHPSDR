@@ -18,7 +18,7 @@ You will need to install Rust and Cargo. See [Rust install](https://www.rust-lan
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/wait.png">
 
-You can either just wait or click on Wait to close the dialog or you can change the timeout value by installing dconf-editor and change the /org/gnome/mutter/check-alive-timeout value form the default of 5000 to 60000.
+You can either just wait or click on Wait to close the dialog or you can change the timeout value by installing dconf-editor and change the /org/gnome/mutter/check-alive-timeout value from the default of 5000 to 60000.
 
 # When a device is selected and Start button clicked the radio will start running
 

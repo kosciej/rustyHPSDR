@@ -288,63 +288,6 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, discovery
     let discovery_data_clone = Rc::clone(&discovery_data);
     discover(discovery_data_clone);
     populate_list_box(&list.clone(), Rc::clone(&discovery_data));
-/*
-    let header = create_discovery_row(&["Device", "IP", "MAC", "Protocol", "Version", "Status"], true);
-    header.set_sensitive(false); // Disable selection
-    list.append(&header);
-
-    let discovery_iter = discovery_data.borrow().clone().into_iter();
-    let mut radio = "Unknown";
-    for val in discovery_iter {
-        match val.protocol {
-          1=>match val.device {
-                 0=>radio = "METIS",
-                 1=>radio = "HERMES",
-                 2=>radio = "GRIFFIN",
-                 4=>radio = "ANGELIA",
-                 5=>radio = "ORION",
-                 6=> {
-                     if val.version < 42 {
-                         radio = "HERMES LITE 1";
-                     } else {
-                         radio = "HERMES LITE 2";
-                     }
-                     },
-                 10=>radio = "ORION2",
-                 _=>radio = "Unknown Radio",
-             },
-          2=>match val.device {
-                 0=>radio = "ATLAS",
-                 1=>radio = "HERMES",
-                 2=>radio = "HERMES2",
-                 3=>radio = "ANGELIA",
-                 4=>radio = "ORION",
-                 5=>radio = "ORION2",
-                 6=>radio = "HERMES_LITE",
-                 _=>radio = "Unknown Radio",
-             },
-
-          _=>radio = "Unknown Protocol",
-        }
-
-        let ip=format!("{}",val.address);
-        let mac=format!("{:02X?}",val.mac);
-        let protocol=format!("{}",val.protocol);
-        let version=format!("{}.{}",val.version/10,val.version%10);
-        let mut status = "None";
-        if val.status == 2 {
-            status = "Available";
-        } else if val.status == 3 {
-            status = "In Use";
-        } else {
-            status = "Unknown";
-        }
-
-        let row = create_discovery_row(&[radio, &ip, &mac, &protocol, &version, &status], false);
-        list.append(&row);
-    }
-*/
-
     if discovery_data.borrow().len() > 0 {
         if let Some(first_radio_row) = list.row_at_index(1) {
             first_radio_row.activate();
@@ -399,6 +342,40 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, discovery
     window
 }
 
+pub fn device_name(device: Device) -> String {
+    let mut radio = "Unknown";
+    match device.protocol {
+        1=>match device.device {
+             0=>radio = "METIS",
+             1=>radio = "HERMES",
+             2=>radio = "GRIFFIN",
+             4=>radio = "ANGELIA",
+             5=>radio = "ORION",
+             6=> {
+                 if device.version < 42 {
+                     radio = "HERMES LITE 1";
+                 } else {
+                     radio = "HERMES LITE 2";
+                 }
+                 },
+             10=>radio = "ORION2",
+             _=>radio = "Unknown Radio",
+        },
+        2=>match device.device {
+             0=>radio = "ATLAS",
+             1=>radio = "HERMES",
+             2=>radio = "HERMES2",
+             3=>radio = "ANGELIA",
+             4=>radio = "ORION",
+             5=>radio = "ORION2",
+             6=>radio = "HERMES_LITE",
+             _=>radio = "Unknown Radio",
+        },
+        _=>radio = "Unknown Protocol",
+    }
+    radio.to_string()
+}
+
 fn populate_list_box(list: &ListBox, discovery_data: Rc<RefCell<Vec<Device>>>) {
 
     // Remove any existing rows
@@ -412,39 +389,8 @@ fn populate_list_box(list: &ListBox, discovery_data: Rc<RefCell<Vec<Device>>>) {
     list.append(&header);
 
     let discovery_iter = discovery_data.borrow().clone().into_iter();
-    let mut radio = "Unknown";
     for val in discovery_iter {
-        match val.protocol {
-          1=>match val.device {
-                 0=>radio = "METIS",
-                 1=>radio = "HERMES",
-                 2=>radio = "GRIFFIN",
-                 4=>radio = "ANGELIA",
-                 5=>radio = "ORION",
-                 6=> {
-                     if val.version < 42 {
-                         radio = "HERMES LITE 1";
-                     } else {
-                         radio = "HERMES LITE 2";
-                     }
-                     },
-                 10=>radio = "ORION2",
-                 _=>radio = "Unknown Radio",
-             },
-          2=>match val.device {
-                 0=>radio = "ATLAS",
-                 1=>radio = "HERMES",
-                 2=>radio = "HERMES2",
-                 3=>radio = "ANGELIA",
-                 4=>radio = "ORION",
-                 5=>radio = "ORION2",
-                 6=>radio = "HERMES_LITE",
-                 _=>radio = "Unknown Radio",
-             },
-
-          _=>radio = "Unknown Protocol",
-        }
-
+        let radio = device_name(val);
         let ip=format!("{}",val.address);
         let mac=format!("{:02X?}",val.mac);
         let protocol=format!("{}",val.protocol);
@@ -458,7 +404,7 @@ fn populate_list_box(list: &ListBox, discovery_data: Rc<RefCell<Vec<Device>>>) {
             status = "Unknown";
         }
 
-        let row = create_discovery_row(&[radio, &ip, &mac, &protocol, &version, &status], false);
+        let row = create_discovery_row(&[&radio, &ip, &mac, &protocol, &version, &status], false);
         list.append(&row);
     }
 }

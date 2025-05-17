@@ -26,6 +26,7 @@ use std::sync::{Arc, Mutex};
 use rustyHPSDR::discovery::Device;
 use rustyHPSDR::discovery::discover;
 use rustyHPSDR::discovery::create_discovery_dialog;
+use rustyHPSDR::discovery::device_name;
 use rustyHPSDR::radio::Radio;
 use rustyHPSDR::receiver::Receiver;
 
@@ -62,6 +63,11 @@ fn main() {
                     Some(i) => {
                         if i >= 0 {
                             let device = discovery_data_for_close.borrow()[(i-1) as usize];
+
+                            let radio = device_name(device);
+                            let title = format!("rustyHPSDR: {} {:?} Protocol {}", radio, device.address, device.protocol);
+                            main_window_for_close.set_title(Some(&title));
+
                             let radio = Arc::new(Mutex::new(Radio::load(device)));
 
                             let mut radio_clone_for_show = radio.clone();

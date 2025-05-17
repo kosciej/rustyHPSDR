@@ -22,6 +22,14 @@ You can either just wait or click on Wait to close the dialog or you can change 
 
 # When a device is selected and Start button clicked the radio will start running
 
+Currently Split, Mic Gain and Drive do not do anything. They will once transmit is implemented.
+
+Most of the other buttons are self explanitary.
+
+To change frequency you can use the scroll wheel in the VFO window, the Spectrum window and Waterfall window or you can click on the frequency to move to.
+
+The CTUN button enables Click Tuning. When active it allows you to click within the Spectrum or Waterfall to QSY without shifting the Spectrum or Waterfall display. When "CTUN" is inactive, clicking on the Spectrum re-centers the Spectrum, thereby shifting the entire Spectrum. 
+
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot1.png">
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot2.png">

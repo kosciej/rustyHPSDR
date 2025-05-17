@@ -26,6 +26,8 @@ You can either just wait or click on Wait to close the dialog or you can change 
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot2.png">
 
+<img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/cursor.png">
+
 # pre-requisites for WDSP
 <pre>
 sudo apt install -y libfftw3-dev

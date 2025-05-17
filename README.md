@@ -30,9 +30,9 @@ You can either just wait or click on Wait to close the dialog or you can change 
 
 If you move the mouse over to the left side of the spectrum display the cursor will change to an up/down arrow that will allow you to use the scroll wheel to move the limits up and down for the current band.
 
-You can do the same fo the waterfall display to adjst the limits up and down for the current band.
+You can do the same fo the waterfall display to adjust the limits up and down for the current band.
 
-Note that the Configure button currently bring up a dialog that lets you set the limits for each band.
+Note that the Configure button currently brings up a dialog that lets you set the limits for all bands.
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/cursor.png">
 

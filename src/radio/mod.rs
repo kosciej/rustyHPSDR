@@ -744,8 +744,35 @@ impl Radio {
 
         let mut r = radio.lock().unwrap();
 
+        let tx_grid = Grid::builder()
+            .margin_start(0)
+            .margin_end(0)
+            .margin_top(0)
+            .margin_bottom(0)
+            .halign(Align::Center)
+            .valign(Align::Center)
+            .row_spacing(2)
+            .column_spacing(2)
+            .build();
+        main_grid.attach(&tx_grid, 0, 1, 1, 1);
+
+        let button_mox = ToggleButton::with_label("MOX");
+        tx_grid.attach(&button_mox, 0, 0, 1, 1);
+        let radio_for_nr = Arc::clone(&radio);
+        button_mox.connect_clicked(move |_| {
+            let mut r = radio_for_nr.lock().unwrap();
+        });
+
+        let button_tun = ToggleButton::with_label("TUN");
+        tx_grid.attach(&button_tun, 0, 1, 1, 1);
+        let radio_for_nr = Arc::clone(&radio);
+        button_tun.connect_clicked(move |_| {
+            let mut r = radio_for_nr.lock().unwrap();
+        });
+
+        
         let afgain_frame = Frame::new(Some("AF Gain"));
-        main_grid.attach(&afgain_frame, 0, 1, 1, 1);
+        main_grid.attach(&afgain_frame, 0, 2, 1, 1);
         let afgain_adjustment = Adjustment::new(
             (r.receiver[0].afgain * 100.0).into(), // Initial value
             0.0,  // Minimum value
@@ -769,7 +796,7 @@ impl Radio {
         });
 
         let agcgain_frame = Frame::new(Some("AGC Gain"));
-        main_grid.attach(&agcgain_frame, 0, 2, 1, 1);
+        main_grid.attach(&agcgain_frame, 0, 3, 1, 1);
         let agcgain_adjustment = Adjustment::new(
             r.receiver[0].agcgain.into(), // Initial value
             -20.0,  // Minimum value
@@ -794,7 +821,7 @@ impl Radio {
 
 
         let micgain_frame = Frame::new(Some("Mic Gain"));
-        main_grid.attach(&micgain_frame, 0, 3, 1, 1);
+        main_grid.attach(&micgain_frame, 0, 4, 1, 1);
         let micgain_adjustment = Adjustment::new(
             50.0, // Initial value
             0.0,  // Minimum value
@@ -809,7 +836,7 @@ impl Radio {
         micgain_frame.set_child(Some(&micgain_scale));
 
         let drive_frame = Frame::new(Some("TX Drive"));
-        main_grid.attach(&drive_frame, 0, 4, 1, 1);
+        main_grid.attach(&drive_frame, 0, 5, 1, 1);
         let drive_adjustment = Adjustment::new(
             50.0, // Initial value
             0.0,  // Minimum value
@@ -825,7 +852,7 @@ impl Radio {
 
 
         let agc_frame = Frame::new(Some("AGC"));
-        main_grid.attach(&agc_frame, 0, 5, 1, 1);
+        main_grid.attach(&agc_frame, 0, 6, 1, 1);
 
         let agc_model = ListStore::new(&[f32::static_type(), String::static_type()]);
         let agc_items = vec![
@@ -941,6 +968,55 @@ impl Radio {
             } 
         });
 
+        let pan_frame = Frame::new(Some("Pan"));
+        main_grid.attach(&pan_frame, 6, 9, 3, 1);
+        let pan_adjustment = Adjustment::new(
+            r.receiver[0].pan.into(),
+            0.0,  // Minimum value
+            100.0, // Maximum value
+            1.0,  // Step increment
+            1.0, // Page increment
+            0.0,  // Page size (not typically used for simple scales)
+        );
+        let pan_scale = Scale::new(Orientation::Horizontal, Some(&pan_adjustment));
+        pan_scale.set_digits(0); // Display whole numbers
+        pan_scale.set_draw_value(true); // Display the current value next to the slider
+        pan_frame.set_child(Some(&pan_scale));
+
+        let pan_radio = Arc::clone(&radio);
+        pan_adjustment.connect_value_changed(move |adjustment| {
+            let mut r = pan_radio.lock().unwrap();
+            if r.receiver[0].zoom > 1 {
+                r.receiver[0].pan = adjustment.value() as i32;
+            } else {
+                r.receiver[0].pan = 0;
+            }
+        });
+
+        let zoom_frame = Frame::new(Some("Zoom"));
+        main_grid.attach(&zoom_frame, 3, 9, 3, 1);
+        let zoom_adjustment = Adjustment::new(
+            r.receiver[0].zoom.into(),
+            1.0,  // Minimum value
+            16.0, // Maximum value
+            1.0,  // Step increment
+            1.0, // Page increment
+            0.0,  // Page size (not typically used for simple scales)
+        );
+        let zoom_scale = Scale::new(Orientation::Horizontal, Some(&zoom_adjustment));
+        zoom_scale.set_digits(0); // Display whole numbers
+        zoom_scale.set_draw_value(true); // Display the current value next to the slider
+        zoom_frame.set_child(Some(&zoom_scale));
+
+        let zoom_radio = Arc::clone(&radio);
+        zoom_adjustment.connect_value_changed(move |adjustment| {
+            let mut r = zoom_radio.lock().unwrap();
+            r.receiver[0].zoom = adjustment.value() as i32;
+            r.receiver[0].init_analyzer();
+            if adjustment.value() == 0.0 {
+                r.receiver[0].pan = 0;
+            }
+        });
 
         r.receiver[0].init();
 
@@ -978,18 +1054,21 @@ impl Radio {
         //let band_info_for_timeout = band_info.clone();
         let pixbuf_for_timeout = pixbuf.clone();
         glib::timeout_add_local(Duration::from_millis(update_interval as u64), move || {
-            let mut pixels = vec![0.0; spectrum_display_for_timeout.width() as usize];
+            let r = radio_clone_for_timeout.lock().unwrap();
+            let zoom = r.receiver[0].zoom;
+            let channel = r.receiver[0].channel;
+            drop(r);
+
+            let mut pixels = vec![0.0; (spectrum_display_for_timeout.width() * zoom) as usize];
             let mut flag: c_int = 0;
             unsafe {
-                let r = radio_clone_for_timeout.lock().unwrap();
-                GetPixels(r.receiver[0].channel, 0, pixels.as_mut_ptr(), &mut flag);
+                GetPixels(channel, 0, pixels.as_mut_ptr(), &mut flag);
             }
             if flag != 0 {
-                let radio_clone_for_draw = radio_clone_for_timeout.clone(); 
-                //let meter_label_for_draw = meter_label.clone();
                 let meter_display_for_draw = meter_display_for_timeout.clone();
                 let pixbuf_for_draw = pixbuf_for_timeout.clone();
                 let waterfall_display_for_draw = waterfall_display_for_timeout.clone();
+                let radio_clone_for_draw = Arc::clone(&radio_clone_for_timeout);
                 spectrum_display_for_timeout.set_draw_func(move |da, cr, width, height|{
                     {
                         draw_spectrum(da, cr, width, height, &radio_clone_for_draw, &pixels);
@@ -997,13 +1076,10 @@ impl Radio {
                         update_waterfall(width, height, &radio_clone_for_draw, &pixbuf_for_waterfall, &pixels);
                     }
 
-                    let mut r = radio_clone_for_draw.lock().unwrap();
                     unsafe {
-                        r.s_meter_dbm = GetRXAMeter(r.receiver[0].channel,rxaMeterType_RXA_S_AV as i32);
+                        let mut r = radio_clone_for_draw.lock().unwrap();
+                        r.s_meter_dbm = GetRXAMeter(channel,rxaMeterType_RXA_S_AV as i32);
                     }
-                    //let s = (meter_db + 121.0) / 6.0;
-                    //let label_text = format!("S{} ({} dBm)", s as i32, meter_db as i32);
-                    //meter_label_for_draw.set_label(&label_text);
 
                     let pixbuf_for_waterfall_draw = pixbuf_for_draw.clone();
                     waterfall_display_for_draw.set_draw_func(move |_da, cr, width, height| {
@@ -1098,8 +1174,16 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, f: &Label, x: f64, widt
         
     let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
     let frequency_high = r.receiver[0].frequency_a + (r.receiver[0].sample_rate/2) as f32;
-    let hz_per_pixel=(frequency_high - frequency_low) as f32 / width as f32;
-    let f1 = frequency_low + (x as f32 * hz_per_pixel);
+    let frequency_range = frequency_high - frequency_low;
+                
+    let display_frequency_range = frequency_range / r.receiver[0].zoom as f32;
+    let display_frequency_offset = ((frequency_range - display_frequency_range) / 100.0) * r.receiver[0].pan as f32;  
+    let display_frequency_low = frequency_low + display_frequency_offset;
+    let display_frequency_high = frequency_high + display_frequency_offset;
+    let display_hz_per_pixel = display_frequency_range as f32 / width as f32;
+
+
+    let f1 = display_frequency_low + (x as f32 * display_hz_per_pixel);
     let f1 = (f1 as u32 / r.receiver[0].step as u32 * r.receiver[0].step as u32) as f32;
  
     if r.receiver[0].ctun {
@@ -1159,15 +1243,40 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
 
     let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
     let frequency_high = r.receiver[0].frequency_a + (r.receiver[0].sample_rate/2) as f32;
-    let hz_per_pixel=(frequency_high - frequency_low) as f32 / width as f32;
-                                
+    let frequency_range = frequency_high - frequency_low;
+    let hz_per_pixel = frequency_range as f32 / pixels.len() as f32;
+
+    let display_frequency_range = frequency_range / r.receiver[0].zoom as f32;
+    let display_frequency_offset = ((frequency_range - display_frequency_range) / 100.0) * r.receiver[0].pan as f32;
+    let display_frequency_low = frequency_low + display_frequency_offset;
+    let display_frequency_high = frequency_high + display_frequency_offset;
+    let display_hz_per_pixel = display_frequency_range as f32 / width as f32;
+
     cr.set_source_rgb(0.5, 0.5, 0.5);
     let mut step = 25000.0;  
     match r.receiver[0].sample_rate {       
          48000 => step = 50000.0,
          96000 => step = 10000.0,   
         192000 => step = 20000.0,
-        384000 => step = 25000.0,
+        384000 => match r.receiver[0].zoom {
+                      1 => step = 25000.0,
+                      2 => step = 25000.0,
+                      3 => step = 10000.0,
+                      4 => step = 10000.0,
+                      5 => step = 10000.0,
+                      6 => step = 5000.0,
+                      7 => step = 5000.0,
+                      8 => step = 5000.0,
+                      9 => step = 5000.0,
+                      10 => step = 5000.0,
+                      11 => step = 2000.0,
+                      12 => step = 2000.0,
+                      13 => step = 2000.0,
+                      14 => step = 2000.0,
+                      15 => step = 2000.0,
+                      16 => step = 2000.0,
+                      _ => step = 25000.0,
+                  },
         768000 => step = 50000.0,
        1536000 => step = 100000.0,
              _ => step = 25000.0,
@@ -1175,9 +1284,9 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
    
     // draw the frequency markers
     cr.set_source_rgb(1.0, 1.0, 1.0);
-    let mut f: f32 = (((frequency_low as i32 + step as i32) / step as i32) * step as i32) as f32;
-    while f < frequency_high {
-        let x = (f - frequency_low) / hz_per_pixel;
+    let mut f: f32 = (((display_frequency_low as i32 + step as i32) / step as i32) * step as i32) as f32;
+    while f < display_frequency_high {
+        let x = (f - display_frequency_low) / display_hz_per_pixel;
         cr.move_to( x.into(), 0.0);
         cr.line_to( x.into(), height.into());
         let text = format!("{}", f);
@@ -1189,14 +1298,14 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
 
     // draw the band limits
     cr.set_source_rgb(1.0, 0.0, 0.0);
-    if frequency_low < r.band_info[b].low && frequency_high > r.band_info[b].low {
-        let x = (r.band_info[b].low - frequency_low) / hz_per_pixel;
+    if display_frequency_low < r.band_info[b].low && display_frequency_high > r.band_info[b].low {
+        let x = (r.band_info[b].low - display_frequency_low) / display_hz_per_pixel;
         cr.move_to( x.into(), 0.0);
         cr.line_to( x.into(), height.into());
     }
 
-    if frequency_low < r.band_info[b].high && frequency_high > r.band_info[b].high {
-        let x = (r.band_info[b].high - frequency_low) / hz_per_pixel;
+    if display_frequency_low < r.band_info[b].high && display_frequency_high > r.band_info[b].high {
+        let x = (r.band_info[b].high - display_frequency_low) / display_hz_per_pixel;
         cr.move_to( x.into(), 0.0);
         cr.line_to( x.into(), height.into());
     }
@@ -1205,7 +1314,6 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
 
     // draw signal levels
     cr.set_source_rgb(0.5, 0.5, 0.5);
-    //for i in (r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32).step_by(r.receiver[0].spectrum_step as usize) {
     for i in r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32 {
         if i % r.receiver[0].spectrum_step as i32 == 0 {
             let y = (r.band_info[b].spectrum_high - i as f32) * dbm_per_line;
@@ -1218,50 +1326,60 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
     }
     cr.stroke().unwrap();
 
-    cr.move_to(0.0, height as f64);
-
+    // draw the spectrum
+    let spectrum_high = r.band_info[b].spectrum_high;
+    let spectrum_width = r.receiver[0].spectrum_width;
+    let pan = ((pixels.len() as f32 - spectrum_width as f32) / 100.0) * r.receiver[0].pan as f32;
     cr.set_source_rgb(1.0, 1.0, 0.0);
-    for (i, &pixel) in pixels.iter().enumerate() {
-        let mut y = ((r.band_info[b].spectrum_high - pixel as f32) * dbm_per_line).floor();
+    cr.move_to(0.0, height as f64);
+    for i in 0..spectrum_width {
+        let pixel = pixels[i as usize + pan as usize];
+        let mut y = ((spectrum_high - pixel as f32) * dbm_per_line).floor();  
         cr.line_to(i as f64, y.into());
     }
     cr.line_to(width as f64, height as f64);
 
+    // fill the spectrum
     let pattern = LinearGradient::new(0.0, (height-20) as f64, 0.0, 0.0);
     let mut s9: f32 = -73.0;
     s9 = ((r.band_info[b].spectrum_high - s9)
                   * (height-20) as f32
                 / (r.band_info[b].spectrum_high - r.band_info[b].spectrum_low)).floor();
     s9 = 1.0-(s9/(height-20) as f32);
-
     pattern.add_color_stop_rgb(0.0,0.0,1.0,0.0); // Green
     pattern.add_color_stop_rgb((s9/3.0).into(),1.0,0.65,0.0); // Orange
     pattern.add_color_stop_rgb(((s9/3.0)*2.0).into(),1.0,1.0,0.0); // Yellow
     pattern.add_color_stop_rgb(s9.into(),1.0,0.0,0.0); // Red
-
     cr.set_source(&pattern).expect("Failed to set source");
     cr.close_path();
     let _ = cr.fill_preserve();
     cr.stroke().unwrap();
 
-    let mut offset: f32 = 0.0;
+
+    let mut frequency = r.receiver[0].frequency_a;
     if r.receiver[0].ctun {
-        offset = (r.receiver[0].ctun_frequency - r.receiver[0].frequency_a) / hz_per_pixel;
+        frequency = r.receiver[0].ctun_frequency;
+    }
+     
+    // see if cursor and filter visible
+    if display_frequency_low < frequency && display_frequency_high > frequency {
+
+        // draw the center line frequency marker
+        let mut x = (frequency - display_frequency_low) / display_hz_per_pixel;
+        cr.set_source_rgb(1.0, 0.0, 0.0);
+        cr.set_line_width(1.0);
+        cr.move_to(x.into(), 0.0);
+        cr.line_to(x.into(), height.into());
+        cr.stroke().unwrap();
+        
+        // draw the filter
+        cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
+        let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
+        let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
+        cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+        let _ = cr.fill();
     }
 
-    // filter
-    cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
-    let filter_left=offset+(width as f32/2.0)+(r.receiver[0].filter_low/hz_per_pixel);
-    let filter_right=offset+(width as f32/2.0)+(r.receiver[0].filter_high/hz_per_pixel);
-    cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
-    let _ = cr.fill();
-
-    // draw the center line frequency marker
-    cr.set_source_rgb(1.0, 0.0, 0.0);
-    cr.set_line_width(1.0);
-    cr.move_to((offset + (width/2) as f32).into(), 0.0);
-    cr.line_to((offset + (width/2) as f32).into(), height.into());
-    cr.stroke().unwrap();
 }
 
 fn draw_waterfall(cr: &Context, width: i32, height: i32, pixbuf: &Rc<RefCell<Option<Pixbuf>>>) {
@@ -1283,19 +1401,22 @@ fn update_waterfall(width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixbuf: 
             let new_pixbuf = old_pixbuf.clone();
             unsafe {
                 let pixels = new_pixbuf.pixels();
-
                 let row_size = width * 3;
 
+                // copy the current waterfall down one line
                 for y in (0..height - 1).rev() { // Iterate in reverse order
                     let src_offset = (y * row_size) as usize;
                     let dest_offset = ((y + 1) * row_size) as usize;
                     pixels.copy_within(src_offset..src_offset + row_size as usize, dest_offset);
                 }
 
-                let w = min(width,new_pixels.len().try_into().unwrap());
-                for x in 0..w {
+                // fill in the top line with the latest spectrum data
+                let spectrum_width = r.receiver[0].spectrum_width;
+                let pan = ((new_pixels.len() as f32 - spectrum_width as f32) / 100.0) * r.receiver[0].pan as f32;
+
+                for x in 0..spectrum_width {
                     let b = r.receiver[0].band.to_usize();
-                    let mut value: f32 = new_pixels[x as usize] as f32;
+                    let mut value: f32 = new_pixels[x as usize + pan as usize] as f32;
                     if value < r.band_info[b].waterfall_low {
                         value = r.band_info[b].waterfall_low;
                     } else if value > r.band_info[b].waterfall_high {

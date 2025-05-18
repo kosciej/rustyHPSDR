@@ -58,11 +58,9 @@ pub struct Receiver {
     pub snb: bool,
     pub fps: f32,
     pub spectrum_width: i32,
-    //pub spectrum_high: f32,
-    //pub spectrum_low: f32,
     pub spectrum_step: f32,
-    //pub waterfall_high: f32,
-    //pub waterfall_low: f32,
+    pub zoom: i32,
+    pub pan: i32,
     pub afgain:  f32,
     pub agc: AGC,
     pub agcgain:  f32,
@@ -112,11 +110,9 @@ impl Receiver {
         let snb: bool = false;
         let fps = 25.0;
         let spectrum_width: i32 = 1024;
-        //let spectrum_high: f32 = band_info[band.to_usize()].spectrum_high;
-        //let spectrum_low: f32 = band_info[band.to_usize()].spectrum_low;
         let spectrum_step: f32 = 10.0;
-        //let waterfall_high: f32 = band_info[band.to_usize()].waterfall_high;
-        //let waterfall_low: f32 = band_info[band.to_usize()].waterfall_low;
+        let zoom: i32 = 1;
+        let pan: i32 = 0;
         let afgain: f32 = 0.5;
         let agc: AGC = AGC::FAST;
         let agcgain: f32 = 80.0;
@@ -136,7 +132,7 @@ impl Receiver {
         let remote_audio_buffer_offset: usize = 4;
         let attenuation: i32 = 0;
 
-        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, /*spectrum_high, spectrum_low,*/ spectrum_step, /*waterfall_high, waterfall_low,*/ afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation/*, spectrum_display, waterfall_display*/ };
+        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation/*, spectrum_display, waterfall_display*/ };
 
         rx
     }
@@ -220,10 +216,10 @@ impl Receiver {
         let fft_size = 8192; 
         let max_w = fft_size + min((keep_time * self.fps) as i32, (keep_time * fft_size as f32  * self.fps) as i32);
         let buffer_size: i32 = self.buffer_size as i32;
-        let spectrum_width = self.spectrum_width;
+        let pixels = self.spectrum_width * self.zoom;
         //thread::spawn(move || { 
             unsafe {
-                SetAnalyzer(0, 1, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, spectrum_width, 1, 0, 0.0, 0.0, max_w);
+                SetAnalyzer(0, 1, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
             }
         //}); 
     }

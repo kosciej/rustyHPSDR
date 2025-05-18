@@ -405,6 +405,9 @@ fn populate_list_box(list: &ListBox, discovery_data: Rc<RefCell<Vec<Device>>>) {
         }
 
         let row = create_discovery_row(&[&radio, &ip, &mac, &protocol, &version, &status], false);
+        if val.status != 2 {
+            row.set_sensitive(false); // Disable selection if in use
+        }
         list.append(&row);
     }
 }

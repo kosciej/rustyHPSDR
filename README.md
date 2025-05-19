@@ -44,6 +44,12 @@ Note that the Configure button currently brings up a dialog that lets you set th
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/cursor.png">
 
+# Zoom and Pan
+
+I have now added the first attemot at Zoom and Pan
+
+<img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/zoom1.png">
+
 # pre-requisites for WDSP
 <pre>
 sudo apt install -y libfftw3-dev

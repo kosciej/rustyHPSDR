@@ -691,9 +691,17 @@ impl Radio {
 
             r.receiver[0].filter_low = low;
             r.receiver[0].filter_high = high;
+
+            if r.receiver[0].mode == Modes::CWL.to_usize() {
+                r.receiver[0].filter_low = -r.receiver[0].cw_sidetone - low;
+                r.receiver[0].filter_high = -r.receiver[0].cw_sidetone + high;
+            } else if r.receiver[0].mode == Modes::CWU.to_usize() {
+                r.receiver[0].filter_low = r.receiver[0].cw_sidetone - low;
+                r.receiver[0].filter_high = r.receiver[0].cw_sidetone + high;
+            }
             unsafe {
                 SetRXAMode(r.receiver[0].channel, r.receiver[0].mode as i32);
-                RXASetPassband(r.receiver[0].channel,r.receiver[0].filter_low.into(),r.receiver[0].filter_high.into());
+                RXASetPassband(r.receiver[0].channel, r.receiver[0].filter_low.into(), r.receiver[0].filter_high.into());
             }
 
             let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
@@ -703,23 +711,31 @@ impl Radio {
         let r = radio.lock().unwrap();
         let mode = r.receiver[0].mode;
         drop(r);
+
         let radio_for_mode_set_callback = Arc::clone(&radio);
         let filter_grid_for_mode_set_callback = filter_grid.clone();
         let mut mode_grid_for_callback = mode_grid.borrow_mut();
         mode_grid_for_callback.set_callback(move|index| {
-            let mut radio = radio_for_mode_set_callback.lock().unwrap();
-            radio.receiver[0].mode = index;
+            let mut r = radio_for_mode_set_callback.lock().unwrap();
+            r.receiver[0].mode = index;
             let filter_grid = filter_grid_for_mode_set_callback.borrow_mut();
             filter_grid.update_filter_buttons(index);
 
-            let (low, high) = filter_grid.get_filter_values(index, 5);
-            radio.receiver[0].filter_low = low;
-            radio.receiver[0].filter_high = high;
-            unsafe {
-                SetRXAMode(radio.receiver[0].channel, radio.receiver[0].mode as i32);
-                RXASetPassband(radio.receiver[0].channel,radio.receiver[0].filter_low.into(),radio.receiver[0].filter_high.into());
-            }
+            let (low, high) = filter_grid.get_filter_values(index, r.receiver[0].filter);
+            r.receiver[0].filter_low = low;
+            r.receiver[0].filter_high = high;
 
+            if r.receiver[0].mode == Modes::CWL.to_usize() {
+                r.receiver[0].filter_low = -r.receiver[0].cw_sidetone - low;
+                r.receiver[0].filter_high = -r.receiver[0].cw_sidetone + high;
+            } else if r.receiver[0].mode == Modes::CWU.to_usize() {
+                r.receiver[0].filter_low = r.receiver[0].cw_sidetone - low;
+                r.receiver[0].filter_high = r.receiver[0].cw_sidetone + high;
+            }
+            unsafe {
+                SetRXAMode(r.receiver[0].channel, r.receiver[0].mode as i32);
+                RXASetPassband(r.receiver[0].channel, r.receiver[0].filter_low.into(), r.receiver[0].filter_high.into());
+            }
         }, mode);
 
         let r = radio.lock().unwrap();
@@ -729,15 +745,22 @@ impl Radio {
         let filter_grid_for_set_callback = filter_grid.clone();
         let mut filter_grid_for_callback = filter_grid.borrow_mut();
         filter_grid_for_callback.set_callback(move|index| {
-            let mut radio = radio_for_filter_callback.lock().unwrap();
+            let mut r = radio_for_filter_callback.lock().unwrap();
             let filter_grid = filter_grid_for_set_callback.borrow();
-            radio.receiver[0].filter = index;
-            let (low, high) = filter_grid.get_filter_values(radio.receiver[0].mode, radio.receiver[0].filter);
-            radio.receiver[0].filter_low = low;
-            radio.receiver[0].filter_high = high;
+            r.receiver[0].filter = index;
+            let (low, high) = filter_grid.get_filter_values(r.receiver[0].mode, r.receiver[0].filter);
+            r.receiver[0].filter_low = low;
+            r.receiver[0].filter_high = high;
+
+            if r.receiver[0].mode == Modes::CWL.to_usize() {
+                r.receiver[0].filter_low = -r.receiver[0].cw_sidetone - low;
+                r.receiver[0].filter_high = -r.receiver[0].cw_sidetone + high;
+            } else if r.receiver[0].mode == Modes::CWU.to_usize() {
+                r.receiver[0].filter_low = r.receiver[0].cw_sidetone - low;
+                r.receiver[0].filter_high = r.receiver[0].cw_sidetone + high;
+            }
             unsafe {
-                SetRXAMode(radio.receiver[0].channel, radio.receiver[0].mode as i32);
-                RXASetPassband(radio.receiver[0].channel,radio.receiver[0].filter_low.into(),radio.receiver[0].filter_high.into());
+                RXASetPassband(r.receiver[0].channel, r.receiver[0].filter_low.into(), r.receiver[0].filter_high.into());
             }
         }, filter);
 
@@ -891,6 +914,30 @@ impl Radio {
         drive_scale.set_digits(0); // Display whole numbers
         drive_scale.set_draw_value(true); // Display the current value next to the slider
         drive_frame.set_child(Some(&drive_scale));
+
+
+        if device.device == 6 { // HERMES LITE
+            let rxgain_frame = Frame::new(Some("RX Gain"));
+            main_grid.attach(&rxgain_frame, 0, 7, 1, 1); 
+            let rxgain_adjustment = Adjustment::new(
+                r.receiver[0].rxgain.into(), // Initial value
+                -12.0,  // Minimum value
+                48.0, // Maximum value
+                1.0,  // Step increment
+                1.0, // Page increment
+                0.0,  // Page size (not typically used for simple scales)
+            );
+            let rxgain_scale = Scale::new(Orientation::Horizontal, Some(&rxgain_adjustment));
+            rxgain_scale.set_digits(0); // Display whole numbers
+            rxgain_scale.set_draw_value(true); // Display the current value next to the slider
+            rxgain_frame.set_child(Some(&rxgain_scale));
+
+            let rxgain_radio = Arc::clone(&radio);
+            rxgain_adjustment.connect_value_changed(move |adjustment| {
+                let mut r = rxgain_radio.lock().unwrap();
+                r.receiver[0].rxgain = adjustment.value() as i32;
+            });
+        }
 
         let noise_grid = Grid::builder()
             .margin_start(0)
@@ -1374,9 +1421,15 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
         
         // draw the filter
         cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
-        let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
-        let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
-        cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+        if r.receiver[0].mode == Modes::CWL.to_usize() || r.receiver[0].mode == Modes::CWU.to_usize() {
+            let filter_left = ((frequency + r.receiver[0].filter_low - r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
+            let filter_right = ((frequency + r.receiver[0].filter_high + r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
+            cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+        } else {
+            let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
+            let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
+            cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+        }
         let _ = cr.fill();
     }
 

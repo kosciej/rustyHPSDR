@@ -18,6 +18,7 @@
 pub mod discovery;
 pub mod radio;
 pub mod receiver;
+pub mod transmitter;
 pub mod bands;
 pub mod modes;
 pub mod filters;

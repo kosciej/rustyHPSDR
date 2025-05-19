@@ -82,6 +82,8 @@ pub struct Receiver {
     pub remote_audio_buffer: Vec<u8>,
     pub remote_audio_buffer_offset: usize,
     pub attenuation: i32,
+    pub rxgain: i32,
+    pub cw_sidetone: f32,
 
 }
 
@@ -131,8 +133,10 @@ impl Receiver {
         let remote_audio_buffer = vec![0u8; remote_audio_buffer_size];
         let remote_audio_buffer_offset: usize = 4;
         let attenuation: i32 = 0;
+        let rxgain: i32 = 0;
+        let cw_sidetone: f32 = 400.0;
 
-        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation/*, spectrum_display, waterfall_display*/ };
+        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_sidetone };
 
         rx
     }
@@ -197,7 +201,11 @@ impl Receiver {
             SetDisplayNumAverage(0, 0, display_average);
 
             SetRXAMode(self.channel, self.mode as i32);
-            RXASetPassband(self.channel,self.filter_low.into(),self.filter_high.into());
+            if self.mode == Modes::CWL.to_usize() || self.mode == Modes::CWU.to_usize() {
+                RXASetPassband(self.channel,(self.cw_sidetone - self.filter_low).into(), (self.cw_sidetone +self.filter_high).into());
+            } else {
+                RXASetPassband(self.channel,self.filter_low.into(),self.filter_high.into());
+            }
 
             if self.ctun {
                 let offset = self.ctun_frequency - self.frequency_a;

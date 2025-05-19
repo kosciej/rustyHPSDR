@@ -139,13 +139,21 @@ impl Protocol1 {
         // start the radio running
         let mut r = radio.lock().unwrap();
         loop {
-            self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].attenuation, self.device);
+            if self.device.device == 6 {
+                self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].rxgain, self.device);
+            } else {
+                self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].attenuation, self.device);
+            }
             if self.ozy_command == 1 {
                 break;
             }
         }
         loop {
-            self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].attenuation, self.device);
+            if self.device.device == 6 {
+                self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].rxgain, self.device);
+            } else {
+                self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].attenuation, self.device);
+            }
             if self.ozy_command == 1 {
                 break;
             }
@@ -260,7 +268,11 @@ impl Protocol1 {
                     self.ozy_buffer[self.ozy_buffer_offset] = 0;
                     self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
                     if self.ozy_buffer_offset == OZY_BUFFER_SIZE {
-                        self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].attenuation, self.device);
+                        if self.device.device == 6 {
+                            self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].rxgain, self.device);
+                        } else {
+                            self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].attenuation, self.device);
+                        }
                         self.ozy_buffer_offset = 8;
                     }
                     let ox=r.receiver[0].local_audio_buffer_offset * 2;

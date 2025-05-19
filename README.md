@@ -46,7 +46,7 @@ Note that the Configure button currently brings up a dialog that lets you set th
 
 # Zoom and Pan
 
-I have now added the first attemot at Zoom and Pan
+I have now added the first attempt at Zoom and Pan
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/zoom1.png">
 

@@ -937,6 +937,27 @@ impl Radio {
                 let mut r = rxgain_radio.lock().unwrap();
                 r.receiver[0].rxgain = adjustment.value() as i32;
             });
+        } else {
+            let rxattn_frame = Frame::new(Some("RX Attn"));
+            main_grid.attach(&rxattn_frame, 0, 7, 1, 1);  
+            let rxattn_adjustment = Adjustment::new(
+                r.receiver[0].attenuation.into(), // Initial value
+                0.0,  // Minimum value
+                31.0, // Maximum value
+                1.0,  // Step increment
+                1.0, // Page increment
+                0.0,  // Page size (not typically used for simple scales)
+            );
+            let rxattn_scale = Scale::new(Orientation::Horizontal, Some(&rxattn_adjustment));
+            rxattn_scale.set_digits(0); // Display whole numbers
+            rxattn_scale.set_draw_value(true); // Display the current value next to the slider
+            rxattn_frame.set_child(Some(&rxattn_scale));
+
+            let rxattn_radio = Arc::clone(&radio);
+            rxattn_adjustment.connect_value_changed(move |adjustment| {
+                let mut r = rxattn_radio.lock().unwrap();
+                r.receiver[0].attenuation = adjustment.value() as i32;
+            });
         }
 
         let noise_grid = Grid::builder()

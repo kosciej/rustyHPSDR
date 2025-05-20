@@ -255,6 +255,8 @@ impl Protocol2 {
         buf[1434] = ((f>>8)&0xFF) as u8;
         buf[1435] = (f&0xFF) as u8;
 
+        buf[1443] = rx.attenuation as u8;
+
         self.device.address.set_port(1027);
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
         self.high_priority_sequence += 1;

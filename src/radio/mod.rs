@@ -108,6 +108,8 @@ impl Radio {
     pub fn run(radio: &Arc<Mutex<Radio>>, main_window: &ApplicationWindow, device: Device) {
 
         let content = gtk::Box::new(Orientation::Vertical, 0);
+        content.set_hexpand(true);
+        content.set_vexpand(true);
 
         let provider = gtk::CssProvider::new();
         provider.load_from_data(
@@ -189,10 +191,6 @@ impl Radio {
 
         let mut grid_row = 0;
 
-        // setup default information
-        //let mut rx = Arc::new(Mutex::new(r.receiver[0].clone()));
-        //let mut band_info = Rc::new(RefCell::new(BandInfo::new()));
-
         let configure_button = Button::with_label("Configure");
         let main_window_for_configure = main_window.clone();
         //let band_info_for_configure = band_info.clone();
@@ -235,6 +233,8 @@ impl Radio {
             .row_spacing(2)
             .column_spacing(2)
             .build();
+        vfo_grid.set_hexpand(true);
+        vfo_grid.set_vexpand(true);
         main_grid.attach(&vfo_grid, 3, 0, 2, 1);
 
         let button_a_to_b = Button::with_label("A>B");
@@ -261,19 +261,13 @@ impl Radio {
             if r.receiver[0].ctun {
                 r.receiver[0].ctun_frequency = 0.0;
                 r.receiver[0].ctun = false;
-                unsafe {
-                    SetRXAShiftRun(r.receiver[0].channel, 0);
-                }
+                r.receiver[0].set_ctun(false);
                 let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
                 vfo_a_frequency_for_ctun.set_label(&formatted_value);
             } else {
                 r.receiver[0].ctun_frequency = r.receiver[0].frequency_a;
                 r.receiver[0].ctun = true;
-                unsafe {
-                    SetRXAShiftRun(r.receiver[0].channel, 1);
-                    SetRXAShiftFreq(r.receiver[0].channel, 0.0);
-                    RXANBPSetShiftFrequency(r.receiver[0].channel, 0.0);
-                }
+                r.receiver[0].set_ctun(true);
             }
         });
 
@@ -311,11 +305,7 @@ impl Radio {
             let mut r = radio_for_b_to_a.lock().unwrap();
             if r.receiver[0].ctun {
                 r.receiver[0].ctun_frequency = r.receiver[0].frequency_b;
-                let offset = r.receiver[0].ctun_frequency - r.receiver[0].frequency_a;
-                unsafe {
-                    SetRXAShiftFreq(r.receiver[0].channel, offset.into());
-                    RXANBPSetShiftFrequency(r.receiver[0].channel, offset.into());
-                }
+                r.receiver[0].set_ctun_frequency();
             } else {
                 r.receiver[0].frequency_a = r.receiver[0].frequency_b;
             }
@@ -334,11 +324,7 @@ impl Radio {
                 r.receiver[0].ctun_frequency = temp_frequency;
                 let formatted_value = format_u32_with_separators(r.receiver[0].ctun_frequency as u32);
                 vfo_a_frequency_for_a_swap_b.set_label(&formatted_value);
-                let offset = r.receiver[0].ctun_frequency - r.receiver[0].frequency_a;
-                unsafe {
-                    SetRXAShiftFreq(r.receiver[0].channel, offset.into());
-                    RXANBPSetShiftFrequency(r.receiver[0].channel, offset.into());
-                }
+                r.receiver[0].set_ctun_frequency();
             } else {
                 r.receiver[0].frequency_b = r.receiver[0].frequency_a;
                 r.receiver[0].frequency_a = temp_frequency;
@@ -672,10 +658,7 @@ impl Radio {
             r.receiver[0].frequency_a = r.band_info[index].current;
             if r.receiver[0].ctun {
                 r.receiver[0].ctun_frequency = r.receiver[0].frequency_a;
-                unsafe {
-                    SetRXAShiftFreq(r.receiver[0].channel, 0.0);
-                    RXANBPSetShiftFrequency(r.receiver[0].channel, 0.0);
-                }
+                r.receiver[0].set_ctun_frequency();
             }
 
             if !r.receiver[0].filters_manual {
@@ -700,10 +683,7 @@ impl Radio {
                 r.receiver[0].filter_low = r.receiver[0].cw_sidetone - low;
                 r.receiver[0].filter_high = r.receiver[0].cw_sidetone + high;
             }
-            unsafe {
-                SetRXAMode(r.receiver[0].channel, r.receiver[0].mode as i32);
-                RXASetPassband(r.receiver[0].channel, r.receiver[0].filter_low.into(), r.receiver[0].filter_high.into());
-            }
+            r.receiver[0].set_mode();
 
             let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
             vfo_a_frequency_for_callback.set_label(&formatted_value);
@@ -733,10 +713,7 @@ impl Radio {
                 r.receiver[0].filter_low = r.receiver[0].cw_sidetone - low;
                 r.receiver[0].filter_high = r.receiver[0].cw_sidetone + high;
             }
-            unsafe {
-                SetRXAMode(r.receiver[0].channel, r.receiver[0].mode as i32);
-                RXASetPassband(r.receiver[0].channel, r.receiver[0].filter_low.into(), r.receiver[0].filter_high.into());
-            }
+            r.receiver[0].set_mode();
         }, mode);
 
         let r = radio.lock().unwrap();
@@ -760,9 +737,7 @@ impl Radio {
                 r.receiver[0].filter_low = r.receiver[0].cw_sidetone - low;
                 r.receiver[0].filter_high = r.receiver[0].cw_sidetone + high;
             }
-            unsafe {
-                RXASetPassband(r.receiver[0].channel, r.receiver[0].filter_low.into(), r.receiver[0].filter_high.into());
-            }
+            r.receiver[0].set_filter();
         }, filter);
 
 
@@ -816,9 +791,7 @@ impl Radio {
         afgain_adjustment.connect_value_changed(move |adjustment| {
             let mut r = afgain_radio.lock().unwrap();
             r.receiver[0].afgain = (adjustment.value() / 100.0) as f32;
-            unsafe {
-                SetRXAPanelGain1(r.receiver[0].channel, r.receiver[0].afgain.into());
-            }
+            r.receiver[0].set_afgain();
         });
 
         let agc_frame = Frame::new(Some("AGC"));
@@ -878,9 +851,7 @@ impl Radio {
         agcgain_adjustment.connect_value_changed(move |adjustment| {
             let mut r = agcgain_radio.lock().unwrap();
             r.receiver[0].agcgain = adjustment.value() as f32;
-            unsafe {
-                SetRXAAGCTop(r.receiver[0].channel, r.receiver[0].agcgain.into());
-            }
+            r.receiver[0].set_agcgain();
         });
 
         if device.device == 6 { // HERMES LITE
@@ -906,10 +877,10 @@ impl Radio {
                 r.receiver[0].rxgain = adjustment.value() as i32;
             });
         } else {
-            let rxattn_frame = Frame::new(Some("RX Attn"));
+            let adcattn_frame = Frame::new(Some("ADC Attn"));
             grid_row = grid_row + 1;
-            main_grid.attach(&rxattn_frame, 0, grid_row, 1, 1);  
-            let rxattn_adjustment = Adjustment::new(
+            main_grid.attach(&adcattn_frame, 0, grid_row, 1, 1);  
+            let adcattn_adjustment = Adjustment::new(
                 r.receiver[0].attenuation.into(), // Initial value
                 0.0,  // Minimum value
                 31.0, // Maximum value
@@ -917,14 +888,14 @@ impl Radio {
                 1.0, // Page increment
                 0.0,  // Page size (not typically used for simple scales)
             );
-            let rxattn_scale = Scale::new(Orientation::Horizontal, Some(&rxattn_adjustment));
-            rxattn_scale.set_digits(0); // Display whole numbers
-            rxattn_scale.set_draw_value(true); // Display the current value next to the slider
-            rxattn_frame.set_child(Some(&rxattn_scale));
+            let adcattn_scale = Scale::new(Orientation::Horizontal, Some(&adcattn_adjustment));
+            adcattn_scale.set_digits(0); // Display whole numbers
+            adcattn_scale.set_draw_value(true); // Display the current value next to the slider
+            adcattn_frame.set_child(Some(&adcattn_scale));
 
-            let rxattn_radio = Arc::clone(&radio);
-            rxattn_adjustment.connect_value_changed(move |adjustment| {
-                let mut r = rxattn_radio.lock().unwrap();
+            let adcattn_radio = Arc::clone(&radio);
+            adcattn_adjustment.connect_value_changed(move |adjustment| {
+                let mut r = adcattn_radio.lock().unwrap();
                 r.receiver[0].attenuation = adjustment.value() as i32;
             });
         }
@@ -985,9 +956,7 @@ impl Radio {
             } else {
                 r.receiver[0].nr = true;
             }
-            unsafe {
-                SetRXAEMNRRun(r.receiver[0].channel, r.receiver[0].nr as i32);
-            }
+            r.receiver[0].set_nr();
         });
 
         let button_nb = ToggleButton::with_label("NB2");
@@ -1001,9 +970,7 @@ impl Radio {
             } else {
                 r.receiver[0].nb = true;
             }
-            unsafe {
-                SetEXTNOBRun(r.receiver[0].channel, r.receiver[0].nb as i32);
-            }
+            r.receiver[0].set_nb();
         });
 
         let button_anf = ToggleButton::with_label("ANF");
@@ -1017,9 +984,7 @@ impl Radio {
             } else { 
                 r.receiver[0].anf = true;
             }
-            unsafe {
-                SetRXAANFRun(r.receiver[0].channel, r.receiver[0].anf as i32);
-            }
+            r.receiver[0].set_anf();
         });
 
         let button_snb = ToggleButton::with_label("SNB");
@@ -1033,9 +998,7 @@ impl Radio {
             } else {
                 r.receiver[0].snb = true;
             }
-            unsafe {
-                SetRXASNBARun(r.receiver[0].channel, r.receiver[0].snb as i32);
-            } 
+            r.receiver[0].set_snb();
         });
 
         let pan_frame = Frame::new(Some("Pan"));
@@ -1255,11 +1218,7 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, f: &Label, x: f64, widt
  
     if r.receiver[0].ctun {
         r.receiver[0].ctun_frequency = f1;
-        let offset = r.receiver[0].ctun_frequency - r.receiver[0].frequency_a;
-        unsafe {
-            SetRXAShiftFreq(r.receiver[0].channel, offset.into());
-            RXANBPSetShiftFrequency(r.receiver[0].channel, offset.into());
-        }
+        r.receiver[0].set_ctun_frequency();
         let formatted_value = format_u32_with_separators(r.receiver[0].ctun_frequency as u32);
         f.set_label(&formatted_value);
     } else {
@@ -1283,11 +1242,7 @@ fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64) {
         let formatted_value = format_u32_with_separators(r.receiver[0].ctun_frequency as u32);
         f.set_label(&formatted_value);
 
-        let offset = r.receiver[0].ctun_frequency - r.receiver[0].frequency_a;
-        unsafe {
-            SetRXAShiftFreq(r.receiver[0].channel, offset.into());
-            RXANBPSetShiftFrequency(r.receiver[0].channel, offset.into());
-        }
+        r.receiver[0].set_ctun_frequency();
     } else {
         r.receiver[0].frequency_a = r.receiver[0].frequency_a - (r.receiver[0].step * dy as f32);
         let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);

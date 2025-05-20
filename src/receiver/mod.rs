@@ -227,4 +227,75 @@ impl Receiver {
         //}); 
     }
 
+    pub fn set_filter(&self) {
+        unsafe {
+            RXASetPassband(self.channel, self.filter_low.into(), self.filter_high.into());
+        }
+    }
+
+    pub fn set_mode(&self) {
+        unsafe {
+            SetRXAMode(self.channel, self.mode as i32);
+        }
+        self.set_filter();
+    }
+
+    pub fn set_ctun_frequency(&self) {
+        let offset = self.ctun_frequency - self.frequency_a;
+        unsafe {
+            SetRXAShiftFreq(self.channel, offset.into());
+            RXANBPSetShiftFrequency(self.channel, offset.into());
+        }
+    }
+
+    pub fn set_ctun(&self, state: bool) {
+        if state {
+            unsafe {
+                SetRXAShiftRun(self.channel, 1);
+                self.set_ctun_frequency();
+            }
+        } else {
+            unsafe {
+                SetRXAShiftRun(self.channel, 0);
+            }
+        }
+    }
+
+    pub fn set_afgain(&self) {
+        unsafe {
+            SetRXAPanelGain1(self.channel, self.afgain.into());
+        }
+    }
+
+    pub fn set_agcgain(&self) {
+        unsafe {
+            SetRXAAGCTop(self.channel, self.agcgain.into());
+        }
+    }
+
+    pub fn set_nr(&self) {
+        unsafe {
+            SetRXAEMNRRun(self.channel, self.nr as i32);
+        }  
+    }
+
+    pub fn set_nb(&self) {
+        unsafe {
+            SetEXTNOBRun(self.channel, self.nb as i32);
+        }
+    }
+
+    pub fn set_anf(&self) {
+        unsafe {
+            SetRXAANFRun(self.channel, self.anf as i32);
+        }
+    }
+
+    pub fn set_snb(&self) {
+        unsafe {
+            SetRXASNBARun(self.channel, self.snb as i32);
+        }
+    }
+
+
 }

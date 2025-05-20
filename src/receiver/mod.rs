@@ -20,10 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
-use std::thread;
-use std::time::Duration;
 
-use crate::discovery::Device;
 use crate::agc::AGC;
 use crate::bands::Bands;
 use crate::bands::BandInfo;
@@ -209,11 +206,9 @@ impl Receiver {
 
             if self.ctun {
                 let offset = self.ctun_frequency - self.frequency_a;
-                unsafe {
-                    SetRXAShiftRun(self.channel, 1);
-                    SetRXAShiftFreq(self.channel, offset.into());
-                    RXANBPSetShiftFrequency(self.channel, 0.0);
-                }
+                SetRXAShiftRun(self.channel, 1);
+                SetRXAShiftFreq(self.channel, offset.into());
+                RXANBPSetShiftFrequency(self.channel, 0.0);
             }
         }
     }

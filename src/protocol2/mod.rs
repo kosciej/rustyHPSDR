@@ -44,7 +44,7 @@ pub struct Protocol2 {
 
 impl Protocol2 {
 
-    pub fn new(device: Device, radio: Arc<Mutex<Radio>> ) -> Protocol2 {
+    pub fn new(device: Device) -> Protocol2 {
         let socket = UdpSocket::bind("0.0.0.0:0").expect("bind failed");
         setsockopt(&socket, ReusePort, &true).unwrap();
         setsockopt(&socket, ReuseAddr, &true).unwrap();
@@ -68,7 +68,7 @@ impl Protocol2 {
 
     }
 
-    pub fn run(&mut self, device: Device, radio: Arc<Mutex<Radio>>) {
+    pub fn run(&mut self, radio: Arc<Mutex<Radio>>) {
         let r = radio.lock().unwrap();
 
         let mut buffer = vec![0; 65536];
@@ -113,7 +113,7 @@ impl Protocol2 {
                                 let mut b = HEADER_SIZE;
     
                                 if size >= HEADER_SIZE + data_size {
-                                    for i in 0..iq_sample_count {
+                                    for _i in 0..iq_sample_count {
                                         if buffer[b] & 0x80 != 0 {
                                             i_sample = u32::from_be_bytes([0xFF, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
                                         } else {
@@ -186,7 +186,6 @@ impl Protocol2 {
                 }
             }
         }
-        println!("capture_and_process_udp: EXIT");
     }
 
     pub fn send_general(&mut self) {

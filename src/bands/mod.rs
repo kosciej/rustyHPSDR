@@ -24,7 +24,6 @@ use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 
-use crate::discovery::Device;
 use crate::radio::Radio;
 use crate::modes::Modes;
 use crate::filters::Filters;

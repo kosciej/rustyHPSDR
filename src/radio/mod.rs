@@ -16,7 +16,7 @@
 */
 
 use gtk::prelude::*;
-use gtk::{Adjustment, Align, Application, ApplicationWindow, Button, CellRendererText, CheckButton, ComboBox, ComboBoxText,  DrawingArea, Entry, Frame, Grid, Label, ListBox, ListBoxRow, ListStore, Orientation, Scale, ScrolledWindow, SpinButton, ToggleButton, TreeModel, Widget, Window};
+use gtk::{Adjustment, Align, ApplicationWindow, Button, CellRendererText, ComboBox, DrawingArea, Frame, Grid, Label, ListStore, Orientation, Scale, ToggleButton};
 use gtk::{EventController, EventControllerMotion, EventControllerScroll, EventControllerScrollFlags, GestureClick};
 use gtk::glib::Propagation;
 use gtk::cairo::{Context, LineCap, LineJoin, LinearGradient}; 
@@ -24,10 +24,10 @@ use gtk::gdk::Cursor;
 use gdk_pixbuf::Pixbuf;
 use gdk_pixbuf::Colorspace;
 use glib::ControlFlow::Continue;
+use pangocairo;
 
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::cmp::min;
 use std::fmt::Write;
 use std::mem::drop;
 use std::os::raw::c_int;
@@ -49,7 +49,6 @@ use crate::bands::BandGrid;
 use crate::bands::BandInfo;
 use crate::modes::Modes;
 use crate::modes::ModeGrid;
-use crate::filters::Filters;
 use crate::filters::FilterGrid;
 use crate::agc::AGC;
 use crate::receiver::Receiver;
@@ -188,11 +187,13 @@ impl Radio {
         // add the main window grid
         content.append(&main_grid);
 
+        let mut grid_row = 0;
+
         // setup default information
         //let mut rx = Arc::new(Mutex::new(r.receiver[0].clone()));
         //let mut band_info = Rc::new(RefCell::new(BandInfo::new()));
 
-        let mut configure_button = Button::with_label("Configure");
+        let configure_button = Button::with_label("Configure");
         let main_window_for_configure = main_window.clone();
         //let band_info_for_configure = band_info.clone();
         let radio_for_configure = Arc::clone(&radio);
@@ -430,8 +431,8 @@ impl Radio {
         });
 
         let radio_for_meter_draw = Arc::clone(&radio);
-        meter_display.set_draw_func(move |da, cr, width, height| {
-            let mut r = radio_for_meter_draw.lock().unwrap();
+        meter_display.set_draw_func(move |_da, cr, width, height| {
+            let r = radio_for_meter_draw.lock().unwrap();
             cr.set_source_rgb (1.0, 1.0, 1.0);
             cr.paint().unwrap();
             if width >= 114 {
@@ -494,7 +495,7 @@ impl Radio {
         let spectrum_display_for_motion_event = spectrum_display.clone();
         let last_spectrum_x_clone = last_spectrum_x.clone();
         motion_event_controller_spectrum.connect_motion(
-            move |controller, x, y| {
+            move |_controller, x, _y| {
                 last_spectrum_x_clone.set(x);
                 if x < 40.0 {
                     spectrum_display_for_motion_event.set_cursor(cursor_nsresize.as_ref());
@@ -510,7 +511,7 @@ impl Radio {
         let radio_clone = Arc::clone(&radio);
         let f = vfo_a_frequency.clone();
         let last_spectrum_x_clone = last_spectrum_x.clone();
-        scroll_controller_spectrum.connect_scroll(move |controller, dx, dy| {
+        scroll_controller_spectrum.connect_scroll(move |_controller, _dx, dy| {
             if last_spectrum_x_clone.get() < 40.0 {
                 // adjust spectrum low and high
                 let mut r = radio_clone.lock().unwrap();
@@ -534,7 +535,7 @@ impl Radio {
         );
         let radio_clone = Arc::clone(&radio);
         let f = vfo_a_frequency.clone();
-        scroll_controller_a.connect_scroll(move |controller, dx, dy| {
+        scroll_controller_a.connect_scroll(move |_controller, _dx, dy| {
             spectrum_waterfall_scroll(&radio_clone, &f, dy);
             Propagation::Proceed
         });
@@ -544,22 +545,22 @@ impl Radio {
         let spectrum_click_gesture_clone_for_callback = spectrum_click_gesture.clone();
         let radio_clone = Arc::clone(&radio);
         let f = vfo_a_frequency.clone();
-        spectrum_click_gesture_clone_for_callback.connect_pressed(move |gesture, _, x, y| {
+        spectrum_click_gesture_clone_for_callback.connect_pressed(move |gesture, _, x, _y| {
             let da = gesture.widget().unwrap();
             let width = da.allocated_width();
             spectrum_waterfall_clicked(&radio_clone, &f, x, width);
         });
         spectrum_display.add_controller(<GestureClick as Clone>::clone(&spectrum_click_gesture).upcast::<EventController>());
 
-        let radio_clone = Arc::clone(&radio);
-        spectrum_display.connect_resize(move |_, width, height| {
 /*
+        let radio_clone = Arc::clone(&radio);
+        spectrum_display.connect_resize(move |_, width, _height| {
             let mut r = rx_clone.lock().unwrap();
             println!("Spectrum resized to: {}x{}", width, height);
             r.spectrum_width = width;
             r.init_analyzer();
-*/
         });
+*/
         main_grid.attach(&spectrum_display, 1, 1, 10, 4);
 
 
@@ -578,7 +579,7 @@ impl Radio {
         let waterfall_display_for_motion_event = waterfall_display.clone();
         let last_waterfall_x_clone = last_waterfall_x.clone();
         motion_event_controller_waterfall.connect_motion(
-            move |controller, x, y| {
+            move |_controller, x, _y| {
                 last_waterfall_x_clone.set(x);
                 if x < 40.0 {
                     waterfall_display_for_motion_event.set_cursor(cursor_nsresize.as_ref());
@@ -594,7 +595,7 @@ impl Radio {
         let radio_clone = Arc::clone(&radio);
         let f = vfo_a_frequency.clone();
         let last_waterfall_x_clone = last_waterfall_x.clone();
-        scroll_controller_waterfall.connect_scroll(move |controller, dx, dy| {
+        scroll_controller_waterfall.connect_scroll(move |_controller, _dx, dy| {
             if last_waterfall_x_clone.get() < 40.0 {
                 // adjust spectrum low and high
                 let mut r = radio_clone.lock().unwrap();
@@ -617,7 +618,7 @@ impl Radio {
         let waterfall_click_gesture_clone_for_callback = waterfall_click_gesture.clone();
         let radio_clone = Arc::clone(&radio);
         let f = vfo_a_frequency.clone();
-        waterfall_click_gesture_clone_for_callback.connect_pressed(move |gesture, _, x, y| {
+        waterfall_click_gesture_clone_for_callback.connect_pressed(move |gesture, _, x, _y| {
             let da = gesture.widget().unwrap();
             let width = da.allocated_width();
             spectrum_waterfall_clicked(&radio_clone, &f, x, width);
@@ -625,7 +626,7 @@ impl Radio {
         waterfall_display.add_controller(<GestureClick as Clone>::clone(&waterfall_click_gesture).upcast::<EventController>());
 
         let radio_clone = Arc::clone(&radio);
-        waterfall_display.connect_resize(move |_, width, height| {
+        waterfall_display.connect_resize(move |_, width, _height| {
             let mut r = radio_clone.lock().unwrap();
             //println!("Waterfall resized to: {}x{}", width, height);
             r.receiver[0].spectrum_width = width;
@@ -658,7 +659,7 @@ impl Radio {
         let filter_grid_for_callback = filter_grid.clone();
         let radio_for_callback = Arc::clone(&radio);
         let vfo_a_frequency_for_callback = vfo_a_frequency.clone();
-        let mut r = radio.lock().unwrap();
+        let r = radio.lock().unwrap();
         let band = r.receiver[0].band.to_usize();
         drop(r);
         band_grid_for_callback.set_callback(move|index| {
@@ -777,7 +778,8 @@ impl Radio {
             .row_spacing(2)
             .column_spacing(2)
             .build();
-        main_grid.attach(&tx_grid, 0, 1, 1, 1);
+        grid_row = grid_row + 1;
+        main_grid.attach(&tx_grid, 0, grid_row, 1, 1);
 
         let button_mox = ToggleButton::with_label("MOX");
         tx_grid.attach(&button_mox, 0, 0, 1, 1);
@@ -795,7 +797,8 @@ impl Radio {
 
         
         let afgain_frame = Frame::new(Some("AF Gain"));
-        main_grid.attach(&afgain_frame, 0, 2, 1, 1);
+        grid_row = grid_row + 1;
+        main_grid.attach(&afgain_frame, 0, grid_row, 1, 1);
         let afgain_adjustment = Adjustment::new(
             (r.receiver[0].afgain * 100.0).into(), // Initial value
             0.0,  // Minimum value
@@ -818,64 +821,9 @@ impl Radio {
             }
         });
 
-        let agcgain_frame = Frame::new(Some("AGC Gain"));
-        main_grid.attach(&agcgain_frame, 0, 3, 1, 1);
-        let agcgain_adjustment = Adjustment::new(
-            r.receiver[0].agcgain.into(), // Initial value
-            -20.0,  // Minimum value
-            120.0, // Maximum value
-            1.0,  // Step increment
-            1.0, // Page increment
-            0.0,  // Page size (not typically used for simple scales)
-        );
-        let agcgain_scale = Scale::new(Orientation::Horizontal, Some(&agcgain_adjustment));
-        agcgain_scale.set_digits(0); // Display whole numbers
-        agcgain_scale.set_draw_value(true); // Display the current value next to the slider
-        agcgain_frame.set_child(Some(&agcgain_scale));
-
-        let agcgain_radio = Arc::clone(&radio);
-        agcgain_adjustment.connect_value_changed(move |adjustment| {
-            let mut r = agcgain_radio.lock().unwrap();
-            r.receiver[0].agcgain = adjustment.value() as f32;
-            unsafe {
-                SetRXAAGCTop(r.receiver[0].channel, r.receiver[0].agcgain.into());
-            }
-        });
-
-
-        let micgain_frame = Frame::new(Some("Mic Gain"));
-        main_grid.attach(&micgain_frame, 0, 4, 1, 1);
-        let micgain_adjustment = Adjustment::new(
-            50.0, // Initial value
-            0.0,  // Minimum value
-            100.0, // Maximum value
-            1.0,  // Step increment
-            1.0, // Page increment
-            0.0,  // Page size (not typically used for simple scales)
-        );
-        let micgain_scale = Scale::new(Orientation::Horizontal, Some(&micgain_adjustment));
-        micgain_scale.set_digits(0); // Display whole numbers
-        micgain_scale.set_draw_value(true); // Display the current value next to the slider
-        micgain_frame.set_child(Some(&micgain_scale));
-
-        let drive_frame = Frame::new(Some("TX Drive"));
-        main_grid.attach(&drive_frame, 0, 5, 1, 1);
-        let drive_adjustment = Adjustment::new(
-            50.0, // Initial value
-            0.0,  // Minimum value
-            100.0, // Maximum value
-            1.0,  // Step increment
-            1.0, // Page increment
-            0.0,  // Page size (not typically used for simple scales)
-        );
-        let drive_scale = Scale::new(Orientation::Horizontal, Some(&drive_adjustment));
-        drive_scale.set_digits(0); // Display whole numbers
-        drive_scale.set_draw_value(true); // Display the current value next to the slider
-        drive_frame.set_child(Some(&drive_scale));
-
-
         let agc_frame = Frame::new(Some("AGC"));
-        main_grid.attach(&agc_frame, 0, 6, 1, 1);
+        grid_row = grid_row + 1;
+        main_grid.attach(&agc_frame, 0, grid_row, 1, 1);
 
         let agc_model = ListStore::new(&[f32::static_type(), String::static_type()]);
         let agc_items = vec![
@@ -910,15 +858,35 @@ impl Radio {
             AGC::set_agc(&r.receiver[0]);
         });
 
-        let drive_scale = Scale::new(Orientation::Horizontal, Some(&drive_adjustment));
-        drive_scale.set_digits(0); // Display whole numbers
-        drive_scale.set_draw_value(true); // Display the current value next to the slider
-        drive_frame.set_child(Some(&drive_scale));
+        let agcgain_frame = Frame::new(Some("AGC Gain"));
+        grid_row = grid_row + 1;
+        main_grid.attach(&agcgain_frame, 0, grid_row, 1, 1);
+        let agcgain_adjustment = Adjustment::new(
+            r.receiver[0].agcgain.into(), // Initial value
+            -20.0,  // Minimum value
+            120.0, // Maximum value
+            1.0,  // Step increment
+            1.0, // Page increment
+            0.0,  // Page size (not typically used for simple scales)
+        );
+        let agcgain_scale = Scale::new(Orientation::Horizontal, Some(&agcgain_adjustment));
+        agcgain_scale.set_digits(0); // Display whole numbers
+        agcgain_scale.set_draw_value(true); // Display the current value next to the slider
+        agcgain_frame.set_child(Some(&agcgain_scale));
 
+        let agcgain_radio = Arc::clone(&radio);
+        agcgain_adjustment.connect_value_changed(move |adjustment| {
+            let mut r = agcgain_radio.lock().unwrap();
+            r.receiver[0].agcgain = adjustment.value() as f32;
+            unsafe {
+                SetRXAAGCTop(r.receiver[0].channel, r.receiver[0].agcgain.into());
+            }
+        });
 
         if device.device == 6 { // HERMES LITE
             let rxgain_frame = Frame::new(Some("RX Gain"));
-            main_grid.attach(&rxgain_frame, 0, 7, 1, 1); 
+            grid_row = grid_row + 1;
+            main_grid.attach(&rxgain_frame, 0, grid_row, 1, 1); 
             let rxgain_adjustment = Adjustment::new(
                 r.receiver[0].rxgain.into(), // Initial value
                 -12.0,  // Minimum value
@@ -939,7 +907,8 @@ impl Radio {
             });
         } else {
             let rxattn_frame = Frame::new(Some("RX Attn"));
-            main_grid.attach(&rxattn_frame, 0, 7, 1, 1);  
+            grid_row = grid_row + 1;
+            main_grid.attach(&rxattn_frame, 0, grid_row, 1, 1);  
             let rxattn_adjustment = Adjustment::new(
                 r.receiver[0].attenuation.into(), // Initial value
                 0.0,  // Minimum value
@@ -959,6 +928,39 @@ impl Radio {
                 r.receiver[0].attenuation = adjustment.value() as i32;
             });
         }
+
+
+        let micgain_frame = Frame::new(Some("Mic Gain"));
+        grid_row = grid_row + 1;
+        main_grid.attach(&micgain_frame, 0, grid_row, 1, 1);
+        let micgain_adjustment = Adjustment::new(
+            50.0, // Initial value
+            0.0,  // Minimum value
+            100.0, // Maximum value
+            1.0,  // Step increment
+            1.0, // Page increment
+            0.0,  // Page size (not typically used for simple scales)
+        );
+        let micgain_scale = Scale::new(Orientation::Horizontal, Some(&micgain_adjustment));
+        micgain_scale.set_digits(0); // Display whole numbers
+        micgain_scale.set_draw_value(true); // Display the current value next to the slider
+        micgain_frame.set_child(Some(&micgain_scale));
+
+        let drive_frame = Frame::new(Some("TX Drive"));
+        grid_row = grid_row + 1;
+        main_grid.attach(&drive_frame, 0, grid_row, 1, 1);
+        let drive_adjustment = Adjustment::new(
+            50.0, // Initial value
+            0.0,  // Minimum value
+            100.0, // Maximum value
+            1.0,  // Step increment
+            1.0, // Page increment
+            0.0,  // Page size (not typically used for simple scales)
+        );
+        let drive_scale = Scale::new(Orientation::Horizontal, Some(&drive_adjustment));
+        drive_scale.set_digits(0); // Display whole numbers
+        drive_scale.set_draw_value(true); // Display the current value next to the slider
+        drive_frame.set_child(Some(&drive_scale));
 
         let noise_grid = Grid::builder()
             .margin_start(0)
@@ -1087,25 +1089,23 @@ impl Radio {
         });
 
         r.receiver[0].init();
-
         drop(r);
 
         main_window.set_child(Some(&content));
 
-        let radio_clone_for_protocol = Arc::clone(&radio);
         match device.protocol {
             1 => {
-                let mut p1 = Protocol1::new(device, radio_clone_for_protocol);
+                let mut p1 = Protocol1::new(device);
                 let radio_clone_for_spawn = Arc::clone(&radio);
                 thread::spawn(move || {
-                    p1.run(device, radio_clone_for_spawn);
+                    p1.run(radio_clone_for_spawn);
                 });
             },
             2 => {
-                let mut p2 = Protocol2::new(device, radio_clone_for_protocol);
+                let mut p2 = Protocol2::new(device);
                 let radio_clone_for_spawn = Arc::clone(&radio);
                 thread::spawn(move || {
-                    p2.run(device, radio_clone_for_spawn);
+                    p2.run(radio_clone_for_spawn);
                 });
             },
             _ => eprintln!("Invalid protocol"),
@@ -1133,13 +1133,12 @@ impl Radio {
                 GetPixels(channel, 0, pixels.as_mut_ptr(), &mut flag);
             }
             if flag != 0 {
-                let meter_display_for_draw = meter_display_for_timeout.clone();
                 let pixbuf_for_draw = pixbuf_for_timeout.clone();
                 let waterfall_display_for_draw = waterfall_display_for_timeout.clone();
                 let radio_clone_for_draw = Arc::clone(&radio_clone_for_timeout);
-                spectrum_display_for_timeout.set_draw_func(move |da, cr, width, height|{
+                spectrum_display_for_timeout.set_draw_func(move |_da, cr, width, height|{
                     {
-                        draw_spectrum(da, cr, width, height, &radio_clone_for_draw, &pixels);
+                        draw_spectrum(cr, width, height, &radio_clone_for_draw, &pixels);
                         let pixbuf_for_waterfall = pixbuf_for_draw.clone();
                         update_waterfall(width, height, &radio_clone_for_draw, &pixbuf_for_waterfall, &pixels);
                     }
@@ -1183,11 +1182,11 @@ impl Radio {
                         println!("Successfully loaded radio data from {:?}", path);
                         radio
                     }
-                    Err(e) => {
+                    Err(_e) => {
                         Self::new(device)
                     }
                 },
-                Err(e) => {
+                Err(_e) => {
                     Self::new(device)
                 }
             }
@@ -1200,7 +1199,7 @@ impl Radio {
         let path = Self::config_file_path(device);
         if let Some(parent) = path.parent() {
             if !parent.exists() {
-                if let Err(e) = fs::create_dir_all(parent) {
+                if let Err(_e) = fs::create_dir_all(parent) {
                     return;
                 }
             }
@@ -1247,7 +1246,7 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, f: &Label, x: f64, widt
     let display_frequency_range = frequency_range / r.receiver[0].zoom as f32;
     let display_frequency_offset = ((frequency_range - display_frequency_range) / 100.0) * r.receiver[0].pan as f32;  
     let display_frequency_low = frequency_low + display_frequency_offset;
-    let display_frequency_high = frequency_high + display_frequency_offset;
+    //let display_frequency_high = frequency_high + display_frequency_offset;
     let display_hz_per_pixel = display_frequency_range as f32 / width as f32;
 
 
@@ -1296,7 +1295,7 @@ fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64) {
     }
 }
 
-fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixels: &Vec<f32>) {
+fn draw_spectrum(cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixels: &Vec<f32>) {
     cr.set_source_rgb(0.0, 0.0, 0.0);
     cr.paint().unwrap();
 
@@ -1312,7 +1311,7 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
     let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
     let frequency_high = r.receiver[0].frequency_a + (r.receiver[0].sample_rate/2) as f32;
     let frequency_range = frequency_high - frequency_low;
-    let hz_per_pixel = frequency_range as f32 / pixels.len() as f32;
+    //let hz_per_pixel = frequency_range as f32 / pixels.len() as f32;
 
     let display_frequency_range = frequency_range / r.receiver[0].zoom as f32;
     let display_frequency_offset = ((frequency_range - display_frequency_range) / 100.0) * r.receiver[0].pan as f32;
@@ -1351,18 +1350,22 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
     }
    
     // draw the frequency markers
-    cr.set_source_rgb(1.0, 1.0, 1.0);
     let mut f: f32 = (((display_frequency_low as i32 + step as i32) / step as i32) * step as i32) as f32;
     while f < display_frequency_high {
         let x = (f - display_frequency_low) / display_hz_per_pixel;
+        cr.set_source_rgb(0.5, 0.5, 0.5);
         cr.move_to( x.into(), 0.0);
         cr.line_to( x.into(), height.into());
-        let text = format!("{}", f);
-        cr.move_to( x.into(), 20.0);
+        cr.stroke().unwrap();
+        let text = format_u32_with_separators((f / 1000.0) as u32);
+        cr.set_source_rgb(1.0, 1.0, 0.0);
+        let pango_layout = pangocairo::functions::create_layout(cr);
+        pango_layout.set_text(&text);
+        let (text_width, _text_height) = pango_layout.pixel_size();
+        cr.move_to( (x - (text_width as f32 / 2.0)).into(), 20.0);
         let _ = cr.show_text(&text);
         f = f + step as f32;
     }
-    cr.stroke().unwrap();
 
     // draw the band limits
     cr.set_source_rgb(1.0, 0.0, 0.0);
@@ -1381,18 +1384,19 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
 
 
     // draw signal levels
-    cr.set_source_rgb(0.5, 0.5, 0.5);
     for i in r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32 {
         if i % r.receiver[0].spectrum_step as i32 == 0 {
             let y = (r.band_info[b].spectrum_high - i as f32) * dbm_per_line;
+            cr.set_source_rgb(0.5, 0.5, 0.5);
             cr.move_to(0.0, y.into());
             cr.line_to(width as f64, y.into());
-            let text = format!("{}dbm", i);
+            cr.stroke().unwrap();
+            let text = format!("{} dBm", i);
+            cr.set_source_rgb(1.0, 1.0, 0.0);
             cr.move_to( 5.0, (y-2.0).into());
             let _ = cr.show_text(&text);
         }
     }
-    cr.stroke().unwrap();
 
     // draw the spectrum
     let spectrum_high = r.band_info[b].spectrum_high;
@@ -1402,7 +1406,7 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
     cr.move_to(0.0, height as f64);
     for i in 0..spectrum_width {
         let pixel = pixels[i as usize + pan as usize];
-        let mut y = ((spectrum_high - pixel as f32) * dbm_per_line).floor();  
+        let y = ((spectrum_high - pixel as f32) * dbm_per_line).floor();  
         cr.line_to(i as f64, y.into());
     }
     cr.line_to(width as f64, height as f64);
@@ -1433,7 +1437,7 @@ fn draw_spectrum(area: &DrawingArea, cr: &Context, width: i32, height: i32, radi
     if display_frequency_low < frequency && display_frequency_high > frequency {
 
         // draw the center line frequency marker
-        let mut x = (frequency - display_frequency_low) / display_hz_per_pixel;
+        let x = (frequency - display_frequency_low) / display_hz_per_pixel;
         cr.set_source_rgb(1.0, 0.0, 0.0);
         cr.set_line_width(1.0);
         cr.move_to(x.into(), 0.0);
@@ -1531,7 +1535,4 @@ fn update_waterfall(width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixbuf: 
     };
 
     *pixbuf.borrow_mut() = Some(new_pixbuf);
-}
-
-fn update_meter(radio: &Arc<Mutex<Radio>>, meter_display: &DrawingArea, meter_db: f64) {
 }

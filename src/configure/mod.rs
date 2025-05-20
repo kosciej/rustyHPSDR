@@ -16,14 +16,10 @@
 */
 
 use gtk::prelude::*;
-use gtk::{Align, ApplicationWindow, Box, Button, Grid, Label, Notebook, Orientation, SpinButton, Window};
+use gtk::{Align, ApplicationWindow, Button, Grid, Label, Notebook, Orientation, SpinButton, Window};
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use crate::bands::BandInfo;
-use crate::receiver::Receiver;
 use crate::radio::Radio;
 
 pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Radio>>) -> Window {
@@ -65,10 +61,6 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Rad
     let waterfall_high_title = Label::new(Some("Waterfall High"));
     display_grid.attach(&waterfall_high_title, 4, 0, 1, 1);
 
-    let r = radio.lock().unwrap();
-    let band_info = r.band_info.clone();
-    drop(r);
-    
     let band_info = radio.lock().unwrap().band_info.clone();
 
     for (i, info) in band_info.iter().enumerate() {

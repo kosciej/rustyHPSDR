@@ -23,12 +23,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use rustyHPSDR::discovery::Device;
-use rustyHPSDR::discovery::discover;
 use rustyHPSDR::discovery::create_discovery_dialog;
 use rustyHPSDR::discovery::device_name;
 use rustyHPSDR::radio::Radio;
-use rustyHPSDR::receiver::Receiver;
 
 fn main() {
     let application = Application::builder()
@@ -70,14 +67,13 @@ fn main() {
 
                             let radio = Arc::new(Mutex::new(Radio::load(device)));
 
-                            let mut radio_clone_for_show = radio.clone();
+                            let radio_clone_for_show = radio.clone();
                             let main_window_clone_for_show = main_window_for_close.clone();
                             main_window_for_close.connect_show(move |_| {
                                 Radio::run(&radio_clone_for_show, &main_window_clone_for_show, device);
                             });
                     
-                            let mut radio_clone_for_close = radio.clone();
-                            let main_window_clone_for_close = main_window_for_close.clone();
+                            let radio_clone_for_close = radio.clone();
                             main_window_for_close.connect_close_request(move |_| {
                                 let r = radio_clone_for_close.lock().unwrap();
                                 r.save(device);

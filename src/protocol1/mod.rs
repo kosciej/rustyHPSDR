@@ -19,11 +19,10 @@ use nix::sys::socket::setsockopt;
 use nix::sys::socket::sockopt::{ReuseAddr, ReusePort};
 use rodio::{buffer::SamplesBuffer, OutputStream, Sink, Source};
 use std::net::{UdpSocket};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 use std::os::raw::c_int;
 
 use crate::discovery::Device;
-use crate::receiver::Receiver;
 use crate::radio::Radio;
 use crate::wdsp::*;
 
@@ -78,7 +77,7 @@ pub struct Protocol1 {
 
 impl Protocol1 {
 
-    pub fn new(device: Device, radio: Arc<Mutex<Radio>> ) -> Protocol1 {
+    pub fn new(device: Device) -> Protocol1 {
         let socket = UdpSocket::bind("0.0.0.0:0").expect("bind failed");
         setsockopt(&socket, ReusePort, &true).unwrap();
         setsockopt(&socket, ReuseAddr, &true).unwrap();
@@ -103,9 +102,6 @@ impl Protocol1 {
         let ozy_command: u8 = 1;
         let metis_buffer: Vec<u8> = vec![0; METIS_BUFFER_SIZE];
         let metis_buffer_offset: usize = 8;
-        //let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-        //let sink = Sink::try_new(&stream_handle).unwrap();
-        //sink.play();
 
         let p1 = Protocol1{device,
                            socket,
@@ -134,10 +130,10 @@ impl Protocol1 {
         p1
     }
 
-    pub fn run(&mut self, device: Device, radio: Arc<Mutex<Radio>>) {
+    pub fn run(&mut self, radio: Arc<Mutex<Radio>>) {
 
         // start the radio running
-        let mut r = radio.lock().unwrap();
+        let r = radio.lock().unwrap();
         loop {
             if self.device.device == 6 {
                 self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].rxgain, self.device);
@@ -168,7 +164,7 @@ impl Protocol1 {
         let mut buffer = vec![0; 2048];
         loop {
             match self.socket.recv_from(&mut buffer) {
-                Ok((size, src)) => {
+                Ok((_size, src)) => {
                     match src.port() {
                         1024 => {
                                 if buffer[0] == 0xEF && buffer[1] == 0xFE {
@@ -215,7 +211,7 @@ impl Protocol1 {
         }
         // collect the control bytes
         b = b + 5;
-        for s in 0..self.iq_samples {
+        for _s in 0..self.iq_samples {
             if buffer[b] & 0x80 != 0 {
                 i_sample = u32::from_be_bytes([0xFF, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
             } else {

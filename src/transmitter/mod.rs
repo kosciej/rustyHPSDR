@@ -35,7 +35,7 @@ impl Transmitter {
     pub fn new(chan: u8, protocol: u8 ) -> Transmitter {
 
         let channel: i32 = chan as i32;
-        let mut sample_rate = 48000; // protocol 1 & 2
+        let sample_rate = 48000; // protocol 1 & 2
         let mut dsp_rate = 48000;    // protocol 1
         let mut output_rate = 48000; // protocol 1
         if protocol == 2 {

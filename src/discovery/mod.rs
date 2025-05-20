@@ -328,9 +328,6 @@ pub fn create_discovery_dialog(parent: Option<&impl IsA<gtk::Window>>, discovery
         window_clone.close();
     });
 
-    let window_clone = window.clone();
-    let selected_index_for_rediscover = selected_index.clone();
-    //let mut devices_for_rediscover = devices.clone();
     let discovery_data_clone = Rc::clone(&discovery_data);
     let list_clone = list.clone();
     rediscover_button.connect_clicked(move |_| {

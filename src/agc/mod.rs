@@ -45,11 +45,11 @@ impl AGC {
         *self as i32
     }
 
-    pub fn set_agc(rx: &Receiver) {
+    pub fn set_agc(rx: &Receiver, channel: i32) {
         unsafe {
-            SetRXAAGCMode(rx.channel, rx.agc.to_i32());
-            SetRXAAGCSlope(rx.channel,rx.agcslope);
-            SetRXAAGCTop(rx.channel,rx.agcgain.into());
+            SetRXAAGCMode(channel, rx.agc.to_i32());
+            SetRXAAGCSlope(channel,rx.agcslope);
+            SetRXAAGCTop(channel,rx.agcgain.into());
         }
         match rx.agc {
             AGC::OFF => {
@@ -57,34 +57,34 @@ impl AGC {
                 },
             AGC::LONG => {
                 unsafe {
-                    SetRXAAGCAttack(rx.channel,2);
-                    SetRXAAGCHang(rx.channel,2000);
-                    SetRXAAGCDecay(rx.channel,2000);
-                    SetRXAAGCHangThreshold(rx.channel,rx.agcchangethreshold);
+                    SetRXAAGCAttack(channel,2);
+                    SetRXAAGCHang(channel,2000);
+                    SetRXAAGCDecay(channel,2000);
+                    SetRXAAGCHangThreshold(channel,rx.agcchangethreshold);
                 }
                 },
             AGC::SLOW => {
                 unsafe {
-                    SetRXAAGCAttack(rx.channel,2);
-                    SetRXAAGCHang(rx.channel,1000);
-                    SetRXAAGCDecay(rx.channel,500);
-                    SetRXAAGCHangThreshold(rx.channel,rx.agcchangethreshold);
+                    SetRXAAGCAttack(channel,2);
+                    SetRXAAGCHang(channel,1000);
+                    SetRXAAGCDecay(channel,500);
+                    SetRXAAGCHangThreshold(channel,rx.agcchangethreshold);
                 }
                 },
             AGC::MEDIUM => {
                 unsafe {
-                    SetRXAAGCAttack(rx.channel,2);
-                    SetRXAAGCHang(rx.channel,0);
-                    SetRXAAGCDecay(rx.channel,250);
-                    SetRXAAGCHangThreshold(rx.channel,100);
+                    SetRXAAGCAttack(channel,2);
+                    SetRXAAGCHang(channel,0);
+                    SetRXAAGCDecay(channel,250);
+                    SetRXAAGCHangThreshold(channel,100);
                 }
                 },
             AGC::FAST => {
                 unsafe {
-                    SetRXAAGCAttack(rx.channel,2);
-                    SetRXAAGCHang(rx.channel,0);
-                    SetRXAAGCDecay(rx.channel,50);
-                    SetRXAAGCHangThreshold(rx.channel,100);
+                    SetRXAAGCAttack(channel,2);
+                    SetRXAAGCHang(channel,0);
+                    SetRXAAGCDecay(channel,50);
+                    SetRXAAGCHangThreshold(channel,100);
                 }
                 },
         }

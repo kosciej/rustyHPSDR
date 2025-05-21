@@ -30,6 +30,7 @@ use crate::wdsp::*;
 
 const DEFAULT_SAMPLE_RATE: i32 =384000;
 const DISPLAY_AVERAGE_TIME: f32 = 170.0;
+const SUBRX_CHANNEL_START: i32 = 16;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Receiver {
@@ -82,6 +83,7 @@ pub struct Receiver {
     pub rxgain: i32,
     pub cw_sidetone: f32,
 
+    pub subrx: bool,
 }
 
 impl Receiver {
@@ -132,8 +134,9 @@ impl Receiver {
         let attenuation: i32 = 0;
         let rxgain: i32 = 0;
         let cw_sidetone: f32 = 400.0;
+        let subrx: bool = false;
 
-        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_sidetone };
+        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_sidetone, subrx };
 
         rx
     }
@@ -146,74 +149,88 @@ impl Receiver {
         self.remote_audio_buffer = vec![0u8; self.remote_audio_buffer_size];
         self.remote_audio_buffer_offset = 4;
 
-        let empty_string = String::from("");
-        let c_string = CString::new(empty_string).expect("CString::new failed");
-        let c_char_ptr: *mut c_char = c_string.into_raw();
-        unsafe {
-            OpenChannel(self.channel, self.buffer_size as i32, self.fft_size, self.sample_rate, self.dsp_rate, self.output_rate, 0, 1, 0.010, 0.025, 0.0, 0.010, 0);
-            create_anbEXT(self.channel, 1, self.buffer_size as i32, self.sample_rate.into(), 0.0001, 0.0001, 0.0001, 0.05, 20.0);
-            create_nobEXT(self.channel,1,0,self.buffer_size as i32,self.sample_rate.into(),0.0001,0.0001,0.0001,0.05,20.0);
-            RXASetNC(self.channel, self.fft_size);
-            RXASetMP(self.channel, 0); // low_latency
 
-            SetRXAPanelGain1(self.channel, self.afgain.into());
-            AGC::set_agc(&self);
-            SetRXAAGCTop(self.channel, self.agcgain.into());
-            SetRXAPanelSelect(self.channel, 3);
-            SetRXAPanelPan(self.channel, 0.5);
-            SetRXAPanelCopy(self.channel, 0);
-            SetRXAPanelBinaural(self.channel, 0);
-            SetRXAPanelRun(self.channel, 1);
+        self.init_wdsp(self.channel);
+        self.create_display(self.channel);
+        self.init_analyzer(self.channel);
+
+        self.init_wdsp(self.channel+SUBRX_CHANNEL_START);
+    }
+
+    fn init_wdsp(&self, channel: i32) {
+
+        unsafe {
+            OpenChannel(channel, self.buffer_size as i32, self.fft_size, self.sample_rate, self.dsp_rate, self.output_rate, 0, 1, 0.010, 0.025, 0.0, 0.010, 0);
+            create_anbEXT(channel, 1, self.buffer_size as i32, self.sample_rate.into(), 0.0001, 0.0001, 0.0001, 0.05, 20.0);
+            create_nobEXT(channel,1,0,self.buffer_size as i32,self.sample_rate.into(),0.0001,0.0001,0.0001,0.05,20.0);
+            RXASetNC(channel, self.fft_size);
+            RXASetMP(channel, 0); // low_latency
+
+            SetRXAPanelGain1(channel, self.afgain.into());
+            AGC::set_agc(&self, channel);
+            SetRXAAGCTop(channel, self.agcgain.into());
+            SetRXAPanelSelect(channel, 3);
+            SetRXAPanelPan(channel, 0.5);
+            SetRXAPanelCopy(channel, 0);
+            SetRXAPanelBinaural(channel, 0);
+            SetRXAPanelRun(channel, 1);
 
             //if(self.enable_equalizer) {
-            //  SetRXAGrphEQ(self.channel, rx->equalizer);
-            //  SetRXAEQRun(self.channel, 1);
+            //  SetRXAGrphEQ(channel, rx->equalizer);
+            //  SetRXAEQRun(channel, 1);
             //} else {
-              SetRXAEQRun(self.channel, 0);
+              SetRXAEQRun(channel, 0);
             //}
 
-            SetEXTANBRun(self.channel, 0); //self.nb);
-            SetEXTNOBRun(self.channel, self.nb.into()); //self.nb2);
+            SetEXTANBRun(channel, 0); //self.nb);
+            SetEXTNOBRun(channel, self.nb.into()); //self.nb2);
 
-            SetRXAEMNRPosition(self.channel, 0); //self.nr_agc);
-            SetRXAEMNRgainMethod(self.channel, 2); //self.nr2_gain_method);
-            SetRXAEMNRnpeMethod(self.channel, 0); //self.nr2_npe_method);
-            SetRXAEMNRRun(self.channel, self.nr.into()); //self.nr2);
-            SetRXAEMNRaeRun(self.channel, 1); //self.nr2_ae);
+            SetRXAEMNRPosition(channel, 0); //self.nr_agc);
+            SetRXAEMNRgainMethod(channel, 2); //self.nr2_gain_method);
+            SetRXAEMNRnpeMethod(channel, 0); //self.nr2_npe_method);
+            SetRXAEMNRRun(channel, self.nr.into()); //self.nr2);
+            SetRXAEMNRaeRun(channel, 1); //self.nr2_ae);
 
-            SetRXAANRVals(self.channel, 64, 16, 16e-4, 10e-7); // defaults
-            SetRXAANRRun(self.channel, 0); //self.nr);
-            SetRXAANFRun(self.channel, self.anf.into()); //self.anf);
-            SetRXASNBARun(self.channel, self.snb.into()); //self.snb);
+            SetRXAANRVals(channel, 64, 16, 16e-4, 10e-7); // defaults
+            SetRXAANRRun(channel, 0); //self.nr);
+            SetRXAANFRun(channel, self.anf.into()); //self.anf);
+            SetRXASNBARun(channel, self.snb.into()); //self.snb);
 
-            let mut result: c_int = 0;
-            XCreateAnalyzer(0,&mut result,262144,1,1,c_char_ptr);
-            self.init_analyzer();
-            SetDisplayDetectorMode(0, 0, DETECTOR_MODE_AVERAGE.try_into().expect("SetDisplayDetectorMode failed!"));
-            SetDisplayAverageMode(0, 0,  AVERAGE_MODE_LOG_RECURSIVE.try_into().expect("SetDisplayAverageMode failed!"));
-            let t = 0.001 * DISPLAY_AVERAGE_TIME;
-            let display_avb = (-1.0 / (self.fps * t)).exp();
-            let display_average = max(2, min(60, (self.fps * t) as i32));
-            SetDisplayAvBackmult(0, 0, display_avb.into());
-            SetDisplayNumAverage(0, 0, display_average);
-
-            SetRXAMode(self.channel, self.mode as i32);
+            SetRXAMode(channel, self.mode as i32);
             if self.mode == Modes::CWL.to_usize() || self.mode == Modes::CWU.to_usize() {
-                RXASetPassband(self.channel,(self.cw_sidetone - self.filter_low).into(), (self.cw_sidetone +self.filter_high).into());
+                RXASetPassband(channel,(self.cw_sidetone - self.filter_low).into(), (self.cw_sidetone +self.filter_high).into());
             } else {
-                RXASetPassband(self.channel,self.filter_low.into(),self.filter_high.into());
+                RXASetPassband(channel,self.filter_low.into(),self.filter_high.into());
             }
 
             if self.ctun {
                 let offset = self.ctun_frequency - self.frequency_a;
-                SetRXAShiftRun(self.channel, 1);
-                SetRXAShiftFreq(self.channel, offset.into());
-                RXANBPSetShiftFrequency(self.channel, 0.0);
+                SetRXAShiftRun(channel, 1);
+                SetRXAShiftFreq(channel, offset.into());
+                RXANBPSetShiftFrequency(channel, 0.0);
             }
         }
     }
 
-    pub fn init_analyzer(&self) {
+    fn create_display(&self, display: i32) {
+        let empty_string = String::from("");
+        let c_string = CString::new(empty_string).expect("CString::new failed");
+        let c_char_ptr: *mut c_char = c_string.into_raw();
+        unsafe {
+            let mut result: c_int = 0;
+            XCreateAnalyzer(display, &mut result, 262144, 1, 1, c_char_ptr);
+            SetDisplayDetectorMode(display, 0, DETECTOR_MODE_AVERAGE.try_into().expect("SetDisplayDetectorMode failed!"));
+            SetDisplayAverageMode(display, 0,  AVERAGE_MODE_LOG_RECURSIVE.try_into().expect("SetDisplayAverageMode failed!"));
+            let t = 0.001 * DISPLAY_AVERAGE_TIME;
+            let display_avb = (-1.0 / (self.fps * t)).exp();
+            let display_average = max(2, min(60, (self.fps * t) as i32));
+            SetDisplayAvBackmult(display, 0, display_avb.into());
+            SetDisplayNumAverage(display, 0, display_average);
+
+        }
+    }
+
+    pub fn init_analyzer(&self, display: i32) {
         let mut flp = [0];
         let keep_time: f32 = 0.1;
         let fft_size = 8192; 
@@ -222,7 +239,7 @@ impl Receiver {
         let pixels = self.spectrum_width * self.zoom;
         //thread::spawn(move || { 
             unsafe {
-                SetAnalyzer(0, 1, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
+                SetAnalyzer(display, 1, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
             }
         //}); 
     }

@@ -616,7 +616,7 @@ impl Radio {
             let mut r = radio_clone.lock().unwrap();
             //println!("Waterfall resized to: {}x{}", width, height);
             r.receiver[0].spectrum_width = width;
-            r.receiver[0].init_analyzer();
+            r.receiver[0].init_analyzer(r.receiver[0].channel);
         });
         main_grid.attach(&waterfall_display, 1, 5, 10, 4);
 
@@ -828,7 +828,7 @@ impl Radio {
             let mut r = agc_combo_radio.lock().unwrap();
             let index = agc_combo.active().unwrap_or(0);
             r.receiver[0].agc = AGC::from_i32(index as i32).expect("Invalid AGC");
-            AGC::set_agc(&r.receiver[0]);
+            AGC::set_agc(&r.receiver[0], r.receiver[0].channel);
         });
 
         let agcgain_frame = Frame::new(Some("AGC Gain"));
@@ -1045,7 +1045,7 @@ impl Radio {
         zoom_adjustment.connect_value_changed(move |adjustment| {
             let mut r = zoom_radio.lock().unwrap();
             r.receiver[0].zoom = adjustment.value() as i32;
-            r.receiver[0].init_analyzer();
+            r.receiver[0].init_analyzer(r.receiver[0].channel);
             if adjustment.value() == 0.0 {
                 r.receiver[0].pan = 0;
             }

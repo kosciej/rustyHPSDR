@@ -249,13 +249,27 @@ impl Radio {
         let button_split = Button::with_label("SPLIT");
         vfo_grid.attach(&button_split, 1, 1, 1, 1);
 
+        let button_subrx = ToggleButton::with_label("Subrx");
+        {
+            let r = radio.lock().unwrap();
+            button_subrx.set_active(r.receiver[0].subrx);
+        }
+        vfo_grid.attach(&button_subrx, 2, 0, 1, 1);
+
         let button_ctun = ToggleButton::with_label("CTUN");
         {
             let r = radio.lock().unwrap();
             button_ctun.set_active(r.receiver[0].ctun);
         }
+        vfo_grid.attach(&button_ctun, 2, 1, 1, 1);
+
+
+        let vfo_b_frame = Frame::new(Some("VFO B"));
+        main_grid.attach(&vfo_b_frame, 5, 0, 2, 1);
+
         let radio_for_ctun = Arc::clone(&radio);
         let vfo_a_frequency_for_ctun = vfo_a_frequency.clone();
+        let button_subrx_for_ctun = button_subrx.clone();
         button_ctun.connect_clicked(move |_| {
             let mut r = radio_for_ctun.lock().unwrap();
             if r.receiver[0].ctun {
@@ -269,13 +283,8 @@ impl Radio {
                 r.receiver[0].ctun = true;
                 r.receiver[0].set_ctun(true);
             }
+            button_subrx_for_ctun.set_sensitive(r.receiver[0].ctun);
         });
-
-        
-        vfo_grid.attach(&button_ctun, 2, 0, 1, 1);
-
-        let vfo_b_frame = Frame::new(Some("VFO B"));
-        main_grid.attach(&vfo_b_frame, 5, 0, 2, 1);
 
         let vfo_b_frequency = Label::new(Some("14.150.000"));
         vfo_b_frequency.set_css_classes(&["vfo-b-label"]);
@@ -285,6 +294,22 @@ impl Radio {
             let formatted_value = format_u32_with_separators(r.receiver[0].frequency_b as u32);
             vfo_b_frequency.set_label(&formatted_value);
         }
+
+        let radio_for_subrx = Arc::clone(&radio); 
+        let vfo_b_frequency_for_subrx = vfo_b_frequency.clone();
+        button_subrx.connect_clicked(move |_| {
+            let mut r = radio_for_subrx.lock().unwrap();
+            if r.receiver[0].subrx {
+                r.receiver[0].subrx = false;
+            } else {
+                r.receiver[0].subrx = true;
+                r.receiver[0].frequency_b = r.receiver[0].frequency_a;
+                r.receiver[0].set_subrx_frequency();
+                let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
+                vfo_b_frequency_for_subrx.set_label(&formatted_value);
+            }
+            println!("button_subrx: {}", r.receiver[0].subrx);
+        });
 
         let radio_for_a_to_b = Arc::clone(&radio);
         let vfo_b_frequency_for_a_to_b = vfo_b_frequency.clone();
@@ -526,6 +551,23 @@ impl Radio {
             Propagation::Proceed
         });
         vfo_a_frequency.add_controller(scroll_controller_a);
+
+        let scroll_controller_b = EventControllerScroll::new(
+            EventControllerScrollFlags::VERTICAL
+        );
+        let radio_clone = Arc::clone(&radio);
+        let f = vfo_b_frequency.clone();
+        scroll_controller_b.connect_scroll(move |_controller, _dx, dy| {
+            let mut r = radio_clone.lock().unwrap();
+            r.receiver[0].frequency_b = r.receiver[0].frequency_b - (r.receiver[0].step * dy as f32);
+            if r.receiver[0].subrx {
+                r.receiver[0].set_subrx_frequency();
+            }
+            let formatted_value = format_u32_with_separators(r.receiver[0].frequency_b as u32);
+            f.set_label(&formatted_value);
+            Propagation::Proceed
+        });
+        vfo_b_frequency.add_controller(scroll_controller_b);
 
         let spectrum_click_gesture = Rc::new(GestureClick::new());
         let spectrum_click_gesture_clone_for_callback = spectrum_click_gesture.clone();
@@ -793,6 +835,30 @@ impl Radio {
             r.receiver[0].afgain = (adjustment.value() / 100.0) as f32;
             r.receiver[0].set_afgain();
         });
+
+        let afpan_frame = Frame::new(Some("AF Pan"));
+        grid_row = grid_row + 1;
+        main_grid.attach(&afpan_frame, 0, grid_row, 1, 1);
+        let afpan_adjustment = Adjustment::new(
+            (r.receiver[0].afpan * 100.0).into(), // Initial value
+            0.0,  // Minimum value
+            100.0, // Maximum value
+            1.0,  // Step increment
+            1.0, // Page increment
+            0.0,  // Page size (not typically used for simple scales)
+        );
+        let afpan_scale = Scale::new(Orientation::Horizontal, Some(&afpan_adjustment));
+        afpan_scale.set_digits(0); // Display whole numbers
+        afpan_scale.set_draw_value(true); // Display the current value next to the slider
+        afpan_frame.set_child(Some(&afpan_scale));
+
+        let afpan_radio = Arc::clone(&radio);
+        afpan_adjustment.connect_value_changed(move |adjustment| {
+            let mut r = afpan_radio.lock().unwrap();
+            r.receiver[0].afpan = (adjustment.value() / 100.0) as f32;
+            r.receiver[0].set_afpan();
+        });
+
 
         let agc_frame = Frame::new(Some("AGC"));
         grid_row = grid_row + 1;
@@ -1095,6 +1161,7 @@ impl Radio {
             unsafe {
                 GetPixels(channel, 0, pixels.as_mut_ptr(), &mut flag);
             }
+
             if flag != 0 {
                 let pixbuf_for_draw = pixbuf_for_timeout.clone();
                 let waterfall_display_for_draw = waterfall_display_for_timeout.clone();
@@ -1411,6 +1478,34 @@ fn draw_spectrum(cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>
             cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
         }
         let _ = cr.fill();
+    }
+
+    if r.receiver[0].subrx {
+        frequency = r.receiver[0].frequency_b;
+if display_frequency_low < frequency && display_frequency_high > frequency {
+
+        // draw the center line frequency marker
+        let x = (frequency - display_frequency_low) / display_hz_per_pixel;
+        cr.set_source_rgb(1.0, 0.64, 0.0); // orange
+        cr.set_line_width(1.0);
+        cr.move_to(x.into(), 0.0);
+        cr.line_to(x.into(), height.into());
+        cr.stroke().unwrap();
+
+        // draw the filter
+        cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
+        if r.receiver[0].mode == Modes::CWL.to_usize() || r.receiver[0].mode == Modes::CWU.to_usize() {
+            let filter_left = ((frequency + r.receiver[0].filter_low - r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
+            let filter_right = ((frequency + r.receiver[0].filter_high + r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
+            cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+        } else {
+            let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
+            let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
+            cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+        }
+        let _ = cr.fill();
+    }
+
     }
 
 }

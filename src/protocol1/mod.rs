@@ -200,6 +200,7 @@ impl Protocol1 {
     fn process_ozy_buffer(&mut self, buffer: &Vec<u8>, offset: usize, radio: Arc<Mutex<Radio>>, sink: &Sink)  {
         let mut r = radio.lock().unwrap();
         let mut audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
+        let mut subrx_audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
         let mut i_sample = 0;
         let mut q_sample = 0;
         let mut b = offset;
@@ -234,18 +235,25 @@ impl Protocol1 {
             if r.receiver[0].samples >= r.receiver[0].buffer_size {
                 let raw_ptr: *mut f64 = r.receiver[0].iq_input_buffer.as_mut_ptr() as *mut f64;
                 let audio_ptr: *mut f64 =  audio_buffer.as_mut_ptr() as *mut f64;
+                let subrx_audio_ptr: *mut f64 =  subrx_audio_buffer.as_mut_ptr() as *mut f64;
                 let mut result: c_int = 0;
                 unsafe {
-                    fexchange0(0, raw_ptr, audio_ptr, &mut result);
+                    fexchange0(r.receiver[0].channel, raw_ptr, audio_ptr, &mut result);
+                    if r.receiver[0].subrx {
+                        fexchange0(r.receiver[0].subrx_channel, raw_ptr, subrx_audio_ptr, &mut result);
+                    }
                 }
                 unsafe {
                     Spectrum0(1, r.receiver[0].channel, 0, 0, raw_ptr);
                 }
                 r.receiver[0].samples = 0;
                 for i in 0..r.receiver[0].output_samples {
-                    let ix = i *2 ;
+                    let ix = i * 2 ;
                     let left_sample: i32 = (audio_buffer[ix] * 16777215.0) as i32;
-                    let right_sample: i32 = (audio_buffer[ix+1] * 16777215.0) as i32;
+                    let mut right_sample: i32 = (audio_buffer[ix+1] * 16777215.0) as i32;
+                    if r.receiver[0].subrx {
+                        right_sample = (subrx_audio_buffer[ix+1] * 16777215.0) as i32;
+                    }
 
                     self.ozy_buffer[self.ozy_buffer_offset] = (left_sample >> 8) as u8;
                     self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
@@ -272,8 +280,12 @@ impl Protocol1 {
                         self.ozy_buffer_offset = 8;
                     }
                     let ox=r.receiver[0].local_audio_buffer_offset * 2;
-                    r.receiver[0].local_audio_buffer[ox]=audio_buffer[ix];
-                    r.receiver[0].local_audio_buffer[ox+1]=audio_buffer[ix+1];
+                    r.receiver[0].local_audio_buffer[ox+1]=audio_buffer[ix];
+                    if r.receiver[0].subrx {
+                        r.receiver[0].local_audio_buffer[ox]=subrx_audio_buffer[ix+1];
+                    } else {
+                        r.receiver[0].local_audio_buffer[ox]=audio_buffer[ix+1];
+                    }
                     r.receiver[0].local_audio_buffer_offset = r.receiver[0].local_audio_buffer_offset + 1;
                     if r.receiver[0].local_audio_buffer_offset == r.receiver[0].local_audio_buffer_size {
                         r.receiver[0].local_audio_buffer_offset = 0;

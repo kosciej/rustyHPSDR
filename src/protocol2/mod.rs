@@ -73,6 +73,7 @@ impl Protocol2 {
 
         let mut buffer = vec![0; 65536];
         let mut audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
+        let mut subrx_audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
 
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
@@ -134,9 +135,13 @@ impl Protocol2 {
                                         if r.receiver[ddc].samples >= r.receiver[ddc].buffer_size {
                                             let raw_ptr: *mut f64 = r.receiver[ddc].iq_input_buffer.as_mut_ptr() as *mut f64;
                                             let audio_ptr: *mut f64 =  audio_buffer.as_mut_ptr() as *mut f64;
+                                            let subrx_audio_ptr: *mut f64 =  subrx_audio_buffer.as_mut_ptr() as *mut f64;
                                             let mut result: c_int = 0;
                                             unsafe {
                                                 fexchange0(r.receiver[ddc].channel, raw_ptr, audio_ptr, &mut result);
+                                                if r.receiver[ddc].subrx {
+                                                    fexchange0(r.receiver[ddc].subrx_channel, raw_ptr, subrx_audio_ptr, &mut result);
+                                                }
                                             }
                                             unsafe {
                                                 Spectrum0(1, r.receiver[ddc].channel, 0, 0, raw_ptr);
@@ -145,7 +150,10 @@ impl Protocol2 {
                                             for i in 0..r.receiver[ddc].output_samples {
                                                 let ix = i * 2;
                                                 let left_sample: i32 = (audio_buffer[ix] * 32767.0) as i32;
-                                                let right_sample: i32 = (audio_buffer[ix+1] * 32767.0) as i32;
+                                                let mut right_sample: i32 = (audio_buffer[ix+1] * 32767.0) as i32;
+                                                if r.receiver[0].subrx {
+                                                    right_sample = (subrx_audio_buffer[ix+1] * 32767.0) as i32;
+                                                }
                                                 let rox = r.receiver[ddc].remote_audio_buffer_offset;
                                                 r.receiver[ddc].remote_audio_buffer[rox] = (left_sample >> 8) as u8;
                                                 r.receiver[ddc].remote_audio_buffer[rox+1] = left_sample as u8;
@@ -160,7 +168,11 @@ impl Protocol2 {
                                                 // local audio
                                                 let lox=r.receiver[ddc].local_audio_buffer_offset * 2;
                                                 r.receiver[ddc].local_audio_buffer[lox]=audio_buffer[ix];
-                                                r.receiver[ddc].local_audio_buffer[lox+1]=audio_buffer[ix+1];
+                                                if r.receiver[0].subrx {
+                                                    r.receiver[ddc].local_audio_buffer[lox+1]=subrx_audio_buffer[ix+1];
+                                                } else {
+                                                    r.receiver[ddc].local_audio_buffer[lox+1]=audio_buffer[ix+1];
+                                                }
                                                 r.receiver[ddc].local_audio_buffer_offset = r.receiver[ddc].local_audio_buffer_offset + 1;
                                                 if r.receiver[ddc].local_audio_buffer_offset == r.receiver[ddc].local_audio_buffer_size {
                                                     r.receiver[ddc].local_audio_buffer_offset = 0;

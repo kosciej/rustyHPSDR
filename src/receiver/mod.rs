@@ -30,7 +30,7 @@ use crate::wdsp::*;
 
 const DEFAULT_SAMPLE_RATE: i32 =384000;
 const DISPLAY_AVERAGE_TIME: f32 = 170.0;
-const SUBRX_CHANNEL_START: i32 = 16;
+const SUBRX_BASE_CHANNEL: i32 = 16;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Receiver {
@@ -60,6 +60,7 @@ pub struct Receiver {
     pub zoom: i32,
     pub pan: i32,
     pub afgain:  f32,
+    pub afpan:  f32,
     pub agc: AGC,
     pub agcgain:  f32,
     pub agcslope:  i32,
@@ -84,6 +85,7 @@ pub struct Receiver {
     pub cw_sidetone: f32,
 
     pub subrx: bool,
+    pub subrx_channel: i32,
 }
 
 impl Receiver {
@@ -115,6 +117,7 @@ impl Receiver {
         let zoom: i32 = 1;
         let pan: i32 = 0;
         let afgain: f32 = 0.5;
+        let afpan: f32 = 0.5;
         let agc: AGC = AGC::FAST;
         let agcgain: f32 = 80.0;
         let agcslope: i32 = 35;
@@ -135,8 +138,9 @@ impl Receiver {
         let rxgain: i32 = 0;
         let cw_sidetone: f32 = 400.0;
         let subrx: bool = false;
+        let subrx_channel: i32 = channel + SUBRX_BASE_CHANNEL;
 
-        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_sidetone, subrx };
+        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, afpan, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_sidetone, subrx, subrx_channel };
 
         rx
     }
@@ -149,16 +153,13 @@ impl Receiver {
         self.remote_audio_buffer = vec![0u8; self.remote_audio_buffer_size];
         self.remote_audio_buffer_offset = 4;
 
-
         self.init_wdsp(self.channel);
         self.create_display(self.channel);
         self.init_analyzer(self.channel);
-
-        self.init_wdsp(self.channel+SUBRX_CHANNEL_START);
+        self.init_wdsp(self.subrx_channel);
     }
 
     fn init_wdsp(&self, channel: i32) {
-
         unsafe {
             OpenChannel(channel, self.buffer_size as i32, self.fft_size, self.sample_rate, self.dsp_rate, self.output_rate, 0, 1, 0.010, 0.025, 0.0, 0.010, 0);
             create_anbEXT(channel, 1, self.buffer_size as i32, self.sample_rate.into(), 0.0001, 0.0001, 0.0001, 0.05, 20.0);
@@ -167,6 +168,7 @@ impl Receiver {
             RXASetMP(channel, 0); // low_latency
 
             SetRXAPanelGain1(channel, self.afgain.into());
+            SetRXAPanelPan(channel, self.afpan.into());
             AGC::set_agc(&self, channel);
             SetRXAAGCTop(channel, self.agcgain.into());
             SetRXAPanelSelect(channel, 3);
@@ -247,12 +249,15 @@ impl Receiver {
     pub fn set_filter(&self) {
         unsafe {
             RXASetPassband(self.channel, self.filter_low.into(), self.filter_high.into());
+            RXASetPassband(self.subrx_channel, self.filter_low.into(), self.filter_high.into());
+            
         }
     }
 
     pub fn set_mode(&self) {
         unsafe {
             SetRXAMode(self.channel, self.mode as i32);
+            SetRXAMode(self.subrx_channel, self.mode as i32);
         }
         self.set_filter();
     }
@@ -281,36 +286,57 @@ impl Receiver {
     pub fn set_afgain(&self) {
         unsafe {
             SetRXAPanelGain1(self.channel, self.afgain.into());
+            SetRXAPanelGain1(self.subrx_channel, self.afgain.into());
+        }
+    }
+
+    pub fn set_afpan(&self) {
+        unsafe {
+            SetRXAPanelPan(self.channel, self.afpan.into());
+            SetRXAPanelPan(self.subrx_channel, self.afpan.into());
         }
     }
 
     pub fn set_agcgain(&self) {
         unsafe {
             SetRXAAGCTop(self.channel, self.agcgain.into());
+            SetRXAAGCTop(self.subrx_channel, self.agcgain.into());
         }
     }
 
     pub fn set_nr(&self) {
         unsafe {
             SetRXAEMNRRun(self.channel, self.nr as i32);
+            SetRXAEMNRRun(self.subrx_channel, self.nr as i32);
         }  
     }
 
     pub fn set_nb(&self) {
         unsafe {
             SetEXTNOBRun(self.channel, self.nb as i32);
+            SetEXTNOBRun(self.subrx_channel, self.nb as i32);
         }
     }
 
     pub fn set_anf(&self) {
         unsafe {
             SetRXAANFRun(self.channel, self.anf as i32);
+            SetRXAANFRun(self.subrx_channel, self.anf as i32);
         }
     }
 
     pub fn set_snb(&self) {
         unsafe {
             SetRXASNBARun(self.channel, self.snb as i32);
+            SetRXASNBARun(self.subrx_channel, self.snb as i32);
+        }
+    }
+
+    pub fn set_subrx_frequency(&self) {
+        let offset = self.frequency_b - self.frequency_a;
+        unsafe {
+            SetRXAShiftFreq(self.subrx_channel, offset.into());
+            RXANBPSetShiftFrequency(self.subrx_channel, offset.into());
         }
     }
 

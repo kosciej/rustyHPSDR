@@ -20,7 +20,7 @@ use gtk::{Adjustment, Align, ApplicationWindow, Button, CellRendererText, ComboB
 use gtk::{EventController, EventControllerMotion, EventControllerScroll, EventControllerScrollFlags, GestureClick};
 use gtk::glib::Propagation;
 use gtk::cairo::{Context, LineCap, LineJoin, LinearGradient}; 
-use gtk::gdk::Cursor; 
+use gtk::gdk::{Cursor, Event, ModifierType}; 
 use gdk_pixbuf::Pixbuf;
 use gdk_pixbuf::Colorspace;
 use glib::ControlFlow::Continue;
@@ -491,7 +491,9 @@ impl Radio {
 
             }
         });
-        
+
+        let middle_button_pressed = Rc::new(RefCell::new(false));
+
         let spectrum_display = DrawingArea::new();
         spectrum_display.set_hexpand(true);
         spectrum_display.set_vexpand(true);
@@ -520,11 +522,25 @@ impl Radio {
             EventControllerScrollFlags::VERTICAL | EventControllerScrollFlags::KINETIC
         );
         let radio_clone = Arc::clone(&radio);
-        let f = vfo_a_frequency.clone();
+        let fa = vfo_a_frequency.clone();
         let last_spectrum_x_clone = last_spectrum_x.clone();
-        scroll_controller_spectrum.connect_scroll(move |_controller, _dx, dy| {
-            if last_spectrum_x_clone.get() < 40.0 {
-                // adjust spectrum low and high
+        let middle_button_state = middle_button_pressed.clone();
+        scroll_controller_spectrum.connect_scroll(move |controller, _dx, dy| {
+            let mut r = radio_clone.lock().unwrap();
+            let subrx = r.receiver[0].subrx;
+            drop(r);
+            if *middle_button_state.borrow() && subrx {
+                let mut r = radio_clone.lock().unwrap();
+                r.receiver[0].frequency_b = r.receiver[0].frequency_b - (r.receiver[0].step * dy as f32);
+                let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
+                let frequency_high = r.receiver[0].frequency_a + (r.receiver[0].sample_rate/2) as f32;
+                if r.receiver[0].frequency_b < frequency_low {
+                    r.receiver[0].frequency_b = frequency_low;
+                } else if r.receiver[0].frequency_b > frequency_high {
+                    r.receiver[0].frequency_b = frequency_high;
+                }
+                r.receiver[0].set_subrx_frequency();
+            } else if last_spectrum_x_clone.get() < 40.0 {
                 let mut r = radio_clone.lock().unwrap();
                 let b = r.receiver[0].band.to_usize();
                 if dy < 0.0 {
@@ -535,7 +551,7 @@ impl Radio {
                     r.band_info[b].spectrum_high = r.band_info[b].spectrum_high - 1.0;
                 }
             } else {
-                spectrum_waterfall_scroll(&radio_clone, &f, dy);
+                spectrum_waterfall_scroll(&radio_clone, &fa, dy);
             }
             Propagation::Proceed
         });
@@ -545,9 +561,9 @@ impl Radio {
             EventControllerScrollFlags::VERTICAL
         );
         let radio_clone = Arc::clone(&radio);
-        let f = vfo_a_frequency.clone();
-        scroll_controller_a.connect_scroll(move |_controller, _dx, dy| {
-            spectrum_waterfall_scroll(&radio_clone, &f, dy);
+        let fa = vfo_a_frequency.clone();
+        scroll_controller_a.connect_scroll(move |controller, dx, dy| {
+            spectrum_waterfall_scroll(&radio_clone, &fa, dy);
             Propagation::Proceed
         });
         vfo_a_frequency.add_controller(scroll_controller_a);
@@ -561,6 +577,13 @@ impl Radio {
             let mut r = radio_clone.lock().unwrap();
             r.receiver[0].frequency_b = r.receiver[0].frequency_b - (r.receiver[0].step * dy as f32);
             if r.receiver[0].subrx {
+                let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
+                let frequency_high = r.receiver[0].frequency_a + (r.receiver[0].sample_rate/2) as f32;
+                if r.receiver[0].frequency_b < frequency_low {
+                    r.receiver[0].frequency_b = frequency_low;
+                } else if r.receiver[0].frequency_b > frequency_high {
+                    r.receiver[0].frequency_b = frequency_high;
+                }
                 r.receiver[0].set_subrx_frequency();
             }
             let formatted_value = format_u32_with_separators(r.receiver[0].frequency_b as u32);
@@ -570,14 +593,28 @@ impl Radio {
         vfo_b_frequency.add_controller(scroll_controller_b);
 
         let spectrum_click_gesture = Rc::new(GestureClick::new());
+        spectrum_click_gesture.set_button(0); // all buttons
         let spectrum_click_gesture_clone_for_callback = spectrum_click_gesture.clone();
         let radio_clone = Arc::clone(&radio);
-        let f = vfo_a_frequency.clone();
+        let fa = vfo_a_frequency.clone();
+        let fb = vfo_b_frequency.clone();
+        let press_state = middle_button_pressed.clone();
         spectrum_click_gesture_clone_for_callback.connect_pressed(move |gesture, _, x, _y| {
             let da = gesture.widget().unwrap();
             let width = da.allocated_width();
-            spectrum_waterfall_clicked(&radio_clone, &f, x, width);
+            if gesture.current_button() == 2 { // middle button
+                *press_state.borrow_mut() = true;
+            } else {
+                spectrum_waterfall_clicked(&radio_clone, &fa, &fb, x, width, gesture.current_button());
+            }
         });
+        let press_state = middle_button_pressed.clone();
+        spectrum_click_gesture_clone_for_callback.connect_released(move |gesture, _, x, _y| {
+            if gesture.current_button() == 2 { // middle button
+                *press_state.borrow_mut() = false;
+            }
+        });
+
         spectrum_display.add_controller(<GestureClick as Clone>::clone(&spectrum_click_gesture).upcast::<EventController>());
 
 /*
@@ -621,7 +658,7 @@ impl Radio {
             EventControllerScrollFlags::VERTICAL
         );
         let radio_clone = Arc::clone(&radio);
-        let f = vfo_a_frequency.clone();
+        let fa = vfo_a_frequency.clone();
         let last_waterfall_x_clone = last_waterfall_x.clone();
         scroll_controller_waterfall.connect_scroll(move |_controller, _dx, dy| {
             if last_waterfall_x_clone.get() < 40.0 {
@@ -636,20 +673,23 @@ impl Radio {
                     r.band_info[b].waterfall_high = r.band_info[b].waterfall_high - 1.0;
                 }
             } else {
-                spectrum_waterfall_scroll(&radio_clone, &f, dy);
+                spectrum_waterfall_scroll(&radio_clone, &fa, dy);
             }
             Propagation::Proceed
         });
         waterfall_display.add_controller(scroll_controller_waterfall.clone());
 
         let waterfall_click_gesture = Rc::new(GestureClick::new());
+        waterfall_click_gesture.set_button(0); // all buttons
+        let waterfall_click_gesture_clone_for_callback = spectrum_click_gesture.clone();
         let waterfall_click_gesture_clone_for_callback = waterfall_click_gesture.clone();
         let radio_clone = Arc::clone(&radio);
-        let f = vfo_a_frequency.clone();
+        let fa = vfo_a_frequency.clone();
+        let fb = vfo_b_frequency.clone();
         waterfall_click_gesture_clone_for_callback.connect_pressed(move |gesture, _, x, _y| {
             let da = gesture.widget().unwrap();
             let width = da.allocated_width();
-            spectrum_waterfall_clicked(&radio_clone, &f, x, width);
+            spectrum_waterfall_clicked(&radio_clone, &fa, &fb, x, width, gesture.current_button());
         });
         waterfall_display.add_controller(<GestureClick as Clone>::clone(&waterfall_click_gesture).upcast::<EventController>());
 
@@ -1266,7 +1306,7 @@ fn format_u32_with_separators(value: u32) -> String {
     result
 }
 
-fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, f: &Label, x: f64, width: i32) {
+fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label, x: f64, width: i32, button: u32) {
     let mut r = radio.lock().unwrap();
         
     let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
@@ -1276,22 +1316,27 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, f: &Label, x: f64, widt
     let display_frequency_range = frequency_range / r.receiver[0].zoom as f32;
     let display_frequency_offset = ((frequency_range - display_frequency_range) / 100.0) * r.receiver[0].pan as f32;  
     let display_frequency_low = frequency_low + display_frequency_offset;
-    //let display_frequency_high = frequency_high + display_frequency_offset;
+    let display_frequency_high = frequency_high + display_frequency_offset;
     let display_hz_per_pixel = display_frequency_range as f32 / width as f32;
 
 
     let f1 = display_frequency_low + (x as f32 * display_hz_per_pixel);
     let f1 = (f1 as u32 / r.receiver[0].step as u32 * r.receiver[0].step as u32) as f32;
  
-    if r.receiver[0].ctun {
+    if button == 3 && r.receiver[0].subrx {
+        r.receiver[0].frequency_b = f1;
+        r.receiver[0].set_subrx_frequency();
+        let formatted_value = format_u32_with_separators(r.receiver[0].frequency_b as u32);
+        fb.set_label(&formatted_value);
+    } else if r.receiver[0].ctun {
         r.receiver[0].ctun_frequency = f1;
         r.receiver[0].set_ctun_frequency();
         let formatted_value = format_u32_with_separators(r.receiver[0].ctun_frequency as u32);
-        f.set_label(&formatted_value);
+        fa.set_label(&formatted_value);
     } else {
         r.receiver[0].frequency_a = f1;
         let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
-        f.set_label(&formatted_value);
+        fa.set_label(&formatted_value);
     }
 }
 
@@ -1482,32 +1527,29 @@ fn draw_spectrum(cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>
 
     if r.receiver[0].subrx {
         frequency = r.receiver[0].frequency_b;
-if display_frequency_low < frequency && display_frequency_high > frequency {
+        if display_frequency_low < frequency && display_frequency_high > frequency {
+            // draw the center line frequency marker
+            let x = (frequency - display_frequency_low) / display_hz_per_pixel;
+            cr.set_source_rgb(1.0, 0.64, 0.0); // orange
+            cr.set_line_width(1.0);
+            cr.move_to(x.into(), 0.0);
+            cr.line_to(x.into(), height.into());
+            cr.stroke().unwrap();
 
-        // draw the center line frequency marker
-        let x = (frequency - display_frequency_low) / display_hz_per_pixel;
-        cr.set_source_rgb(1.0, 0.64, 0.0); // orange
-        cr.set_line_width(1.0);
-        cr.move_to(x.into(), 0.0);
-        cr.line_to(x.into(), height.into());
-        cr.stroke().unwrap();
-
-        // draw the filter
-        cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
-        if r.receiver[0].mode == Modes::CWL.to_usize() || r.receiver[0].mode == Modes::CWU.to_usize() {
-            let filter_left = ((frequency + r.receiver[0].filter_low - r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
-            let filter_right = ((frequency + r.receiver[0].filter_high + r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
-            cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
-        } else {
-            let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
-            let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
-            cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+            // draw the filter
+            cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
+            if r.receiver[0].mode == Modes::CWL.to_usize() || r.receiver[0].mode == Modes::CWU.to_usize() {
+                let filter_left = ((frequency + r.receiver[0].filter_low - r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
+                let filter_right = ((frequency + r.receiver[0].filter_high + r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
+                cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+            } else {
+                let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
+                let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
+                cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+            }
+            let _ = cr.fill();
         }
-        let _ = cr.fill();
     }
-
-    }
-
 }
 
 fn draw_waterfall(cr: &Context, width: i32, height: i32, pixbuf: &Rc<RefCell<Option<Pixbuf>>>) {

@@ -153,7 +153,7 @@ impl BandGrid {
             let button = Button::with_label(&info.label);
             
             // Set initial button style class
-            button.add_css_class("inactive-button");
+            button.add_css_class("inactive-band-button");
             buttons.push(button.clone());
             grid.attach(&button, col as i32, row as i32, 1, 1);
         }
@@ -183,13 +183,13 @@ impl BandGrid {
                 let mut active_idx = active_index_clone.borrow_mut();
                 if let Some(prev_idx) = *active_idx {
                     let prev_button = &buttons_clone[prev_idx];
-                    prev_button.remove_css_class("active-button");
-                    prev_button.add_css_class("inactive-button");
+                    prev_button.remove_css_class("active-band-button");
+                    prev_button.add_css_class("inactive-band-button");
                 }
 
                 // Set the style of the newly active button
-                clicked_button.remove_css_class("inactive-button");
-                clicked_button.add_css_class("active-button");
+                clicked_button.remove_css_class("inactive-band-button");
+                clicked_button.add_css_class("active-band-button");
 
                 // Update the active index
                 *active_idx = Some(button_index);
@@ -197,8 +197,8 @@ impl BandGrid {
                 (callback_clone.borrow())(button_index);
             });
             if i == initial_button {
-                button.remove_css_class("inactive-button");
-                button.add_css_class("active-button");
+                button.remove_css_class("inactive-band-button");
+                button.add_css_class("active-band-button");
             }
         }
 

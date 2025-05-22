@@ -350,7 +350,7 @@ impl Protocol1 {
                                      },
                                 4 => {
                                     self.ozy_buffer[3] = 0x14; // C0
-                                    self.ozy_buffer[4] = 0x40; // C1
+                                    self.ozy_buffer[4] = 0x01; // C1
                                     self.ozy_buffer[5] = 0x00; // C2
                                     self.ozy_buffer[6] = 0x00; // C3
                                     self.ozy_buffer[7] = 0x00; // C4
@@ -361,6 +361,11 @@ impl Protocol1 {
                                         }  else { // HERMES_LITE_1
                                             //self.ozy_buffer[7] = self.ozy_buffer[7] | 0x20;
                                         }
+                                    } else {
+                                        //if attenuation != 0 {
+                                            self.ozy_buffer[7] = 0x20;
+                                            self.ozy_buffer[7] = self.ozy_buffer[7] | (attenuation & 0x1F) as u8;
+                                        //}
                                     }
                                      },
                                 5 => {

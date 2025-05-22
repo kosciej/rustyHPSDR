@@ -118,17 +118,25 @@ impl Radio {
                 font-size: 28px;
                 color: green;
              }
-             .vfo-b-label {
+            .vfo-b-label {
                 font-family: FreeSans;
                 font-size: 28px;
                 color: orange;
              }
-             .s-meter-label {
+            .s-meter-label {
                 font-family: FreeSans;
                 font-size: 28px;
                 color: red;
              }
             .active-button {
+                color: orange;
+                background-image: none;
+             }
+            .inactive-button {
+                color: black;
+                background-image: none;
+             }
+            .active-band-button {
                 color: orange;
                 border-radius: 5px;
                 border-style: solid;
@@ -144,7 +152,7 @@ impl Radio {
                 min-height: 0px;
                 background-image: none;
              }
-             .inactive-button {
+             .inactive-band-button {
                 color: black;
                 border-radius: 5px;
                 border-style: solid;
@@ -253,6 +261,11 @@ impl Radio {
         {
             let r = radio.lock().unwrap();
             button_subrx.set_active(r.receiver[0].subrx);
+            if r.receiver[0].subrx {
+                button_subrx.add_css_class("active-button");
+            } else {
+                button_subrx.add_css_class("inactive-button");
+            }
         }
         vfo_grid.attach(&button_subrx, 2, 0, 1, 1);
 
@@ -260,6 +273,11 @@ impl Radio {
         {
             let r = radio.lock().unwrap();
             button_ctun.set_active(r.receiver[0].ctun);
+            if r.receiver[0].ctun {
+                button_ctun.add_css_class("active-button");
+            } else {
+                button_ctun.add_css_class("inactive-button");
+            }
         }
         vfo_grid.attach(&button_ctun, 2, 1, 1, 1);
 
@@ -270,17 +288,21 @@ impl Radio {
         let radio_for_ctun = Arc::clone(&radio);
         let vfo_a_frequency_for_ctun = vfo_a_frequency.clone();
         let button_subrx_for_ctun = button_subrx.clone();
-        button_ctun.connect_clicked(move |_| {
+        button_ctun.connect_clicked(move |button| {
             let mut r = radio_for_ctun.lock().unwrap();
             if r.receiver[0].ctun {
                 r.receiver[0].ctun_frequency = 0.0;
                 r.receiver[0].ctun = false;
+                button.remove_css_class("active-button");
+                button.add_css_class("inactive-button");
                 r.receiver[0].set_ctun(false);
                 let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
                 vfo_a_frequency_for_ctun.set_label(&formatted_value);
             } else {
                 r.receiver[0].ctun_frequency = r.receiver[0].frequency_a;
                 r.receiver[0].ctun = true;
+                button.remove_css_class("inactive-button");
+                button.add_css_class("active-button");
                 r.receiver[0].set_ctun(true);
             }
             //button_subrx_for_ctun.set_sensitive(r.receiver[0].ctun);
@@ -297,12 +319,16 @@ impl Radio {
 
         let radio_for_subrx = Arc::clone(&radio); 
         let vfo_b_frequency_for_subrx = vfo_b_frequency.clone();
-        button_subrx.connect_clicked(move |_| {
+        button_subrx.connect_clicked(move |button| {
             let mut r = radio_for_subrx.lock().unwrap();
             if r.receiver[0].subrx {
                 r.receiver[0].subrx = false;
+                button.remove_css_class("active-button");
+                button.add_css_class("inactive-button");
             } else {
                 r.receiver[0].subrx = true;
+                button.remove_css_class("inactive-button");
+                button.add_css_class("active-button");
                 r.receiver[0].frequency_b = r.receiver[0].frequency_a;
                 r.receiver[0].set_subrx_frequency();
                 let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
@@ -473,17 +499,17 @@ impl Radio {
                 cr.line_to(offset+(114.0*db),height as f64-30.0);
                 cr.stroke().unwrap();
 
-                cr.move_to(offset+(18.0*db)-3.0,40.0);
+                cr.move_to(offset+(18.0*db)-3.0,45.0);
                 let _ = cr.show_text("3");
-                cr.move_to(offset+(36.0*db)-3.0,40.0);
+                cr.move_to(offset+(36.0*db)-3.0,45.0);
                 let _ = cr.show_text("6");
-                cr.move_to(offset+(54.0*db)-3.0,40.0);
+                cr.move_to(offset+(54.0*db)-3.0,45.0);
                 let _ = cr.show_text("9");
-                cr.move_to(offset+(74.0*db)-9.0,40.0);
+                cr.move_to(offset+(74.0*db)-9.0,45.0);
                 let _ = cr.show_text("+20");
-                cr.move_to(offset+(94.0*db)-9.0,40.0);
+                cr.move_to(offset+(94.0*db)-9.0,45.0);
                 let _ = cr.show_text("+40");
-                cr.move_to(offset+(114.0*db)-9.0,40.0);
+                cr.move_to(offset+(114.0*db)-9.0,45.0);
                 let _ = cr.show_text("+60");
             }
         });
@@ -989,6 +1015,7 @@ impl Radio {
                 let mut r = rxgain_radio.lock().unwrap();
                 r.receiver[0].rxgain = adjustment.value() as i32;
             });
+/*
         } else {
             let adcattn_frame = Frame::new(Some("ADC Attn"));
             grid_row = grid_row + 1;
@@ -1011,6 +1038,7 @@ impl Radio {
                 let mut r = adcattn_radio.lock().unwrap();
                 r.receiver[0].attenuation = adjustment.value() as i32;
             });
+*/
         }
 
 

@@ -283,7 +283,7 @@ impl Radio {
                 r.receiver[0].ctun = true;
                 r.receiver[0].set_ctun(true);
             }
-            button_subrx_for_ctun.set_sensitive(r.receiver[0].ctun);
+            //button_subrx_for_ctun.set_sensitive(r.receiver[0].ctun);
         });
 
         let vfo_b_frequency = Label::new(Some("14.150.000"));
@@ -308,7 +308,6 @@ impl Radio {
                 let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
                 vfo_b_frequency_for_subrx.set_label(&formatted_value);
             }
-            println!("button_subrx: {}", r.receiver[0].subrx);
         });
 
         let radio_for_a_to_b = Arc::clone(&radio);
@@ -486,9 +485,6 @@ impl Radio {
                 let _ = cr.show_text("+40");
                 cr.move_to(offset+(114.0*db)-9.0,40.0);
                 let _ = cr.show_text("+60");
-
-
-
             }
         });
 
@@ -525,6 +521,7 @@ impl Radio {
         let fa = vfo_a_frequency.clone();
         let last_spectrum_x_clone = last_spectrum_x.clone();
         let middle_button_state = middle_button_pressed.clone();
+        let button_subrx_clone = button_subrx.clone();
         scroll_controller_spectrum.connect_scroll(move |controller, _dx, dy| {
             let mut r = radio_clone.lock().unwrap();
             let subrx = r.receiver[0].subrx;
@@ -551,7 +548,7 @@ impl Radio {
                     r.band_info[b].spectrum_high = r.band_info[b].spectrum_high - 1.0;
                 }
             } else {
-                spectrum_waterfall_scroll(&radio_clone, &fa, dy);
+                spectrum_waterfall_scroll(&radio_clone, &fa, dy, &button_subrx_clone);
             }
             Propagation::Proceed
         });
@@ -562,8 +559,9 @@ impl Radio {
         );
         let radio_clone = Arc::clone(&radio);
         let fa = vfo_a_frequency.clone();
+        let button_subrx_clone = button_subrx.clone();
         scroll_controller_a.connect_scroll(move |controller, dx, dy| {
-            spectrum_waterfall_scroll(&radio_clone, &fa, dy);
+            spectrum_waterfall_scroll(&radio_clone, &fa, dy, &button_subrx_clone);
             Propagation::Proceed
         });
         vfo_a_frequency.add_controller(scroll_controller_a);
@@ -599,13 +597,14 @@ impl Radio {
         let fa = vfo_a_frequency.clone();
         let fb = vfo_b_frequency.clone();
         let press_state = middle_button_pressed.clone();
+        let button_subrx_clone = button_subrx.clone();
         spectrum_click_gesture_clone_for_callback.connect_pressed(move |gesture, _, x, _y| {
             let da = gesture.widget().unwrap();
             let width = da.allocated_width();
             if gesture.current_button() == 2 { // middle button
                 *press_state.borrow_mut() = true;
             } else {
-                spectrum_waterfall_clicked(&radio_clone, &fa, &fb, x, width, gesture.current_button());
+                spectrum_waterfall_clicked(&radio_clone, &fa, &fb, x, width, gesture.current_button(), &button_subrx_clone);
             }
         });
         let press_state = middle_button_pressed.clone();
@@ -660,6 +659,7 @@ impl Radio {
         let radio_clone = Arc::clone(&radio);
         let fa = vfo_a_frequency.clone();
         let last_waterfall_x_clone = last_waterfall_x.clone();
+        let button_subrx_clone = button_subrx.clone();
         scroll_controller_waterfall.connect_scroll(move |_controller, _dx, dy| {
             if last_waterfall_x_clone.get() < 40.0 {
                 // adjust spectrum low and high
@@ -673,7 +673,7 @@ impl Radio {
                     r.band_info[b].waterfall_high = r.band_info[b].waterfall_high - 1.0;
                 }
             } else {
-                spectrum_waterfall_scroll(&radio_clone, &fa, dy);
+                spectrum_waterfall_scroll(&radio_clone, &fa, dy, &button_subrx_clone);
             }
             Propagation::Proceed
         });
@@ -686,10 +686,11 @@ impl Radio {
         let radio_clone = Arc::clone(&radio);
         let fa = vfo_a_frequency.clone();
         let fb = vfo_b_frequency.clone();
+        let button_subrx_clone = button_subrx.clone();
         waterfall_click_gesture_clone_for_callback.connect_pressed(move |gesture, _, x, _y| {
             let da = gesture.widget().unwrap();
             let width = da.allocated_width();
-            spectrum_waterfall_clicked(&radio_clone, &fa, &fb, x, width, gesture.current_button());
+            spectrum_waterfall_clicked(&radio_clone, &fa, &fb, x, width, gesture.current_button(), &button_subrx_clone);
         });
         waterfall_display.add_controller(<GestureClick as Clone>::clone(&waterfall_click_gesture).upcast::<EventController>());
 
@@ -730,6 +731,7 @@ impl Radio {
         let r = radio.lock().unwrap();
         let band = r.receiver[0].band.to_usize();
         drop(r);
+        let button_subrx_clone = button_subrx.clone();
         band_grid_for_callback.set_callback(move|index| {
             // save current band info
             let mut r = radio_for_callback.lock().unwrap();
@@ -745,6 +747,11 @@ impl Radio {
 
             if !r.receiver[0].filters_manual {
                 r.receiver[0].filters = r.band_info[index].filters;
+            }
+
+            if r.receiver[0].subrx {
+                r.receiver[0].subrx = false;
+                button_subrx_clone.set_active(r.receiver[0].subrx);
             }
 
             let filter_grid_mut = filter_grid_for_callback.borrow_mut();
@@ -1306,7 +1313,7 @@ fn format_u32_with_separators(value: u32) -> String {
     result
 }
 
-fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label, x: f64, width: i32, button: u32) {
+fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label, x: f64, width: i32, button: u32, button_subrx: &ToggleButton) {
     let mut r = radio.lock().unwrap();
         
     let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
@@ -1335,16 +1342,24 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label,
         fa.set_label(&formatted_value);
     } else {
         r.receiver[0].frequency_a = f1;
+        if r.receiver[0].subrx {
+            if r.receiver[0].frequency_b < frequency_low || r.receiver[0].frequency_b > frequency_high {
+                r.receiver[0].subrx = false;
+                button_subrx.set_active(r.receiver[0].subrx);
+            } else {
+                r.receiver[0].set_subrx_frequency();
+            }
+        }
         let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
         fa.set_label(&formatted_value);
     }
 }
 
-fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64) {
+fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64, button_subrx: &ToggleButton) {
     let mut r = radio.lock().unwrap();
+    let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
+    let frequency_high = r.receiver[0].frequency_a + (r.receiver[0].sample_rate/2) as f32;
     if r.receiver[0].ctun {
-        let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
-        let frequency_high = r.receiver[0].frequency_a + (r.receiver[0].sample_rate/2) as f32;
         r.receiver[0].ctun_frequency = r.receiver[0].ctun_frequency - (r.receiver[0].step * dy as f32);
         if r.receiver[0].ctun_frequency < frequency_low {
             r.receiver[0].ctun_frequency = frequency_low;
@@ -1353,10 +1368,17 @@ fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64) {
         }
         let formatted_value = format_u32_with_separators(r.receiver[0].ctun_frequency as u32);
         f.set_label(&formatted_value);
-
         r.receiver[0].set_ctun_frequency();
     } else {
         r.receiver[0].frequency_a = r.receiver[0].frequency_a - (r.receiver[0].step * dy as f32);
+        if r.receiver[0].subrx {
+            if r.receiver[0].frequency_b < frequency_low || r.receiver[0].frequency_b > frequency_high {
+                r.receiver[0].subrx = false;
+                button_subrx.set_active(r.receiver[0].subrx);
+            } else {
+                r.receiver[0].set_subrx_frequency();
+            }
+        }
         let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
         f.set_label(&formatted_value);
     }

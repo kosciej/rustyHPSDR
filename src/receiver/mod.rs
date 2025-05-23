@@ -239,11 +239,10 @@ impl Receiver {
         let max_w = fft_size + min((keep_time * self.fps) as i32, (keep_time * fft_size as f32  * self.fps) as i32);
         let buffer_size: i32 = self.buffer_size as i32;
         let pixels = self.spectrum_width * self.zoom;
-        //thread::spawn(move || { 
-            unsafe {
-                SetAnalyzer(display, 1, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
-            }
-        //}); 
+        println!("init_ananlyzer: display={} pixels={}", display, pixels);
+        unsafe {
+            SetAnalyzer(display, 1, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
+        }
     }
 
     pub fn set_filter(&self) {

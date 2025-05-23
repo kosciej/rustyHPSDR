@@ -642,15 +642,11 @@ impl Radio {
 
         spectrum_display.add_controller(<GestureClick as Clone>::clone(&spectrum_click_gesture).upcast::<EventController>());
 
-/*
         let radio_clone = Arc::clone(&radio);
-        spectrum_display.connect_resize(move |_, width, _height| {
-            let mut r = rx_clone.lock().unwrap();
+        spectrum_display.connect_resize(move |_, width, height| {
             println!("Spectrum resized to: {}x{}", width, height);
-            r.spectrum_width = width;
-            r.init_analyzer();
         });
-*/
+
         main_grid.attach(&spectrum_display, 1, 1, 10, 4);
 
 
@@ -721,9 +717,9 @@ impl Radio {
         waterfall_display.add_controller(<GestureClick as Clone>::clone(&waterfall_click_gesture).upcast::<EventController>());
 
         let radio_clone = Arc::clone(&radio);
-        waterfall_display.connect_resize(move |_, width, _height| {
+        waterfall_display.connect_resize(move |_, width, height| {
+            println!("Waterfall resized to: {}x{}", width, height);
             let mut r = radio_clone.lock().unwrap();
-            //println!("Waterfall resized to: {}x{}", width, height);
             r.receiver[0].spectrum_width = width;
             r.receiver[0].init_analyzer(r.receiver[0].channel);
         });

@@ -467,87 +467,14 @@ impl Radio {
         });
 
         let radio_for_meter_draw = Arc::clone(&radio);
-        meter_display.set_draw_func(move |_da, cr, width, height| {
+        meter_display.set_draw_func(move |_da, cr, width, _height| {
             let r = radio_for_meter_draw.lock().unwrap();
             cr.set_source_rgb (1.0, 1.0, 1.0);
             cr.paint().unwrap();
             if width >= 114 {
-                let offset = 5.0;
-                let db = 1.0; // size in pixels of each dbm
-
-                cr.set_source_rgb(0.0, 1.0, 0.0);
-                cr.rectangle(offset, 0.0, (r.s_meter_dbm + 121.0) + db, 10.0);
-                let _ = cr.fill();
-
-                cr.set_source_rgb (0.0, 0.0, 0.0);
-                for i in 0..54 {
-                    cr.move_to(offset+(i as f64 * db),10.0);
-                    if i%18 == 0 {
-                        cr.line_to(offset+(i as f64 * db),0.0);
-                    } else if i%6 == 0 {
-                        cr.line_to(offset+(i as f64 * db),5.0);
-                    }
-                }
-                cr.move_to(offset+(54.0*db),10.0);
-                cr.line_to(offset+(54.0*db),0.0);
-                cr.move_to(offset+(74.0*db),10.0);
-                cr.line_to(offset+(74.0*db),0.0);
-                cr.move_to(offset+(94.0*db),10.0);
-                cr.line_to(offset+(94.0*db),0.0);
-                cr.move_to(offset+(114.0*db),10.0);
-                cr.line_to(offset+(114.0*db),0.0);
-                cr.stroke().unwrap();
-
-                cr.move_to(offset+(18.0*db)-3.0,20.0);
-                let _ = cr.show_text("3");
-                cr.move_to(offset+(36.0*db)-3.0,20.0);
-                let _ = cr.show_text("6");
-                cr.move_to(offset+(54.0*db)-3.0,20.0);
-                let _ = cr.show_text("9");
-                cr.move_to(offset+(74.0*db)-9.0,20.0);
-                let _ = cr.show_text("+20");
-                cr.move_to(offset+(94.0*db)-9.0,20.0);
-                let _ = cr.show_text("+40");
-                cr.move_to(offset+(114.0*db)-9.0,20.0);
-                let _ = cr.show_text("+60");
-
+                draw_meter(cr, r.s_meter_dbm, false);
                 if r.receiver[0].subrx {
-                    cr.set_source_rgb(1.0, 0.5, 0.0);
-                    cr.rectangle(offset, 25.0, (r.subrx_s_meter_dbm + 121.0) + db, 10.0);
-                    let _ = cr.fill();
-
-                    cr.set_source_rgb (0.0, 0.0, 0.0);
-                    for i in 0..54 {
-                        cr.move_to(offset+(i as f64 * db),35.0);
-                        if i%18 == 0 {
-                            cr.line_to(offset+(i as f64 * db),25.0);
-                        } else if i%6 == 0 {
-                            cr.line_to(offset+(i as f64 * db),30.0);
-                        }
-                    }
-                    cr.move_to(offset+(54.0*db),35.0);
-                    cr.line_to(offset+(54.0*db),25.0);
-                    cr.move_to(offset+(74.0*db),35.0);
-                    cr.line_to(offset+(74.0*db),25.0);
-                    cr.move_to(offset+(94.0*db),35.0);
-                    cr.line_to(offset+(94.0*db),25.0);
-                    cr.move_to(offset+(114.0*db),35.0);
-                    cr.line_to(offset+(114.0*db),25.0);
-                    cr.stroke().unwrap();
-
-                    cr.move_to(offset+(18.0*db)-3.0,45.0);
-                    let _ = cr.show_text("3");
-                    cr.move_to(offset+(36.0*db)-3.0,45.0);
-                    let _ = cr.show_text("6");
-                    cr.move_to(offset+(54.0*db)-3.0,45.0);
-                    let _ = cr.show_text("9");
-                    cr.move_to(offset+(74.0*db)-9.0,45.0);
-                    let _ = cr.show_text("+20");
-                    cr.move_to(offset+(94.0*db)-9.0,45.0);
-                    let _ = cr.show_text("+40");
-                    cr.move_to(offset+(114.0*db)-9.0,45.0);
-                    let _ = cr.show_text("+60");
-
+                    draw_meter(cr, r.subrx_s_meter_dbm, true);
                 }
             }
         });
@@ -1453,6 +1380,56 @@ fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64, butt
         let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
         f.set_label(&formatted_value);
     }
+}
+
+fn draw_meter(cr: &Context, dbm: f64, subrx: bool) {
+    let x_offset = 5.0;
+    let mut y_offset = 0.0;
+    if subrx {
+        y_offset = 25.0;
+    }
+    let db = 1.0; // size in pixels of each dbm
+
+    if subrx {
+        cr.set_source_rgb(1.0, 0.5, 0.0);
+    } else {
+        cr.set_source_rgb(0.0, 1.0, 0.0);
+    }
+    cr.rectangle(x_offset, 0.0+y_offset, (dbm + 121.0) + db, 10.0);
+    let _ = cr.fill();
+
+    cr.set_source_rgb (0.0, 0.0, 0.0);
+    for i in 0..54 {
+        cr.move_to(x_offset+(i as f64 * db),10.0+y_offset);
+        if i%18 == 0 {
+            cr.line_to(x_offset+(i as f64 * db),0.0+y_offset);
+        } else if i%6 == 0 {
+            cr.line_to(x_offset+(i as f64 * db),5.0+y_offset);
+        }
+    }
+    cr.move_to(x_offset+(54.0*db),10.0+y_offset);
+    cr.line_to(x_offset+(54.0*db),0.0+y_offset);
+    cr.move_to(x_offset+(74.0*db),10.0+y_offset);
+    cr.line_to(x_offset+(74.0*db),0.0+y_offset);
+    cr.move_to(x_offset+(94.0*db),10.0+y_offset);
+    cr.line_to(x_offset+(94.0*db),0.0+y_offset);
+    cr.move_to(x_offset+(114.0*db),10.0+y_offset);
+    cr.line_to(x_offset+(114.0*db),0.0+y_offset);
+    cr.stroke().unwrap();
+
+    cr.move_to(x_offset+(18.0*db)-3.0,20.0+y_offset);
+    let _ = cr.show_text("3");
+    cr.move_to(x_offset+(36.0*db)-3.0,20.0+y_offset);
+    let _ = cr.show_text("6");
+    cr.move_to(x_offset+(54.0*db)-3.0,20.0+y_offset);
+    let _ = cr.show_text("9");
+    cr.move_to(x_offset+(74.0*db)-9.0,20.0+y_offset);
+    let _ = cr.show_text("+20");
+    cr.move_to(x_offset+(94.0*db)-9.0,20.0+y_offset);
+    let _ = cr.show_text("+40");
+    cr.move_to(x_offset+(114.0*db)-9.0,20.0+y_offset);
+    let _ = cr.show_text("+60");
+
 }
 
 fn draw_spectrum(cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixels: &Vec<f32>) {

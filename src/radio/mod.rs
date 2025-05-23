@@ -77,6 +77,7 @@ pub struct Radio {
     pub receiver: Vec<Receiver>,
     pub band_info: Vec<BandInfo>,
     pub s_meter_dbm: f64,
+    pub subrx_s_meter_dbm: f64,
 }
 
 impl Radio {
@@ -92,6 +93,7 @@ impl Radio {
             receiver.push(Receiver::new(i, &band_info));
         }
         let s_meter_dbm = -121.0;
+        let subrx_s_meter_dbm = -121.0;
 
         let radio = Radio {
             name,
@@ -100,6 +102,7 @@ impl Radio {
             receiver,
             band_info,
             s_meter_dbm,
+            subrx_s_meter_dbm,
         };
 
         radio
@@ -455,9 +458,6 @@ impl Radio {
 
 
         let meter_frame = Frame::new(Some("S Meter"));
-        //let meter_label = Label::new(Some("-121 dBm"));
-        //meter_label.set_css_classes(&["s-meter-label"]);
-        //meter_frame.set_child(Some(&meter_label));
         let meter_display = DrawingArea::new();
         meter_frame.set_child(Some(&meter_display));
         main_grid.attach(&meter_frame, 9, 0, 2, 1);
@@ -476,41 +476,79 @@ impl Radio {
                 let db = 1.0; // size in pixels of each dbm
 
                 cr.set_source_rgb(0.0, 1.0, 0.0);
-                cr.rectangle(offset, height as f64 - 30.0, (r.s_meter_dbm + 121.0) + db, 10.0);
-
+                cr.rectangle(offset, 0.0, (r.s_meter_dbm + 121.0) + db, 10.0);
                 let _ = cr.fill();
+
                 cr.set_source_rgb (0.0, 0.0, 0.0);
                 for i in 0..54 {
-                    cr.move_to(offset+(i as f64 * db),height as f64-20.0);
+                    cr.move_to(offset+(i as f64 * db),10.0);
                     if i%18 == 0 {
-                        cr.line_to(offset+(i as f64 * db),height as f64-30.0);
+                        cr.line_to(offset+(i as f64 * db),0.0);
                     } else if i%6 == 0 {
-                        cr.line_to(offset+(i as f64 * db),height as f64-25.0);
+                        cr.line_to(offset+(i as f64 * db),5.0);
                     }
-                } 
-                //cr.stroke().unwrap();
-                cr.move_to(offset+(54.0*db),height as f64-20.0);
-                cr.line_to(offset+(54.0*db),height as f64-30.0);
-                cr.move_to(offset+(74.0*db),height as f64-20.0);
-                cr.line_to(offset+(74.0*db),height as f64-30.0);
-                cr.move_to(offset+(94.0*db),height as f64-20.0);
-                cr.line_to(offset+(94.0*db),height as f64-30.0);
-                cr.move_to(offset+(114.0*db),height as f64-20.0);
-                cr.line_to(offset+(114.0*db),height as f64-30.0);
+                }
+                cr.move_to(offset+(54.0*db),10.0);
+                cr.line_to(offset+(54.0*db),0.0);
+                cr.move_to(offset+(74.0*db),10.0);
+                cr.line_to(offset+(74.0*db),0.0);
+                cr.move_to(offset+(94.0*db),10.0);
+                cr.line_to(offset+(94.0*db),0.0);
+                cr.move_to(offset+(114.0*db),10.0);
+                cr.line_to(offset+(114.0*db),0.0);
                 cr.stroke().unwrap();
 
-                cr.move_to(offset+(18.0*db)-3.0,45.0);
+                cr.move_to(offset+(18.0*db)-3.0,20.0);
                 let _ = cr.show_text("3");
-                cr.move_to(offset+(36.0*db)-3.0,45.0);
+                cr.move_to(offset+(36.0*db)-3.0,20.0);
                 let _ = cr.show_text("6");
-                cr.move_to(offset+(54.0*db)-3.0,45.0);
+                cr.move_to(offset+(54.0*db)-3.0,20.0);
                 let _ = cr.show_text("9");
-                cr.move_to(offset+(74.0*db)-9.0,45.0);
+                cr.move_to(offset+(74.0*db)-9.0,20.0);
                 let _ = cr.show_text("+20");
-                cr.move_to(offset+(94.0*db)-9.0,45.0);
+                cr.move_to(offset+(94.0*db)-9.0,20.0);
                 let _ = cr.show_text("+40");
-                cr.move_to(offset+(114.0*db)-9.0,45.0);
+                cr.move_to(offset+(114.0*db)-9.0,20.0);
                 let _ = cr.show_text("+60");
+
+                if r.receiver[0].subrx {
+                    cr.set_source_rgb(1.0, 0.5, 0.0);
+                    cr.rectangle(offset, 25.0, (r.subrx_s_meter_dbm + 121.0) + db, 10.0);
+                    let _ = cr.fill();
+
+                    cr.set_source_rgb (0.0, 0.0, 0.0);
+                    for i in 0..54 {
+                        cr.move_to(offset+(i as f64 * db),35.0);
+                        if i%18 == 0 {
+                            cr.line_to(offset+(i as f64 * db),25.0);
+                        } else if i%6 == 0 {
+                            cr.line_to(offset+(i as f64 * db),30.0);
+                        }
+                    }
+                    cr.move_to(offset+(54.0*db),35.0);
+                    cr.line_to(offset+(54.0*db),25.0);
+                    cr.move_to(offset+(74.0*db),35.0);
+                    cr.line_to(offset+(74.0*db),25.0);
+                    cr.move_to(offset+(94.0*db),35.0);
+                    cr.line_to(offset+(94.0*db),25.0);
+                    cr.move_to(offset+(114.0*db),35.0);
+                    cr.line_to(offset+(114.0*db),25.0);
+                    cr.stroke().unwrap();
+
+                    cr.move_to(offset+(18.0*db)-3.0,45.0);
+                    let _ = cr.show_text("3");
+                    cr.move_to(offset+(36.0*db)-3.0,45.0);
+                    let _ = cr.show_text("6");
+                    cr.move_to(offset+(54.0*db)-3.0,45.0);
+                    let _ = cr.show_text("9");
+                    cr.move_to(offset+(74.0*db)-9.0,45.0);
+                    let _ = cr.show_text("+20");
+                    cr.move_to(offset+(94.0*db)-9.0,45.0);
+                    let _ = cr.show_text("+40");
+                    cr.move_to(offset+(114.0*db)-9.0,45.0);
+                    let _ = cr.show_text("+60");
+
+                }
             }
         });
 
@@ -545,6 +583,7 @@ impl Radio {
         );
         let radio_clone = Arc::clone(&radio);
         let fa = vfo_a_frequency.clone();
+        let fb = vfo_b_frequency.clone();
         let last_spectrum_x_clone = last_spectrum_x.clone();
         let middle_button_state = middle_button_pressed.clone();
         let button_subrx_clone = button_subrx.clone();
@@ -563,6 +602,8 @@ impl Radio {
                     r.receiver[0].frequency_b = frequency_high;
                 }
                 r.receiver[0].set_subrx_frequency();
+                let formatted_value = format_u32_with_separators(r.receiver[0].frequency_b as u32);
+                fb.set_label(&formatted_value);
             } else if last_spectrum_x_clone.get() < 40.0 {
                 let mut r = radio_clone.lock().unwrap();
                 let b = r.receiver[0].band.to_usize();
@@ -894,8 +935,8 @@ impl Radio {
             0.0,  // Page size (not typically used for simple scales)
         );
         let afgain_scale = Scale::new(Orientation::Horizontal, Some(&afgain_adjustment));
-        afgain_scale.set_digits(0); // Display whole numbers
-        afgain_scale.set_draw_value(true); // Display the current value next to the slider
+        //afgain_scale.set_digits(0); // Display whole numbers
+        //afgain_scale.set_draw_value(true); // Display the current value next to the slider
         afgain_frame.set_child(Some(&afgain_scale));
 
         let afgain_radio = Arc::clone(&radio);
@@ -1225,6 +1266,8 @@ impl Radio {
             let r = radio_clone_for_timeout.lock().unwrap();
             let zoom = r.receiver[0].zoom;
             let channel = r.receiver[0].channel;
+            let subrx = r.receiver[0].subrx;
+            let subrx_channel = r.receiver[0].subrx_channel;
             drop(r);
 
             let mut pixels = vec![0.0; (spectrum_display_for_timeout.width() * zoom) as usize];
@@ -1247,7 +1290,11 @@ impl Radio {
                     unsafe {
                         let mut r = radio_clone_for_draw.lock().unwrap();
                         r.s_meter_dbm = GetRXAMeter(channel,rxaMeterType_RXA_S_AV as i32);
+                        if subrx {
+                            r.subrx_s_meter_dbm = GetRXAMeter(subrx_channel,rxaMeterType_RXA_S_AV as i32);
+                        }
                     }
+
 
                     let pixbuf_for_waterfall_draw = pixbuf_for_draw.clone();
                     waterfall_display_for_draw.set_draw_func(move |_da, cr, width, height| {

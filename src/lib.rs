@@ -27,4 +27,5 @@ pub mod configure;
 pub mod protocol1;
 pub mod protocol2;
 pub mod wdsp;
+pub mod audio;
 

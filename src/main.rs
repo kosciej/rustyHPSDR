@@ -66,6 +66,11 @@ fn main() {
                             main_window_for_close.set_title(Some(&title));
 
                             let radio = Arc::new(Mutex::new(Radio::load(device)));
+                            {
+                                let mut r = radio.lock().unwrap();
+                                r.init();
+                                r.audio.init();
+                            }
 
                             let radio_clone_for_show = radio.clone();
                             let main_window_clone_for_show = main_window_for_close.clone();

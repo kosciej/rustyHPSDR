@@ -17,7 +17,6 @@
 
 use nix::sys::socket::setsockopt;
 use nix::sys::socket::sockopt::{ReuseAddr, ReusePort};
-use rodio::{buffer::SamplesBuffer, OutputStream, Sink, Source};
 use std::net::{UdpSocket};
 use std::sync::{Arc, Mutex};
 use std::os::raw::c_int;
@@ -25,6 +24,7 @@ use std::os::raw::c_int;
 use crate::discovery::Device;
 use crate::radio::Radio;
 use crate::wdsp::*;
+use crate::audio::*;
 
 const OZY_BUFFER_SIZE: usize = 512;
 const METIS_BUFFER_SIZE: usize = (OZY_BUFFER_SIZE * 2) + 8;
@@ -157,10 +157,6 @@ impl Protocol1 {
         self.metis_start(self.device);
         drop(r);
 
-        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-        let sink = Sink::try_new(&stream_handle).unwrap();
-        sink.play();
-
         let mut buffer = vec![0; 2048];
         loop {
             match self.socket.recv_from(&mut buffer) {
@@ -173,8 +169,8 @@ impl Protocol1 {
                                         1 => {
                                              match buffer[3] {
                                                  6 => { // IQ samples
-                                                      self.process_ozy_buffer(&buffer,8,radio.clone(), &sink);
-                                                      self.process_ozy_buffer(&buffer,520,radio.clone(), &sink);
+                                                      self.process_ozy_buffer(&buffer,8,radio.clone());
+                                                      self.process_ozy_buffer(&buffer,520,radio.clone());
                                                       },
                                                  4 => { // Wideband samples
                                                       },
@@ -197,7 +193,7 @@ impl Protocol1 {
         }
     }
 
-    fn process_ozy_buffer(&mut self, buffer: &Vec<u8>, offset: usize, radio: Arc<Mutex<Radio>>, sink: &Sink)  {
+    fn process_ozy_buffer(&mut self, buffer: &Vec<u8>, offset: usize, radio: Arc<Mutex<Radio>>)  {
         let mut r = radio.lock().unwrap();
         let mut audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
         let mut subrx_audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
@@ -255,14 +251,25 @@ impl Protocol1 {
                         right_sample = (subrx_audio_buffer[ix+1] * 16777215.0) as i32;
                     }
 
-                    self.ozy_buffer[self.ozy_buffer_offset] = (left_sample >> 8) as u8;
-                    self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
-                    self.ozy_buffer[self.ozy_buffer_offset] = left_sample as u8;
-                    self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
-                    self.ozy_buffer[self.ozy_buffer_offset] = (right_sample >> 8) as u8;
-                    self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
-                    self.ozy_buffer[self.ozy_buffer_offset] = right_sample as u8;
-                    self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
+                    if r.audio.remote_output {
+                        self.ozy_buffer[self.ozy_buffer_offset] = (left_sample >> 8) as u8;
+                        self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
+                        self.ozy_buffer[self.ozy_buffer_offset] = left_sample as u8;
+                        self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
+                        self.ozy_buffer[self.ozy_buffer_offset] = (right_sample >> 8) as u8;
+                        self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
+                        self.ozy_buffer[self.ozy_buffer_offset] = right_sample as u8;
+                        self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
+                    } else {
+                        self.ozy_buffer[self.ozy_buffer_offset] = 0;
+                        self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
+                        self.ozy_buffer[self.ozy_buffer_offset] = 0;
+                        self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
+                        self.ozy_buffer[self.ozy_buffer_offset] = 0;
+                        self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
+                        self.ozy_buffer[self.ozy_buffer_offset] = 0;
+                        self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
+                    }
                     self.ozy_buffer[self.ozy_buffer_offset] = 0;
                     self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
                     self.ozy_buffer[self.ozy_buffer_offset] = 0;
@@ -279,20 +286,22 @@ impl Protocol1 {
                         }
                         self.ozy_buffer_offset = 8;
                     }
-                    let ox=r.receiver[0].local_audio_buffer_offset * 2;
-                    r.receiver[0].local_audio_buffer[ox+1]=audio_buffer[ix];
-                    if r.receiver[0].subrx {
-                        r.receiver[0].local_audio_buffer[ox]=subrx_audio_buffer[ix+1];
-                    } else {
-                        r.receiver[0].local_audio_buffer[ox]=audio_buffer[ix+1];
-                    }
-                    r.receiver[0].local_audio_buffer_offset = r.receiver[0].local_audio_buffer_offset + 1;
-                    if r.receiver[0].local_audio_buffer_offset == r.receiver[0].local_audio_buffer_size {
-                        r.receiver[0].local_audio_buffer_offset = 0;
-                        let f32samples = Protocol1::f64_to_f32(r.receiver[0].local_audio_buffer.clone());
-                        let source = SamplesBuffer::new(2, 48000, f32samples);
-                        if sink.len() < 3 {
-                           sink.append(source);
+
+                    if r.audio.local_output {
+                        
+                        let left_sample: i16 = (audio_buffer[ix] * 32767.0) as i16;
+                        let mut right_sample: i16 = (audio_buffer[ix+1] * 32767.0) as i16;
+                        if r.receiver[0].subrx {
+                            right_sample = (subrx_audio_buffer[ix+1] * 32767.0) as i16;
+                        }
+                        let ox=r.receiver[0].local_audio_buffer_offset * 2;
+                        r.receiver[0].local_audio_buffer[ox+1]=left_sample;
+                        r.receiver[0].local_audio_buffer[ox]=right_sample;
+                        r.receiver[0].local_audio_buffer_offset = r.receiver[0].local_audio_buffer_offset + 1;
+                        if r.receiver[0].local_audio_buffer_offset == r.receiver[0].local_audio_buffer_size {
+                            r.receiver[0].local_audio_buffer_offset = 0;
+                            let buffer_clone = r.receiver[0].local_audio_buffer.clone();
+                            r.audio.write_output(&buffer_clone);
                         }
                     }
                 }

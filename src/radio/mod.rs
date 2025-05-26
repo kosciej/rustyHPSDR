@@ -56,6 +56,7 @@ use crate::configure::*;
 use crate::wdsp::*;
 use crate::protocol1::Protocol1;
 use crate::protocol2::Protocol2;
+use crate::audio::*;
 
 #[derive(Clone)]
 struct StepItem {
@@ -69,15 +70,23 @@ struct AGCItem {
     text: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct Radio {
     pub name: String,
     pub supported_receivers: u8,
     pub receivers: u8,
     pub receiver: Vec<Receiver>,
     pub band_info: Vec<BandInfo>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub s_meter_dbm: f64,
+    #[serde(skip_serializing, skip_deserializing)]
     pub subrx_s_meter_dbm: f64,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub mox: bool,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub tun: bool,
+    //#[serde(skip_serializing, skip_deserializing)]
+    pub audio: Audio,
 }
 
 impl Radio {
@@ -94,6 +103,9 @@ impl Radio {
         }
         let s_meter_dbm = -121.0;
         let subrx_s_meter_dbm = -121.0;
+        let mox = false;
+        let tun = false;
+        let audio = Audio::new();
 
         let radio = Radio {
             name,
@@ -103,9 +115,19 @@ impl Radio {
             band_info,
             s_meter_dbm,
             subrx_s_meter_dbm,
+            mox,
+            tun,
+            audio,
         };
 
         radio
+    }
+
+    pub fn init(&mut self) {
+        self.s_meter_dbm = -121.0;
+        self.subrx_s_meter_dbm = -121.0;
+        self.mox = false;
+        self.tun = false;
     }
 
     pub fn run(radio: &Arc<Mutex<Radio>>, main_window: &ApplicationWindow, device: Device) {
@@ -136,6 +158,14 @@ impl Radio {
                 background-image: none;
              }
             .inactive-button {
+                color: black;
+                background-image: none;
+             }
+            .active-tx-button {
+                color: red;
+                background-image: none;
+             }
+            .inactive-tx-button {
                 color: black;
                 background-image: none;
              }
@@ -515,7 +545,7 @@ impl Radio {
         let middle_button_state = middle_button_pressed.clone();
         let button_subrx_clone = button_subrx.clone();
         scroll_controller_spectrum.connect_scroll(move |controller, _dx, dy| {
-            let mut r = radio_clone.lock().unwrap();
+            let r = radio_clone.lock().unwrap();
             let subrx = r.receiver[0].subrx;
             drop(r);
             if *middle_button_state.borrow() && subrx {
@@ -610,7 +640,6 @@ impl Radio {
 
         spectrum_display.add_controller(<GestureClick as Clone>::clone(&spectrum_click_gesture).upcast::<EventController>());
 
-        let radio_clone = Arc::clone(&radio);
         spectrum_display.connect_resize(move |_, width, height| {
             println!("Spectrum resized to: {}x{}", width, height);
         });
@@ -798,6 +827,7 @@ impl Radio {
         let r = radio.lock().unwrap();
         let filter = r.receiver[0].filter;
         drop(r);
+
         let radio_for_filter_callback = Arc::clone(&radio);
         let filter_grid_for_set_callback = filter_grid.clone();
         let mut filter_grid_for_callback = filter_grid.borrow_mut();
@@ -819,9 +849,6 @@ impl Radio {
             r.receiver[0].set_filter();
         }, filter);
 
-
-        let mut r = radio.lock().unwrap();
-
         let tx_grid = Grid::builder()
             .margin_start(0)
             .margin_end(0)
@@ -836,17 +863,65 @@ impl Radio {
         main_grid.attach(&tx_grid, 0, grid_row, 1, 1);
 
         let button_mox = ToggleButton::with_label("MOX");
+        {
+            let r = radio.lock().unwrap();
+            if r.mox {
+                button_mox.add_css_class("active-tx-button");
+            } else {
+                button_mox.add_css_class("inactive-tx-button");
+            }
+        }
         tx_grid.attach(&button_mox, 0, 0, 1, 1);
-        let radio_for_nr = Arc::clone(&radio);
-        button_mox.connect_clicked(move |_| {
-            let mut r = radio_for_nr.lock().unwrap();
-        });
 
         let button_tun = ToggleButton::with_label("TUN");
+        {
+            let r = radio.lock().unwrap();
+            if r.tun {
+                button_tun.add_css_class("active-tx-button");
+            } else {
+                button_tun.add_css_class("inactive-tx-button");
+            }
+        }
         tx_grid.attach(&button_tun, 0, 1, 1, 1);
-        let radio_for_nr = Arc::clone(&radio);
-        button_tun.connect_clicked(move |_| {
-            let mut r = radio_for_nr.lock().unwrap();
+
+        let mox_radio = Arc::clone(&radio);
+        let tun_button_for_mox = button_tun.clone();
+        button_mox.connect_clicked(move |button| {
+            let mut r = mox_radio.lock().unwrap();
+            r.mox = button.is_active();
+            if r.mox {
+                button.remove_css_class("inactive-tx-button");
+                button.add_css_class("active-tx-button");
+                if tun_button_for_mox.is_active() {
+                   tun_button_for_mox.set_active(false);
+                   tun_button_for_mox.remove_css_class("active-tx-button");
+                   tun_button_for_mox.add_css_class("inactive-tx-button");
+                   r.tun = false;
+                }
+            } else {
+                button.remove_css_class("active-tx-button");
+                button.add_css_class("inactive-tx-button");
+            }
+        });
+
+        let tun_radio = Arc::clone(&radio);
+        let mox_button_for_tun = button_mox.clone();
+        button_tun.connect_clicked(move |button| {
+            let mut r = tun_radio.lock().unwrap();
+            r.tun = button.is_active();
+            if r.tun {
+                button.remove_css_class("inactive-tx-button");
+                button.add_css_class("active-tx-button");
+                if mox_button_for_tun.is_active() {
+                   mox_button_for_tun.set_active(false);
+                   mox_button_for_tun.remove_css_class("active-tx-button");
+                   mox_button_for_tun.add_css_class("inactive-tx-button");
+                   r.mox = false;
+                }
+            } else {
+                button.remove_css_class("active-tx-button");
+                button.add_css_class("inactive-tx-button");
+            }
         });
 
         
@@ -854,7 +929,7 @@ impl Radio {
         grid_row = grid_row + 1;
         main_grid.attach(&afgain_frame, 0, grid_row, 1, 1);
         let afgain_adjustment = Adjustment::new(
-            (r.receiver[0].afgain * 100.0).into(), // Initial value
+            0.0, //(r.receiver[0].afgain * 100.0).into(), // Initial value
             0.0,  // Minimum value
             100.0, // Maximum value
             1.0,  // Step increment
@@ -862,8 +937,12 @@ impl Radio {
             0.0,  // Page size (not typically used for simple scales)
         );
         let afgain_scale = Scale::new(Orientation::Horizontal, Some(&afgain_adjustment));
-        //afgain_scale.set_digits(0); // Display whole numbers
-        //afgain_scale.set_draw_value(true); // Display the current value next to the slider
+        afgain_scale.set_digits(0); // Display whole numbers
+        afgain_scale.set_draw_value(true); // Display the current value next to the slider
+        {
+            let r = radio.lock().unwrap();
+            afgain_adjustment.set_value((r.receiver[0].afgain *100.0).into());
+        }
         afgain_frame.set_child(Some(&afgain_scale));
 
         let afgain_radio = Arc::clone(&radio);
@@ -877,7 +956,7 @@ impl Radio {
         grid_row = grid_row + 1;
         main_grid.attach(&afpan_frame, 0, grid_row, 1, 1);
         let afpan_adjustment = Adjustment::new(
-            (r.receiver[0].afpan * 100.0).into(), // Initial value
+            0.0, //(r.receiver[0].afpan * 100.0).into(), // Initial value
             0.0,  // Minimum value
             100.0, // Maximum value
             1.0,  // Step increment
@@ -887,6 +966,10 @@ impl Radio {
         let afpan_scale = Scale::new(Orientation::Horizontal, Some(&afpan_adjustment));
         afpan_scale.set_digits(0); // Display whole numbers
         afpan_scale.set_draw_value(true); // Display the current value next to the slider
+        {
+            let r = radio.lock().unwrap();
+            afpan_adjustment.set_value((r.receiver[0].afpan *100.0).into());
+        }
         afpan_frame.set_child(Some(&afpan_scale));
 
         let afpan_radio = Arc::clone(&radio);
@@ -922,8 +1005,10 @@ impl Radio {
         let agc_renderer = CellRendererText::new();
         agc_combo.pack_start(&agc_renderer, true);
         agc_combo.add_attribute(&agc_renderer, "text", 1);
-
-        agc_combo.set_active(Some(r.receiver[0].agc as u32));
+        {
+            let r = radio.lock().unwrap();
+            agc_combo.set_active(Some(r.receiver[0].agc as u32));
+        }
         agc_frame.set_child(Some(&agc_combo));
 
         let agc_combo_radio = Arc::clone(&radio);
@@ -938,7 +1023,7 @@ impl Radio {
         grid_row = grid_row + 1;
         main_grid.attach(&agcgain_frame, 0, grid_row, 1, 1);
         let agcgain_adjustment = Adjustment::new(
-            r.receiver[0].agcgain.into(), // Initial value
+            0.0, // r.receiver[0].agcgain.into(), // Initial value
             -20.0,  // Minimum value
             120.0, // Maximum value
             1.0,  // Step increment
@@ -948,6 +1033,10 @@ impl Radio {
         let agcgain_scale = Scale::new(Orientation::Horizontal, Some(&agcgain_adjustment));
         agcgain_scale.set_digits(0); // Display whole numbers
         agcgain_scale.set_draw_value(true); // Display the current value next to the slider
+        {
+            let r = radio.lock().unwrap();
+            agcgain_adjustment.set_value(r.receiver[0].agcgain.into());
+        }
         agcgain_frame.set_child(Some(&agcgain_scale));
 
         let agcgain_radio = Arc::clone(&radio);
@@ -962,7 +1051,7 @@ impl Radio {
             grid_row = grid_row + 1;
             main_grid.attach(&rxgain_frame, 0, grid_row, 1, 1); 
             let rxgain_adjustment = Adjustment::new(
-                r.receiver[0].rxgain.into(), // Initial value
+                0.0, //r.receiver[0].rxgain.into(), // Initial value
                 -12.0,  // Minimum value
                 48.0, // Maximum value
                 1.0,  // Step increment
@@ -972,6 +1061,10 @@ impl Radio {
             let rxgain_scale = Scale::new(Orientation::Horizontal, Some(&rxgain_adjustment));
             rxgain_scale.set_digits(0); // Display whole numbers
             rxgain_scale.set_draw_value(true); // Display the current value next to the slider
+            {
+                let r = radio.lock().unwrap();
+                rxgain_adjustment.set_value(r.receiver[0].rxgain.into());
+            }
             rxgain_frame.set_child(Some(&rxgain_scale));
 
             let rxgain_radio = Arc::clone(&radio);
@@ -1051,7 +1144,10 @@ impl Radio {
         main_grid.attach(&noise_grid, 1, 9, 2, 1);
 
         let button_nr = ToggleButton::with_label("NR2");
-        button_nr.set_active(r.receiver[0].nr);
+        {
+            let r = radio.lock().unwrap();
+            button_nr.set_active(r.receiver[0].nr);
+        }
         noise_grid.attach(&button_nr, 0, 0, 1, 1);
         let radio_for_nr = Arc::clone(&radio);
         button_nr.connect_clicked(move |_| {
@@ -1065,7 +1161,10 @@ impl Radio {
         });
 
         let button_nb = ToggleButton::with_label("NB2");
-        button_nb.set_active(r.receiver[0].nb);
+        {
+            let r = radio.lock().unwrap();
+            button_nb.set_active(r.receiver[0].nb);
+        }
         noise_grid.attach(&button_nb, 0, 1, 1, 1);
         let radio_for_nb = Arc::clone(&radio);
         button_nb.connect_clicked(move |_| {
@@ -1079,7 +1178,10 @@ impl Radio {
         });
 
         let button_anf = ToggleButton::with_label("ANF");
-        button_anf.set_active(r.receiver[0].anf);
+        {
+            let mut r = radio.lock().unwrap();
+            button_anf.set_active(r.receiver[0].anf);
+        }
         noise_grid.attach(&button_anf, 1, 0, 1, 1);
         let radio_for_anf = Arc::clone(&radio);
         button_anf.connect_clicked(move |_| {
@@ -1093,7 +1195,10 @@ impl Radio {
         });
 
         let button_snb = ToggleButton::with_label("SNB");
-        button_snb.set_active(r.receiver[0].snb);
+        {
+            let r = radio.lock().unwrap();
+            button_snb.set_active(r.receiver[0].snb);
+        }
         noise_grid.attach(&button_snb, 1, 1, 1, 1);
         let radio_for_snb = Arc::clone(&radio);
         button_snb.connect_clicked(move |_| {
@@ -1109,7 +1214,7 @@ impl Radio {
         let pan_frame = Frame::new(Some("Pan"));
         main_grid.attach(&pan_frame, 6, 9, 3, 1);
         let pan_adjustment = Adjustment::new(
-            r.receiver[0].pan.into(),
+            0.0, // r.receiver[0].pan.into(),
             0.0,  // Minimum value
             100.0, // Maximum value
             1.0,  // Step increment
@@ -1119,6 +1224,10 @@ impl Radio {
         let pan_scale = Scale::new(Orientation::Horizontal, Some(&pan_adjustment));
         pan_scale.set_digits(0); // Display whole numbers
         pan_scale.set_draw_value(true); // Display the current value next to the slider
+        {
+            let r = radio.lock().unwrap();
+            pan_adjustment.set_value(r.receiver[0].pan.into());
+        }
         pan_frame.set_child(Some(&pan_scale));
 
         let pan_radio = Arc::clone(&radio);
@@ -1134,7 +1243,7 @@ impl Radio {
         let zoom_frame = Frame::new(Some("Zoom"));
         main_grid.attach(&zoom_frame, 3, 9, 3, 1);
         let zoom_adjustment = Adjustment::new(
-            r.receiver[0].zoom.into(),
+            1.0, //r.receiver[0].zoom.into(),
             1.0,  // Minimum value
             16.0, // Maximum value
             1.0,  // Step increment
@@ -1144,6 +1253,10 @@ impl Radio {
         let zoom_scale = Scale::new(Orientation::Horizontal, Some(&zoom_adjustment));
         zoom_scale.set_digits(0); // Display whole numbers
         zoom_scale.set_draw_value(true); // Display the current value next to the slider
+        {
+            let r = radio.lock().unwrap();
+            zoom_adjustment.set_value(r.receiver[0].zoom.into());
+        }
         zoom_frame.set_child(Some(&zoom_scale));
 
         let zoom_radio = Arc::clone(&radio);
@@ -1156,8 +1269,16 @@ impl Radio {
             }
         });
 
-        r.receiver[0].init();
-        drop(r);
+        {
+            let mut r = radio.lock().unwrap();
+            r.receiver[0].init();
+            if r.audio.local_output {
+                let _result = r.audio.open_output();
+            }
+            if r.audio.local_input {
+                let _result = r.audio.open_input();
+            }
+        }
 
         main_window.set_child(Some(&content));
 

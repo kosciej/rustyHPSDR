@@ -74,7 +74,8 @@ pub struct Receiver {
     pub samples: usize,
     pub local_audio_buffer_size: usize,
     #[serde(skip_serializing, skip_deserializing)]
-    pub local_audio_buffer: Vec<f64>,
+    //pub local_audio_buffer: Vec<f64>,
+    pub local_audio_buffer: Vec<i16>,
     pub local_audio_buffer_offset: usize,
     pub remote_audio_buffer_size: usize,
     #[serde(skip_serializing, skip_deserializing)]
@@ -129,7 +130,8 @@ impl Receiver {
         let iq_input_buffer = vec![0.0; (2*buffer_size) as usize];
         let samples: usize = 0;
         let local_audio_buffer_size: usize = 2048;
-        let local_audio_buffer = vec![0.0; local_audio_buffer_size*2];
+        //let local_audio_buffer = vec![0.0; local_audio_buffer_size*2];
+        let local_audio_buffer = vec![0i16; local_audio_buffer_size*2];
         let local_audio_buffer_offset: usize = 0;
         let remote_audio_buffer_size: usize = 260;
         let remote_audio_buffer = vec![0u8; remote_audio_buffer_size];
@@ -148,7 +150,8 @@ impl Receiver {
     pub fn init(&mut self) {
         self.iq_input_buffer = vec![0.0; (2*self.buffer_size) as usize];
         self.samples = 0;
-        self.local_audio_buffer = vec![0.0; self.local_audio_buffer_size*2];
+        //self.local_audio_buffer = vec![0.0; self.local_audio_buffer_size*2];
+        self.local_audio_buffer = vec![0i16; self.local_audio_buffer_size*2];
         self.local_audio_buffer_offset = 0;
         self.remote_audio_buffer = vec![0u8; self.remote_audio_buffer_size];
         self.remote_audio_buffer_offset = 4;
@@ -239,7 +242,6 @@ impl Receiver {
         let max_w = fft_size + min((keep_time * self.fps) as i32, (keep_time * fft_size as f32  * self.fps) as i32);
         let buffer_size: i32 = self.buffer_size as i32;
         let pixels = self.spectrum_width * self.zoom;
-        println!("init_ananlyzer: display={} pixels={}", display, pixels);
         unsafe {
             SetAnalyzer(display, 1, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
         }

@@ -18,9 +18,11 @@
 use gtk::prelude::*;
 use gtk::{Align, ApplicationWindow, Button, Grid, Label, Notebook, Orientation, SpinButton, Window};
 
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use crate::radio::Radio;
+use crate::audio::*;
 
 pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Radio>>) -> Window {
 
@@ -34,6 +36,11 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Rad
         .build();
 
     let notebook = Notebook::new();
+
+    let mut r = radio.lock().unwrap();
+    let (grid, label, audio) = r.audio.configure();
+    drop(r);
+    notebook.append_page(&grid, Some(&label));
 
     let display_label = Label::new(Some("Display"));
     let display_grid = Grid::builder()
@@ -121,7 +128,6 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Rad
 
     notebook.append_page(&display_grid, Some(&display_label));
 
-
     let button_box = gtk::Box::new(Orientation::Horizontal, 5);
     button_box.set_halign(gtk::Align::End);
 
@@ -135,7 +141,55 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Rad
     window.set_child(Some(&main_vbox));
 
     let window_for_ok = window.clone();
+    let audio_clone = Rc::clone(&audio);
+    let radio_clone = radio.clone();
     ok_button.connect_clicked(move |_| {
+        let mut r = radio_clone.lock().unwrap();
+
+        if r.audio.input_device != String::from(&audio_clone.borrow().input_device) {
+            // input device changed
+            if r.audio.local_input {
+                //input was active
+                r.audio.close_input();
+            }
+            r.audio.input_device = String::from(&audio_clone.borrow().input_device);
+            r.audio.local_input = audio_clone.borrow().local_input;
+            if r.audio.local_input {
+                //input is active
+                r.audio.open_input();
+            }
+        } else if r.audio.local_input != audio_clone.borrow().local_input {
+            // device the same but state changed
+            r.audio.local_input = audio_clone.borrow().local_input;
+            if r.audio.local_input {
+                r.audio.open_input();
+            } else {
+                r.audio.close_input();
+            }
+        }
+
+        if r.audio.output_device != String::from(&audio_clone.borrow().output_device) {
+            // input device changed
+            if r.audio.local_output {
+                //input was active
+                r.audio.close_output();
+            }
+            r.audio.output_device = String::from(&audio_clone.borrow().output_device);
+            r.audio.local_output = audio_clone.borrow().local_output;
+            if r.audio.local_output {
+                //input is active
+                r.audio.open_output();
+            }
+        } else if r.audio.local_output != audio_clone.borrow().local_output {
+            // device the same but state changed
+            r.audio.local_output = audio_clone.borrow().local_output;
+            if r.audio.local_output {
+                r.audio.open_output();
+            } else {
+                r.audio.close_output();
+            }
+        }
+
         window_for_ok.close();
     });
 

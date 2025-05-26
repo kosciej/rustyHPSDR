@@ -15,6 +15,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -59,6 +60,9 @@ impl Transmitter {
     }
 
     pub fn init(&mut self) {
+    }
+
+    pub fn run(&mut self) {
     }
 
 }

@@ -644,7 +644,7 @@ impl Radio {
             println!("Spectrum resized to: {}x{}", width, height);
         });
 
-        main_grid.attach(&spectrum_display, 1, 1, 10, 4);
+        main_grid.attach(&spectrum_display, 1, 1, 10, 3);
 
 
         let pixbuf: Rc<RefCell<Option<Pixbuf>>> = Rc::new(RefCell::new(None));
@@ -720,7 +720,7 @@ impl Radio {
             r.receiver[0].spectrum_width = width;
             r.receiver[0].init_analyzer(r.receiver[0].channel);
         });
-        main_grid.attach(&waterfall_display, 1, 5, 10, 4);
+        main_grid.attach(&waterfall_display, 1, 4, 10, 3);
 
         let band_frame = Frame::new(Some("Band"));
         main_grid.attach(&band_frame, 11, 0, 2, 2);
@@ -1141,7 +1141,7 @@ impl Radio {
             .row_spacing(2)
             .column_spacing(2)
             .build();
-        main_grid.attach(&noise_grid, 1, 9, 2, 1);
+        main_grid.attach(&noise_grid, 1, 7, 2, 1);
 
         let button_nr = ToggleButton::with_label("NR2");
         {
@@ -1212,7 +1212,7 @@ impl Radio {
         });
 
         let pan_frame = Frame::new(Some("Pan"));
-        main_grid.attach(&pan_frame, 6, 9, 3, 1);
+        main_grid.attach(&pan_frame, 6, 7, 3, 1);
         let pan_adjustment = Adjustment::new(
             0.0, // r.receiver[0].pan.into(),
             0.0,  // Minimum value
@@ -1241,7 +1241,7 @@ impl Radio {
         });
 
         let zoom_frame = Frame::new(Some("Zoom"));
-        main_grid.attach(&zoom_frame, 3, 9, 3, 1);
+        main_grid.attach(&zoom_frame, 3, 7, 3, 1);
         let zoom_adjustment = Adjustment::new(
             1.0, //r.receiver[0].zoom.into(),
             1.0,  // Minimum value
@@ -1704,15 +1704,19 @@ fn draw_spectrum(cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>
         
         // draw the filter
         cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
+/*
         if r.receiver[0].mode == Modes::CWL.to_usize() || r.receiver[0].mode == Modes::CWU.to_usize() {
             let filter_left = ((frequency + r.receiver[0].filter_low - r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
             let filter_right = ((frequency + r.receiver[0].filter_high + r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
             cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
         } else {
+*/
             let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
             let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
             cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
+/*
         }
+*/
         let _ = cr.fill();
     }
 

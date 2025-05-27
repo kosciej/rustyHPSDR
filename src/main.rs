@@ -20,6 +20,7 @@ use gtk::{Application, ApplicationWindow};
 use gtk::glib::Propagation;
 
 use std::cell::RefCell;
+use std::process;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
@@ -28,8 +29,11 @@ use rustyHPSDR::discovery::device_name;
 use rustyHPSDR::radio::Radio;
 
 fn main() {
+
+    let id = format!("org.g0orx.rustyHPSDR.pid{}", process::id());
+    println!("application_id={}", id);
     let application = Application::builder()
-        .application_id("org.g0orx.rustyHPSDR")
+        .application_id(id)
         .build();
 
     application.connect_activate(|app| {

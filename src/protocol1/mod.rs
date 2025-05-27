@@ -301,7 +301,13 @@ impl Protocol1 {
                         if r.receiver[0].local_audio_buffer_offset == r.receiver[0].local_audio_buffer_size {
                             r.receiver[0].local_audio_buffer_offset = 0;
                             let buffer_clone = r.receiver[0].local_audio_buffer.clone();
-                            r.audio.write_output(&buffer_clone);
+                            match r.audio.write_output(&buffer_clone) {
+                                Ok(()) => {
+                                },
+                                Err(e) => {
+                                    eprintln!("Protocol1: write_output: {}", e);
+                                },
+                            }
                         }
                     }
                 }

@@ -154,7 +154,7 @@ impl FilterGrid {
             Filter {low: -2250.0, high: -150.0, label: "2.1k"},
             Filter {low: -1950.0, high: -150.0, label: "1.8k"},
             Filter {low: -1150.0, high: -150.0, label: "1.0k"},
-            Filter {low: -2850.0, high: -150.0, label: "Var1"},
+            Filter {low: -4000.0, high: 0.0, label: "Var1"},
             Filter {low: -2850.0, high: -150.0, label: "Var2"}
         ];
 
@@ -169,7 +169,7 @@ impl FilterGrid {
             Filter {low: 150.0, high: 2250.0, label: "2.1k"},
             Filter {low: 150.0, high: 1950.0, label: "1.8k"},
             Filter {low: 150.0, high: 1150.0, label: "1.0k"},
-            Filter {low: 150.0, high: 2850.0, label: "Var1"},
+            Filter {low: 0.0, high: 4000.0, label: "Var1"},
             Filter {low: 150.0, high: 2850.0, label: "Var2"},
         ];
 

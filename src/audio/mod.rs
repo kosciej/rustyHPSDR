@@ -1,3 +1,20 @@
+/*
+    Copyright (C) 2025  John Melton G0ORX/N6LYT
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 use alsa::pcm::*;
 use alsa::device_name::HintIter;
 use alsa::{Direction, ValueOr, Error};
@@ -6,6 +23,7 @@ use gtk::{Align, CheckButton, ComboBoxText, Grid, Label};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::SystemTime;
 
 use crate::receiver::Receiver;
 
@@ -45,7 +63,6 @@ impl Audio {
     }
 
     pub fn open_input(&mut self) -> Result<(), Error> {
-println!("open_input: {}", self.input_device);
         let pcm = PCM::new(&self.input_device, Direction::Capture, false)?;
         {
             let hwp = HwParams::any(&pcm)?;
@@ -60,13 +77,12 @@ println!("open_input: {}", self.input_device);
     }
 
     pub fn close_input(&mut self) ->  Result<(), Error> {
-println!("close_input: {}", self.input_device);
         self.input= None;
         Ok(())
     }
 
     pub fn open_output(&mut self) -> Result<(), Error> {
-println!("open_output: {}", self.output_device);
+        let now = SystemTime::now();
         let pcm = PCM::new(&self.output_device, Direction::Playback, false)?;
         {
             let hwp = HwParams::any(&pcm)?;
@@ -81,14 +97,34 @@ println!("open_output: {}", self.output_device);
     }
 
     pub fn close_output(&mut self) ->  Result<(), Error> {
-println!("close_output: {}", self.output_device);
         self.output = None;
         Ok(())
     }
 
     pub fn write_output(&mut self, buffer: &Vec<i16>) -> Result<(), Error> {
-        let io = self.output.as_ref().expect("failed to get io").io_i16()?;
-        io.writei(&buffer)?;
+        match self.output.as_ref().expect("Could not access output to get delay").delay() {
+            Ok(delay) => {
+                let mut trim = 0;
+                let max_delay = 2 * buffer.len() as i64;
+                if delay > max_delay {
+                    trim = delay - max_delay;
+                }
+                let io = self.output.as_ref().expect("failed to get io").io_i16()?;
+                if trim > 0 {
+                    let n = buffer.len() - trim as usize;
+                    if n > 0  {
+                        let trimmed_buffer = buffer[0..n].to_vec();
+                        io.writei(&trimmed_buffer)?;
+                    }
+                } else {
+                    io.writei(&buffer)?;
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to get delay: {}", e);
+            }
+        }
+
         Ok(())
     }
 
@@ -97,11 +133,6 @@ println!("close_output: {}", self.output_device);
         let hints = HintIter::new_str(None, "pcm").unwrap();
         for hint in hints {
             if hint.name.is_some() && hint.desc.is_some() && (hint.direction.is_none() || hint.direction.map(|dir| dir == direction).unwrap_or_default()) {
-                //if hint.direction == None {
-                //    println!("name: {:<35} desc: {:?}", hint.name.clone().unwrap(), hint.desc.unwrap());
-                //} else {
-                //    println!("name: {:<35} desc: {:?} direction: {:?}", hint.name.clone().unwrap(), hint.desc.unwrap(), Some(hint.direction).unwrap());
-                //}
                 devices.push(hint.name.expect("Error: cannot push name"));
             }
         }

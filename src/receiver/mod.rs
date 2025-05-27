@@ -251,7 +251,6 @@ impl Receiver {
         unsafe {
             RXASetPassband(self.channel, self.filter_low.into(), self.filter_high.into());
             RXASetPassband(self.subrx_channel, self.filter_low.into(), self.filter_high.into());
-            
         }
     }
 
@@ -340,6 +339,5 @@ impl Receiver {
             RXANBPSetShiftFrequency(self.subrx_channel, offset.into());
         }
     }
-
 
 }

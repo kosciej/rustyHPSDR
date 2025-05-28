@@ -39,6 +39,8 @@ pub struct Audio {
     pub output_device: String,
     #[serde(skip_serializing, skip_deserializing)]
     output: Option<PCM>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub output_underruns: i32,
 }
 
 impl Audio {
@@ -52,17 +54,27 @@ impl Audio {
         let local_output = false;
         let output_device = String::from("default"); 
         let output = None;
+        let output_underruns = 0;
 
-        let audio = Audio{remote_input, local_input, input_device, input, remote_output, local_output, output_device, output};
+        let audio = Audio{remote_input, local_input, input_device, input, remote_output, local_output, output_device, output, output_underruns};
         audio
     }
 
     pub fn init(&mut self) {
+        println!("audio.init");
         self.input = None;
         self.output = None;
+        self.output_underruns = 0;
+        if self.local_input {
+            let _ = self.open_input();
+        }
+        if self.local_output {
+            let _ = self.open_output();
+        }
     }
 
     pub fn open_input(&mut self) -> Result<(), Error> {
+        println!("audio.open_input: {}", self.input_device);
         let pcm = PCM::new(&self.input_device, Direction::Capture, false)?;
         {
             let hwp = HwParams::any(&pcm)?;
@@ -77,12 +89,13 @@ impl Audio {
     }
 
     pub fn close_input(&mut self) ->  Result<(), Error> {
+        println!("audio.close_input");
         self.input= None;
         Ok(())
     }
 
     pub fn open_output(&mut self) -> Result<(), Error> {
-        let now = SystemTime::now();
+        println!("audio.open_output: {}", self.output_device);
         let pcm = PCM::new(&self.output_device, Direction::Playback, false)?;
         {
             let hwp = HwParams::any(&pcm)?;
@@ -97,6 +110,7 @@ impl Audio {
     }
 
     pub fn close_output(&mut self) ->  Result<(), Error> {
+        println!("audio.close_output");
         self.output = None;
         Ok(())
     }
@@ -109,15 +123,42 @@ impl Audio {
                 if delay > max_delay {
                     trim = delay - max_delay;
                 }
-                let io = self.output.as_ref().expect("failed to get io").io_i16()?;
+                let io = self.output.as_ref().expect("write_output: failed to get io").io_i16().expect("write_output: failed to get io_i16");
                 if trim > 0 {
                     let n = buffer.len() - trim as usize;
                     if n > 0  {
                         let trimmed_buffer = buffer[0..n].to_vec();
-                        io.writei(&trimmed_buffer)?;
+                        match io.writei(&trimmed_buffer) {
+                            Ok(_frames) => {
+                            }
+                            Err(e) => {
+                                self.output_underruns = self.output_underruns + 1;
+                                match self.output.as_ref().expect("output failed for prepare").prepare() {
+                                    Ok(()) => {
+                                    }
+                                    Err(e) => {
+                                        eprintln!("write_output: prepare failed: {}", e);
+                                    }
+                                }
+                            }
+                        }
+
                     }
                 } else {
-                    io.writei(&buffer)?;
+                    match io.writei(&buffer) {
+                        Ok(_frames) => {
+                        }
+                        Err(e) => {
+                            self.output_underruns = self.output_underruns + 1;
+                            match self.output.as_ref().expect("output failed for prepare").prepare() {
+                                Ok(()) => {
+                                }
+                                Err(e) => {
+                                    eprintln!("write_output: prepare failed: {}", e);
+                                }
+                            }
+                        }
+                    }
                 }
             }
             Err(e) => {
@@ -150,6 +191,7 @@ impl Audio {
             local_output: self.local_output,
             output_device: self.output_device.clone(),
             output: None,
+            output_underruns: self.output_underruns,
         }));
 
         let label = Label::new(Some("Audio"));

@@ -16,7 +16,7 @@
 */
 
 use gtk::prelude::*;
-use gtk::{Adjustment, Align, ApplicationWindow, Button, CellRendererText, ComboBox, DrawingArea, Frame, Grid, Label, ListStore, Orientation, Scale, ToggleButton};
+use gtk::{Adjustment, Align, ApplicationWindow, Button, CellRendererText, ComboBox, DrawingArea, Frame, Grid, Label, ListStore, Orientation, Scale, SpinButton, ToggleButton};
 use gtk::{EventController, EventControllerMotion, EventControllerScroll, EventControllerScrollFlags, GestureClick};
 use gtk::glib::Propagation;
 use gtk::cairo::{Context, LineCap, LineJoin, LinearGradient}; 
@@ -785,11 +785,11 @@ impl Radio {
             r.receiver[0].filter_high = high;
 
             if r.receiver[0].mode == Modes::CWL.to_usize() {
-                r.receiver[0].filter_low = -r.receiver[0].cw_sidetone - low;
-                r.receiver[0].filter_high = -r.receiver[0].cw_sidetone + high;
+                r.receiver[0].filter_low = -r.receiver[0].cw_pitch - low;
+                r.receiver[0].filter_high = -r.receiver[0].cw_pitch + high;
             } else if r.receiver[0].mode == Modes::CWU.to_usize() {
-                r.receiver[0].filter_low = r.receiver[0].cw_sidetone - low;
-                r.receiver[0].filter_high = r.receiver[0].cw_sidetone + high;
+                r.receiver[0].filter_low = r.receiver[0].cw_pitch - low;
+                r.receiver[0].filter_high = r.receiver[0].cw_pitch + high;
             }
             r.receiver[0].set_mode();
 
@@ -815,18 +815,24 @@ impl Radio {
             r.receiver[0].filter_high = high;
 
             if r.receiver[0].mode == Modes::CWL.to_usize() {
-                r.receiver[0].filter_low = -r.receiver[0].cw_sidetone - low;
-                r.receiver[0].filter_high = -r.receiver[0].cw_sidetone + high;
+                r.receiver[0].filter_low = -r.receiver[0].cw_pitch - low;
+                r.receiver[0].filter_high = -r.receiver[0].cw_pitch + high;
             } else if r.receiver[0].mode == Modes::CWU.to_usize() {
-                r.receiver[0].filter_low = r.receiver[0].cw_sidetone - low;
-                r.receiver[0].filter_high = r.receiver[0].cw_sidetone + high;
+                r.receiver[0].filter_low = r.receiver[0].cw_pitch - low;
+                r.receiver[0].filter_high = r.receiver[0].cw_pitch + high;
             }
             r.receiver[0].set_mode();
         }, mode);
 
+        {
+        let filter_grid_mut = filter_grid.borrow_mut();
+        filter_grid_mut.update_filter_buttons(mode);
+        }
+
         let r = radio.lock().unwrap();
         let filter = r.receiver[0].filter;
         drop(r);
+
 
         let radio_for_filter_callback = Arc::clone(&radio);
         let filter_grid_for_set_callback = filter_grid.clone();
@@ -840,14 +846,61 @@ impl Radio {
             r.receiver[0].filter_high = high;
 
             if r.receiver[0].mode == Modes::CWL.to_usize() {
-                r.receiver[0].filter_low = -r.receiver[0].cw_sidetone - low;
-                r.receiver[0].filter_high = -r.receiver[0].cw_sidetone + high;
+                r.receiver[0].filter_low = -r.receiver[0].cw_pitch - low;
+                r.receiver[0].filter_high = -r.receiver[0].cw_pitch + high;
             } else if r.receiver[0].mode == Modes::CWU.to_usize() {
-                r.receiver[0].filter_low = r.receiver[0].cw_sidetone - low;
-                r.receiver[0].filter_high = r.receiver[0].cw_sidetone + high;
+                r.receiver[0].filter_low = r.receiver[0].cw_pitch - low;
+                r.receiver[0].filter_high = r.receiver[0].cw_pitch + high;
             }
             r.receiver[0].set_filter();
         }, filter);
+
+    let cw_grid = Grid::builder()
+            .margin_start(0)
+            .margin_end(0)
+            .margin_top(0)
+            .margin_bottom(0)
+            .halign(Align::Center)
+            .valign(Align::Center) 
+            .row_spacing(0)
+            .column_spacing(0) 
+            .build();
+
+    cw_grid.set_column_homogeneous(true);
+    cw_grid.set_row_homogeneous(true);
+    main_grid.attach(&cw_grid, 11, 6, 2, 1);
+
+    let pitch_title = Label::new(Some("CW Pitch"));
+    cw_grid.attach(&pitch_title, 0, 0, 1, 1);
+    let pitch_spin_button = SpinButton::with_range(200.0, 1000.0, 10.0);
+    let mut r = radio.lock().unwrap();
+    let pitch = r.receiver[0].cw_pitch;
+    drop(r);
+    pitch_spin_button.set_value(pitch.into());
+    cw_grid.attach(&pitch_spin_button, 1, 0, 1, 1);
+    let radio_clone = Arc::clone(&radio);
+    let filter_grid_clone = filter_grid.clone();
+    pitch_spin_button.connect_value_changed(move |spin_button| {
+        let value = spin_button.value() as f32;
+        let mut r = radio_clone.lock().unwrap();
+        r.receiver[0].cw_pitch = value;
+        let filter_grid = filter_grid_clone.borrow();
+        let (low, high) = filter_grid.get_filter_values(r.receiver[0].mode, r.receiver[0].filter);
+        r.receiver[0].filter_low = low;
+        r.receiver[0].filter_high = high;
+        if r.receiver[0].mode == Modes::CWL.to_usize() {
+            r.receiver[0].filter_low = -r.receiver[0].cw_pitch - low;
+            r.receiver[0].filter_high = -r.receiver[0].cw_pitch + high;
+        } else if r.receiver[0].mode == Modes::CWU.to_usize() {
+            r.receiver[0].filter_low = r.receiver[0].cw_pitch - low;
+            r.receiver[0].filter_high = r.receiver[0].cw_pitch + high;
+        }
+        r.receiver[0].set_filter();
+        if r.receiver[0].ctun {
+            r.receiver[0].set_ctun_frequency();
+        }
+    });
+
 
         let tx_grid = Grid::builder()
             .margin_start(0)
@@ -1272,12 +1325,8 @@ impl Radio {
         {
             let mut r = radio.lock().unwrap();
             r.receiver[0].init();
-            if r.audio.local_output {
-                let _result = r.audio.open_output();
-            }
-            if r.audio.local_input {
-                let _result = r.audio.open_input();
-            }
+            r.audio.init();
+            r.receiver[0].set_mode();
         }
 
         main_window.set_child(Some(&content));
@@ -1690,10 +1739,15 @@ fn draw_spectrum(cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>
     if r.receiver[0].ctun {
         frequency = r.receiver[0].ctun_frequency;
     }
+    if r.receiver[0].mode == Modes::CWL.to_usize() {
+        frequency = frequency + r.receiver[0].cw_pitch;
+    } else if r.receiver[0].mode == Modes::CWU.to_usize() {
+        frequency = frequency - r.receiver[0].cw_pitch;
+    }
+
      
     // see if cursor and filter visible
     if display_frequency_low < frequency && display_frequency_high > frequency {
-
         // draw the center line frequency marker
         let x = (frequency - display_frequency_low) / display_hz_per_pixel;
         cr.set_source_rgb(1.0, 0.0, 0.0);
@@ -1704,24 +1758,19 @@ fn draw_spectrum(cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>
         
         // draw the filter
         cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
-/*
-        if r.receiver[0].mode == Modes::CWL.to_usize() || r.receiver[0].mode == Modes::CWU.to_usize() {
-            let filter_left = ((frequency + r.receiver[0].filter_low - r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
-            let filter_right = ((frequency + r.receiver[0].filter_high + r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
-            cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
-        } else {
-*/
-            let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
-            let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
-            cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
-/*
-        }
-*/
+        let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
+        let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
+        cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
         let _ = cr.fill();
     }
 
     if r.receiver[0].subrx {
         frequency = r.receiver[0].frequency_b;
+        if r.receiver[0].mode == Modes::CWL.to_usize() {
+            frequency = frequency + r.receiver[0].cw_pitch;
+        } else if r.receiver[0].mode == Modes::CWU.to_usize() {
+            frequency = frequency - r.receiver[0].cw_pitch;
+        }
         if display_frequency_low < frequency && display_frequency_high > frequency {
             // draw the center line frequency marker
             let x = (frequency - display_frequency_low) / display_hz_per_pixel;
@@ -1733,15 +1782,9 @@ fn draw_spectrum(cr: &Context, width: i32, height: i32, radio: &Arc<Mutex<Radio>
 
             // draw the filter
             cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
-            if r.receiver[0].mode == Modes::CWL.to_usize() || r.receiver[0].mode == Modes::CWU.to_usize() {
-                let filter_left = ((frequency + r.receiver[0].filter_low - r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
-                let filter_right = ((frequency + r.receiver[0].filter_high + r.receiver[0].cw_sidetone) - display_frequency_low) / display_hz_per_pixel;
-                cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
-            } else {
-                let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
-                let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
-                cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
-            }
+            let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
+            let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
+            cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
             let _ = cr.fill();
         }
     }

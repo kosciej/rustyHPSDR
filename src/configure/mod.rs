@@ -28,7 +28,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Rad
 
     let window = Window::builder()
         .title("rustyHPSDR Discovery")
-        .modal(false)
+        .modal(true)
         .transient_for(parent)
         .destroy_with_parent(true)
         .default_width(800)

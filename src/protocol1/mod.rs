@@ -22,6 +22,7 @@ use std::sync::{Arc, Mutex};
 use std::os::raw::c_int;
 
 use crate::discovery::Device;
+use crate::modes::Modes;
 use crate::radio::Radio;
 use crate::wdsp::*;
 use crate::audio::*;
@@ -134,11 +135,18 @@ impl Protocol1 {
 
         // start the radio running
         let r = radio.lock().unwrap();
+        let mut f = r.receiver[0].frequency_a;
+        if r.receiver[0].mode == Modes::CWL.to_usize() {
+             f = f + r.receiver[0].cw_pitch;
+        } else if r.receiver[0].mode == Modes::CWU.to_usize() {
+             f = f - r.receiver[0].cw_pitch;
+        }
+
         loop {
             if self.device.device == 6 {
-                self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].rxgain, self.device);
+                self.send_ozy_buffer(f, r.receiver[0].rxgain, self.device);
             } else {
-                self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].attenuation, self.device);
+                self.send_ozy_buffer(f, r.receiver[0].attenuation, self.device);
             }
             if self.ozy_command == 1 {
                 break;
@@ -146,9 +154,9 @@ impl Protocol1 {
         }
         loop {
             if self.device.device == 6 {
-                self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].rxgain, self.device);
+                self.send_ozy_buffer(f, r.receiver[0].rxgain, self.device);
             } else {
-                self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].attenuation, self.device);
+                self.send_ozy_buffer(f, r.receiver[0].attenuation, self.device);
             }
             if self.ozy_command == 1 {
                 break;
@@ -279,10 +287,16 @@ impl Protocol1 {
                     self.ozy_buffer[self.ozy_buffer_offset] = 0;
                     self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
                     if self.ozy_buffer_offset == OZY_BUFFER_SIZE {
+                        let mut f = r.receiver[0].frequency_a;
+                        if r.receiver[0].mode == Modes::CWL.to_usize() {
+                             f = f + r.receiver[0].cw_pitch;
+                        } else if r.receiver[0].mode == Modes::CWU.to_usize() {
+                             f = f - r.receiver[0].cw_pitch;
+                        }
                         if self.device.device == 6 {
-                            self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].rxgain, self.device);
+                            self.send_ozy_buffer(f, r.receiver[0].rxgain, self.device);
                         } else {
-                            self.send_ozy_buffer(r.receiver[0].frequency_a, r.receiver[0].attenuation, self.device);
+                            self.send_ozy_buffer(f, r.receiver[0].attenuation, self.device);
                         }
                         self.ozy_buffer_offset = 8;
                     }

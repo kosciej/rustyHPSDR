@@ -83,7 +83,7 @@ pub struct Receiver {
     pub remote_audio_buffer_offset: usize,
     pub attenuation: i32,
     pub rxgain: i32,
-    pub cw_sidetone: f32,
+    pub cw_pitch: f32,
 
     pub subrx: bool,
     pub subrx_channel: i32,
@@ -112,7 +112,7 @@ impl Receiver {
         let nb: bool = false;
         let anf: bool = false;
         let snb: bool = false;
-        let fps = 25.0;
+        let fps = 50.0;
         let spectrum_width: i32 = 1024;
         let spectrum_step: f32 = 10.0;
         let zoom: i32 = 1;
@@ -138,11 +138,11 @@ impl Receiver {
         let remote_audio_buffer_offset: usize = 4;
         let attenuation: i32 = 0;
         let rxgain: i32 = 0;
-        let cw_sidetone: f32 = 400.0;
+        let cw_pitch: f32 = 200.0;
         let subrx: bool = false;
         let subrx_channel: i32 = channel + SUBRX_BASE_CHANNEL;
 
-        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, afpan, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_sidetone, subrx, subrx_channel };
+        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, afpan, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_pitch, subrx, subrx_channel };
 
         rx
     }
@@ -203,13 +203,18 @@ impl Receiver {
 
             SetRXAMode(channel, self.mode as i32);
             if self.mode == Modes::CWL.to_usize() || self.mode == Modes::CWU.to_usize() {
-                RXASetPassband(channel,(self.cw_sidetone - self.filter_low).into(), (self.cw_sidetone +self.filter_high).into());
+                RXASetPassband(channel,(self.cw_pitch - self.filter_low).into(), (self.cw_pitch +self.filter_high).into());
             } else {
                 RXASetPassband(channel,self.filter_low.into(),self.filter_high.into());
             }
 
             if self.ctun {
-                let offset = self.ctun_frequency - self.frequency_a;
+                let mut offset = self.ctun_frequency - self.frequency_a;
+                if self.mode == Modes::CWL.to_usize() {
+                     offset = offset + self.cw_pitch;
+                } else if self.mode == Modes::CWU.to_usize() {
+                     offset = offset - self.cw_pitch;
+                }
                 SetRXAShiftRun(channel, 1);
                 SetRXAShiftFreq(channel, offset.into());
                 RXANBPSetShiftFrequency(channel, 0.0);
@@ -263,7 +268,12 @@ impl Receiver {
     }
 
     pub fn set_ctun_frequency(&self) {
-        let offset = self.ctun_frequency - self.frequency_a;
+        let mut offset = self.ctun_frequency - self.frequency_a;
+        if self.mode == Modes::CWL.to_usize() {
+             offset = offset + self.cw_pitch;
+        } else if self.mode == Modes::CWU.to_usize() {
+             offset = offset - self.cw_pitch;
+        }
         unsafe {
             SetRXAShiftFreq(self.channel, offset.into());
             RXANBPSetShiftFrequency(self.channel, offset.into());
@@ -333,7 +343,12 @@ impl Receiver {
     }
 
     pub fn set_subrx_frequency(&self) {
-        let offset = self.frequency_b - self.frequency_a;
+        let mut offset = self.frequency_b - self.frequency_a;
+        if self.mode == Modes::CWL.to_usize() {
+             offset = offset + self.cw_pitch;
+        } else if self.mode == Modes::CWU.to_usize() {
+             offset = offset - self.cw_pitch;
+        }
         unsafe {
             SetRXAShiftFreq(self.subrx_channel, offset.into());
             RXANBPSetShiftFrequency(self.subrx_channel, offset.into());

@@ -22,6 +22,7 @@ use std::sync::{Arc, Mutex};
 use std::os::raw::c_int;
 
 use crate::discovery::Device;
+use crate::modes::Modes;
 use crate::receiver::Receiver;
 use crate::radio::Radio;
 use crate::wdsp::*;
@@ -237,7 +238,14 @@ impl Protocol2 {
         buf[4] = 0x01;
     
         // convert frequency to phase
-        let phase = ((4294967296.0*rx.frequency_a)/122880000.0) as u32;
+        let mut f = rx.frequency_a;
+        if rx.mode == Modes::CWL.to_usize() {
+             f = f + rx.cw_pitch;
+        } else if rx.mode == Modes::CWU.to_usize() {
+             f = f - rx.cw_pitch;
+        }
+
+        let phase = ((4294967296.0*f)/122880000.0) as u32;
         buf[9] = ((phase>>24) & 0xFF) as u8;
         buf[10] = ((phase>>16) & 0xFF) as u8;
         buf[11] = ((phase>>8) & 0xFF) as u8;

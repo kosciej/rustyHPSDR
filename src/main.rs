@@ -73,7 +73,7 @@ fn main() {
                             {
                                 let mut r = radio.lock().unwrap();
                                 r.init();
-                                r.audio.init();
+                                //r.audio.init();
                             }
 
                             let radio_clone_for_show = radio.clone();

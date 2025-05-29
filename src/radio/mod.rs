@@ -24,6 +24,7 @@ use gtk::gdk::{Cursor, Event, ModifierType};
 use gdk_pixbuf::Pixbuf;
 use gdk_pixbuf::Colorspace;
 use glib::ControlFlow::Continue;
+use glib::timeout_add_local;
 use pangocairo;
 
 use std::cell::Cell;
@@ -1288,6 +1289,7 @@ impl Radio {
                 r.receiver[0].pan = adjustment.value() as i32;
             } else {
                 r.receiver[0].pan = 0;
+                adjustment.set_value(r.receiver[0].pan.into());
             }
         });
 
@@ -1314,7 +1316,7 @@ impl Radio {
             let mut r = zoom_radio.lock().unwrap();
             r.receiver[0].zoom = adjustment.value() as i32;
             r.receiver[0].init_analyzer(r.receiver[0].channel);
-            if adjustment.value() == 0.0 {
+            if adjustment.value() == 1.0 {
                 r.receiver[0].pan = 0;
             }
         });
@@ -1359,9 +1361,8 @@ impl Radio {
         let waterfall_display_for_timeout = waterfall_display.clone();
         let meter_display_for_timeout = meter_display.clone();
         let radio_clone_for_timeout = Arc::clone(&radio);
-        //let band_info_for_timeout = band_info.clone();
         let pixbuf_for_timeout = pixbuf.clone();
-        glib::timeout_add_local(Duration::from_millis(update_interval as u64), move || {
+        let timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
             let r = radio_clone_for_timeout.lock().unwrap();
             let zoom = r.receiver[0].zoom;
             let channel = r.receiver[0].channel;

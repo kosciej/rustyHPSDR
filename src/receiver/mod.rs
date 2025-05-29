@@ -87,6 +87,12 @@ pub struct Receiver {
 
     pub subrx: bool,
     pub subrx_channel: i32,
+
+    pub equalizer_enabled: bool,
+    pub equalizer_preamp: f32,
+    pub equalizer_low: f32,
+    pub equalizer_mid: f32,
+    pub equalizer_high: f32,
 }
 
 impl Receiver {
@@ -141,8 +147,14 @@ impl Receiver {
         let cw_pitch: f32 = 200.0;
         let subrx: bool = false;
         let subrx_channel: i32 = channel + SUBRX_BASE_CHANNEL;
+        let equalizer_enabled: bool = true;
+        let equalizer_preamp: f32 = 0.0;
+        let equalizer_low: f32 = 0.0;
+        let equalizer_mid: f32 = 0.0;
+        let equalizer_high: f32 = 0.0;
 
-        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, afpan, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_pitch, subrx, subrx_channel };
+
+        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, afpan, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_pitch, subrx, subrx_channel, equalizer_enabled, equalizer_preamp, equalizer_low, equalizer_mid, equalizer_high };
 
         rx
     }
@@ -160,6 +172,8 @@ impl Receiver {
         self.create_display(self.channel);
         self.init_analyzer(self.channel);
         self.init_wdsp(self.subrx_channel);
+
+        self.enable_equalizer();
     }
 
     fn init_wdsp(&self, channel: i32) {
@@ -352,6 +366,28 @@ impl Receiver {
         unsafe {
             SetRXAShiftFreq(self.subrx_channel, offset.into());
             RXANBPSetShiftFrequency(self.subrx_channel, offset.into());
+        }
+    }
+
+    pub fn enable_equalizer(&self) {
+        if self.equalizer_enabled {
+            self.set_equalizer_values();
+        }
+        unsafe {
+            SetRXAEQRun(self.channel, self.equalizer_enabled.into());
+        }
+    }
+
+    pub fn set_equalizer_values(&self) {
+
+        let mut values: Vec<i32> = vec![
+            self.equalizer_preamp as i32,
+            self.equalizer_low as i32,
+            self.equalizer_mid as i32,
+            self.equalizer_high as i32,
+        ];
+        unsafe {
+            SetRXAGrphEQ(self.channel, values.as_mut_ptr());
         }
     }
 

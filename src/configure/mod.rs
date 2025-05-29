@@ -16,7 +16,7 @@
 */
 
 use gtk::prelude::*;
-use gtk::{Align, ApplicationWindow, Button, Grid, Label, Notebook, Orientation, SpinButton, Window};
+use gtk::{Adjustment, Align, ApplicationWindow, Button, CheckButton, Grid, Label, Notebook, Orientation, PositionType, Scale, SpinButton, Window};
 
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -127,6 +127,144 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Rad
     }
 
     notebook.append_page(&display_grid, Some(&display_label));
+
+    let rx_equalizer_label = Label::new(Some("RX Equalizer"));
+    let rx_equalizer_grid = Grid::builder()
+            .margin_start(0)
+            .margin_end(0)
+            .margin_top(0)
+            .margin_bottom(0)
+            .halign(Align::Center)
+            .valign(Align::Center)
+            .row_spacing(5)
+            .column_spacing(5)
+            .build();
+    rx_equalizer_grid.set_column_homogeneous(true);
+    rx_equalizer_grid.set_row_homogeneous(true);
+
+    let mut r = radio.lock().unwrap();
+    let enabled = r.receiver[0].equalizer_enabled;
+    let preamp = r.receiver[0].equalizer_preamp as f64;
+    let low = r.receiver[0].equalizer_low as f64;
+    let mid = r.receiver[0].equalizer_mid as f64;
+    let high = r.receiver[0].equalizer_high as f64;
+    drop(r);
+
+    let equalizer_enabled_check_button = CheckButton::with_label("Equalizer Enabled");
+    equalizer_enabled_check_button.set_active(enabled);
+    rx_equalizer_grid.attach(&equalizer_enabled_check_button, 0, 0, 2, 1);
+    let enabled_radio = Arc::clone(&radio);
+    equalizer_enabled_check_button.connect_toggled(move |button| {
+        let mut r = enabled_radio.lock().unwrap();
+        r.receiver[0].equalizer_enabled = button.is_active();
+        r.receiver[0].enable_equalizer();
+    });
+
+
+    let preamp_label = Label::new(Some("Preamp"));
+    rx_equalizer_grid.attach(&preamp_label, 0, 1, 1, 1);
+    let low_label = Label::new(Some("Low"));
+    rx_equalizer_grid.attach(&low_label, 1, 1, 1, 1);
+    let mid_label = Label::new(Some("Mid"));
+    rx_equalizer_grid.attach(&mid_label, 2, 1, 1, 1);
+    let high_label = Label::new(Some("High"));
+    rx_equalizer_grid.attach(&high_label, 3, 1, 1, 1);
+
+    let preamp_adjustment = Adjustment::new( 
+        preamp, // initial value
+        -12.0,  // Minimum value
+        15.0, // Maximum value
+        1.0,  // Step increment
+        1.0, // Page increment 
+        0.0,  // Page size (not typically used for simple scales)
+    );
+    let preamp_scale = Scale::new(Orientation::Vertical, Some(&preamp_adjustment)); 
+    preamp_scale.set_digits(0); // Display whole numbers
+    preamp_scale.set_draw_value(true);
+    preamp_scale.set_inverted(true);
+    preamp_scale.add_mark(-12.0, PositionType::Left, Some("-12dB"));
+    preamp_scale.add_mark(0.0, PositionType::Left, Some("0dB"));
+    preamp_scale.add_mark(15.0, PositionType::Left, Some("15dB"));
+    rx_equalizer_grid.attach(&preamp_scale, 0, 2, 1, 10);
+
+    let low_adjustment = Adjustment::new(
+        low, // initial value
+        -12.0,  // Minimum value
+        15.0, // Maximum value
+        1.0,  // Step increment
+        1.0, // Page increment
+        0.0,  // Page size (not typically used for simple scales)
+    );
+    let low_scale = Scale::new(Orientation::Vertical, Some(&low_adjustment));
+    low_scale.set_digits(0); // Display whole numbers
+    low_scale.set_draw_value(true);
+    low_scale.set_inverted(true);
+    low_scale.add_mark(-12.0, PositionType::Left, Some("-12dB"));
+    low_scale.add_mark(0.0, PositionType::Left, Some("0dB"));
+    low_scale.add_mark(15.0, PositionType::Left, Some("15dB"));
+    rx_equalizer_grid.attach(&low_scale, 1, 2, 1, 10);
+
+
+    let mid_adjustment = Adjustment::new(
+        mid, // initial value
+        -12.0,  // Minimum value
+        15.0, // Maximum value
+        1.0,  // Step increment
+        1.0, // Page increment
+        0.0,  // Page size (not typically used for simple scales)
+    );
+    let mid_scale = Scale::new(Orientation::Vertical, Some(&mid_adjustment));
+    mid_scale.set_digits(0); // Display whole numbers
+    mid_scale.set_draw_value(true);
+    mid_scale.set_inverted(true);
+    mid_scale.add_mark(-12.0, PositionType::Left, Some("-12dB"));
+    mid_scale.add_mark(0.0, PositionType::Left, Some("0dB"));
+    mid_scale.add_mark(15.0, PositionType::Left, Some("15dB"));
+    rx_equalizer_grid.attach(&mid_scale, 2, 2, 1, 10);
+
+    let high_adjustment = Adjustment::new(
+        high, // initial value
+        -12.0,  // Minimum value
+        15.0, // Maximum value
+        1.0,  // Step increment
+        1.0, // Page increment
+        0.0,  // Page size (not typically used for simple scales)
+    );
+    let high_scale = Scale::new(Orientation::Vertical, Some(&high_adjustment));
+    high_scale.set_digits(0); // Display whole numbers
+    high_scale.set_draw_value(true);
+    high_scale.set_inverted(true);
+    high_scale.add_mark(-12.0, PositionType::Left, Some("-12dB"));
+    high_scale.add_mark(0.0, PositionType::Left, Some("0dB"));
+    high_scale.add_mark(15.0, PositionType::Left, Some("15dB"));
+    rx_equalizer_grid.attach(&high_scale, 3, 2, 1, 10);
+
+    let preamp_radio = Arc::clone(&radio);
+    preamp_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = preamp_radio.lock().unwrap();
+        r.receiver[0].equalizer_preamp = adjustment.value() as f32;
+        r.receiver[0].set_equalizer_values();
+    });
+    let low_radio = Arc::clone(&radio);
+    low_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = low_radio.lock().unwrap();
+        r.receiver[0].equalizer_low = adjustment.value() as f32;
+        r.receiver[0].set_equalizer_values();
+    });
+    let mid_radio = Arc::clone(&radio);
+    mid_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = mid_radio.lock().unwrap();
+        r.receiver[0].equalizer_mid = adjustment.value() as f32;
+        r.receiver[0].set_equalizer_values();
+    });
+    let high_radio = Arc::clone(&radio);
+    high_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = high_radio.lock().unwrap();
+        r.receiver[0].equalizer_high = adjustment.value() as f32;
+        r.receiver[0].set_equalizer_values();
+    });
+
+    notebook.append_page(&rx_equalizer_grid, Some(&rx_equalizer_label));
 
     let button_box = gtk::Box::new(Orientation::Horizontal, 5);
     button_box.set_halign(gtk::Align::End);

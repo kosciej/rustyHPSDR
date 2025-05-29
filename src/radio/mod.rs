@@ -1264,8 +1264,7 @@ impl Radio {
             r.receiver[0].set_snb();
         });
 
-        let pan_frame = Frame::new(Some("Pan"));
-        main_grid.attach(&pan_frame, 6, 7, 3, 1);
+        let pan_title = Label::new(Some("Pan:"));
         let pan_adjustment = Adjustment::new(
             0.0, // r.receiver[0].pan.into(),
             0.0,  // Minimum value
@@ -1281,7 +1280,6 @@ impl Radio {
             let r = radio.lock().unwrap();
             pan_adjustment.set_value(r.receiver[0].pan.into());
         }
-        pan_frame.set_child(Some(&pan_scale));
 
         let pan_radio = Arc::clone(&radio);
         pan_adjustment.connect_value_changed(move |adjustment| {
@@ -1293,8 +1291,8 @@ impl Radio {
             }
         });
 
-        let zoom_frame = Frame::new(Some("Zoom"));
-        main_grid.attach(&zoom_frame, 3, 7, 3, 1);
+        let zoom_title = Label::new(Some("Zoom:"));
+
         let zoom_adjustment = Adjustment::new(
             1.0, //r.receiver[0].zoom.into(),
             1.0,  // Minimum value
@@ -1310,7 +1308,6 @@ impl Radio {
             let r = radio.lock().unwrap();
             zoom_adjustment.set_value(r.receiver[0].zoom.into());
         }
-        zoom_frame.set_child(Some(&zoom_scale));
 
         let zoom_radio = Arc::clone(&radio);
         zoom_adjustment.connect_value_changed(move |adjustment| {
@@ -1321,6 +1318,11 @@ impl Radio {
                 r.receiver[0].pan = 0;
             }
         });
+
+        main_grid.attach(&zoom_title, 3, 7, 1, 1);
+        main_grid.attach(&zoom_scale, 4, 7, 2, 1);
+        main_grid.attach(&pan_title, 6, 7, 1, 1);
+        main_grid.attach(&pan_scale, 7, 7, 2, 1);
 
         {
             let mut r = radio.lock().unwrap();
@@ -1369,8 +1371,10 @@ impl Radio {
 
             let mut pixels = vec![0.0; (spectrum_display_for_timeout.width() * zoom) as usize];
             let mut flag: c_int = 0;
-            unsafe {
-                GetPixels(channel, 0, pixels.as_mut_ptr(), &mut flag);
+            if pixels.len() != 0 { // may happen at start of application before spectrum is setup
+                unsafe {
+                    GetPixels(channel, 0, pixels.as_mut_ptr(), &mut flag);
+                }
             }
 
             if flag != 0 {

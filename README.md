@@ -6,6 +6,8 @@ This is very early code to implement a UI in Rust using gtk4-rs to implement a R
 
 The current code only implements a Receiver. It does work with Protocol 1 and Protocol 2 radios including the Hermes Lite. I will be adding more features including Transmit over the next few weeks.
 
+Transmit is still in progress. It is working for protocol 2 but needs more work for protocol 1.
+
 I am using WDSP as an extern C library so you need to install my port of WDSP on [github](https://github.com/g0orx/wdsp.git). I have not currently implemented a Rust wrappper so all the calls to it have to be wrapped with "unsafe { ... }".
 
 You will need to install Rust and Cargo. See [Rust install](https://www.rust-lang.org/tools/install) for information on installing Rust and Cargo.
@@ -36,11 +38,7 @@ The CTUN button enables Click Tuning. When active it allows you to click within 
 
 # Adjusting spectrum and waterfall display
 
-If you move the mouse over to the left side of the spectrum display the cursor will change to an up/down arrow that will allow you to use the scroll wheel to move the limits up and down for the current band.
-
-You can do the same fo the waterfall display to adjust the limits up and down for the current band.
-
-Note that the Configure button currently brings up a dialog that lets you set the limits for all bands.
+If you move the mouse over to the left side of the spectrum display the cursor will change to an up arrow, down arrow or up/down arrow that will allow you to use the scroll wheel to move the limits up and down for the current band. When the up arrow shows it moves the upper limiit, when the down arrow shows it moves the lower limit and when the up/down arrow shows it moves the upper and lower limits.
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/cursor.png">
 

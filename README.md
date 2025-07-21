@@ -12,6 +12,8 @@ I am using WDSP as an extern C library so you need to install my port of WDSP on
 
 You will need to install Rust and Cargo. See [Rust install](https://www.rust-lang.org/tools/install) for information on installing Rust and Cargo.
 
+This version of the code has many major changes. A major change is that the UI is now 3 xml files: ui.xml, discovery.xml. configure.xml that are used at run time to build the ui interface.
+
 Please note that not all images or the current UI. My antenna came down in a recent storm. This is the latest UI ...
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/latest.png">

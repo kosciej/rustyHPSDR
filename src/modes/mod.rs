@@ -60,13 +60,14 @@ impl Modes {
 
 
 use gtk::prelude::*;
-use gtk::{Button, Grid};
+use gtk::{Builder, Button, Grid};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 // Define a type for our callback function
 pub type ModeClickCallback = Box<dyn Fn(usize)>;
 
+#[derive(Clone)]
 pub struct ModeGrid {
     pub grid: Grid,
     buttons: Vec<Button>,
@@ -75,40 +76,30 @@ pub struct ModeGrid {
 }
 
 impl ModeGrid {
-    pub fn new() -> Self {
-        // Create a grid
-        let grid = Grid::new();
-        grid.set_row_homogeneous(true);
-        grid.set_column_homogeneous(true);
-        grid.set_row_spacing(0);
-        grid.set_column_spacing(0);
-        grid.set_margin_start(0);
-        grid.set_margin_end(0);
-        grid.set_margin_top(0);
-        grid.set_margin_bottom(0);
-
-        let mut buttons = Vec::with_capacity(15);
-        let active_index = Rc::new(RefCell::new(None));
-        let callback = Rc::new(RefCell::new(Box::new(|_| {}) as Box<dyn Fn(usize)>));
-
-        let cols = 3;
+    pub fn new(builder: &Builder) -> Self {
+        let grid: Grid = builder
+            .object("mode_grid")
+            .expect("Could not get object 'mode_grid' from builder."); 
         
         let labels = [
-        "LSB", "USB", "DSB",
-        "CWL", "CWU", "FMN",
-        "AM", "DIGU", "SPEC",
-        "DIGL", "SAM", "DRM",
+        "lsb", "usb", "dsb",
+        "cwl", "cwu", "fmn",
+        "am", "digu", "spec",
+        "digl", "sam", "drm",
         ];
 
-        for (i, &label) in labels.iter().enumerate() {
-            let row = i / cols;
-            let col = i % cols;
-            
-            let button = Button::with_label(label);
+        let mut buttons = Vec::with_capacity(12);
+        for (_i, &label) in labels.iter().enumerate() {
+            let id = format!("{}_button", label);
+            let button: Button = builder
+                .object(id)
+                .expect("Could not get object mode_button from builder.");
             button.add_css_class("inactive-button");
             buttons.push(button.clone());
-            grid.attach(&button, col as i32, row as i32, 1, 1);
         }
+
+        let active_index = Rc::new(RefCell::new(None));
+        let callback = Rc::new(RefCell::new(Box::new(|_| {}) as Box<dyn Fn(usize)>));
 
         ModeGrid {
             grid,

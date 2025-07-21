@@ -1,0 +1,55 @@
+<!--
+    Copyright (C) 2025  John Melton G0ORX/N6LYT
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkWindow" id="discovery_window">
+    <property name="title">rustyHPSDR Discovery</property>
+    <property name="default-width">800</property>
+    <property name="default-height">200</property>
+    <child>
+      <object class="GtkBox" id="vbox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkListBox" id="list">
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="button_box">
+            <property name="orientation">horizontal</property>
+            <property name="halign">end</property>
+            <child>
+              <object class="GtkButton" id="rediscover_button">
+                <property name="label">Rediscover</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="cancel_button">
+                <property name="label">Cancel</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="start_button">
+                <property name="label">Start</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

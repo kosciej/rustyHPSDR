@@ -59,7 +59,7 @@ impl Filters {
 }
 
 use gtk::prelude::*;
-use gtk::{Button, Grid};
+use gtk::{Adjustment, Builder, Button, Grid, SpinButton};
 use std::cell::RefCell;
 use std::rc::Rc;
 use crate::modes::Modes;
@@ -73,10 +73,14 @@ pub struct Filter {
     label: &'static str,
 }
 
-
+#[derive(Clone)]
 pub struct FilterGrid {
     pub grid: Grid,
     buttons: Vec<Button>,
+    low_spinbutton: SpinButton,
+    low_adjustment: Adjustment,
+    high_spinbutton: SpinButton,
+    high_adjustment: Adjustment,
     active_index: Rc<RefCell<Option<usize>>>,
     callback: Rc<RefCell<Box<dyn Fn(usize) + 'static>>>
 }
@@ -263,36 +267,56 @@ impl FilterGrid {
             Filter {low: -3300.0, high: 3300.0, label: "Var2"},
         ];
 
-    pub fn new() -> Self {
-        // Create a grid
-        let grid = Grid::new();
-        grid.set_row_homogeneous(true);
-        grid.set_column_homogeneous(true);
-        grid.set_row_spacing(0);
-        grid.set_column_spacing(0);
-        grid.set_margin_start(0);
-        grid.set_margin_end(0);
-        grid.set_margin_top(0);
-        grid.set_margin_bottom(0);
+    pub fn new(builder: &Builder) -> Self {
+        let grid: Grid = builder
+            .object("filter_grid")
+            .expect("Could not get object 'filtermode_grid' from builder.");
 
         let mut buttons = Vec::with_capacity(15);
         let active_index = Rc::new(RefCell::new(None));
         let callback = Rc::new(RefCell::new(Box::new(|_: usize| {}) as Box<dyn Fn(usize)>));
     
-        let cols = 3;
-        for (i, filter) in Self::filterUSB.iter().enumerate() {
-            let row = i / cols;
-            let col = i % cols;
+        let labels = [
+            "f0", "f1", "f2",
+            "f3", "f4", "f5",
+            "f6", "f7", "f8",
+            "f9", "var1", "var2",
+        ];
 
-            let button = Button::with_label(filter.label);
+        for (_i, &label) in labels.iter().enumerate() {
+            let id = format!("{}_button", label);
+            let button: Button = builder
+                .object(id)
+                .expect("Could not get object filter_button from builder.");
+
             button.add_css_class("inactive-button");
             buttons.push(button.clone());
-            grid.attach(&button, col as i32, row as i32, 1, 1);
         }
+
+        let low_spinbutton: SpinButton = builder
+            .object("low_spinbutton")
+            .expect("Could not get object low_spinbutton from builder.");
+
+        let low_adjustment: Adjustment = builder
+            .object("low_adjustment")
+            .expect("Could not get object low_adjustment from builder.");
+
+        let high_spinbutton: SpinButton = builder
+            .object("high_spinbutton")
+            .expect("Could not get object high_spinbutton from builder.");
+
+        let high_adjustment: Adjustment = builder
+            .object("high_adjustment")
+            .expect("Could not get object high_adjustment from builder.");
+
 
         FilterGrid {
             grid,
             buttons,
+            low_spinbutton,
+            low_adjustment,
+            high_spinbutton,
+            high_adjustment,
             active_index,
             callback,
         }
@@ -308,12 +332,22 @@ impl FilterGrid {
         let mut active_idx = self.active_index.borrow_mut();
         *active_idx = Some(initial_button);
 
+        if initial_button == 10 || initial_button == 11 {
+            self.low_spinbutton.set_sensitive(true);
+            self.high_spinbutton.set_sensitive(true);
+        } else {
+            self.low_spinbutton.set_sensitive(false);
+            self.high_spinbutton.set_sensitive(false);
+        }
+        
         // now add the callback
         for (i, button) in self.buttons.iter().enumerate() {
             let callback_clone = self.callback.clone();
             let button_index = i;
             let active_index_clone = self.active_index.clone();
             let buttons_clone = self.buttons.clone();
+            let low_spinbutton_clone = self.low_spinbutton.clone();
+            let high_spinbutton_clone = self.high_spinbutton.clone();
             button.connect_clicked(move |clicked_button| {
                 let mut active_idx = active_index_clone.borrow_mut();
                 if let Some(prev_idx) = *active_idx {
@@ -329,6 +363,14 @@ impl FilterGrid {
                 // Update the active index
                 *active_idx = Some(button_index);
 
+                if button_index == 10 || button_index == 11 {
+                    low_spinbutton_clone.set_sensitive(true);
+                    high_spinbutton_clone.set_sensitive(true);
+                } else {
+                    low_spinbutton_clone.set_sensitive(false);
+                    high_spinbutton_clone.set_sensitive(false);
+                }
+
                 (callback_clone.borrow())(button_index);
             });
 
@@ -337,6 +379,17 @@ impl FilterGrid {
                 button.add_css_class("active-button");
             }
         }
+/*
+        let callback_clone = self.callback.clone();
+        self.low_adjustment.connect_value_changed(move |adjustment| {
+           (callback_clone.borrow())(10);
+        });
+
+        let callback_clone = self.callback.clone();
+        self.high_adjustment.connect_value_changed(move |adjustment| {
+           (callback_clone.borrow())(11);
+        });
+*/
     }
 
     pub fn get_widget(&self) -> &Grid {
@@ -398,7 +451,18 @@ impl FilterGrid {
         *active_idx = Some(index);
         self.buttons[index].remove_css_class("inactive-button");
         self.buttons[index].add_css_class("active-button");
+        if index == 10 || index == 11 {
+            self.low_spinbutton.set_sensitive(true);
+            self.high_spinbutton.set_sensitive(true);
+        } else {
+            self.low_spinbutton.set_sensitive(false);
+            self.high_spinbutton.set_sensitive(false);
+        }
     }
 
+    pub fn set_active_values(&self, low: f32, high: f32) {
+        self.low_adjustment.set_value(low.into());
+        self.high_adjustment.set_value(high.into());
+    }
 
 }

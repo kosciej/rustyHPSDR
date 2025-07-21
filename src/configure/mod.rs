@@ -15,322 +15,398 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use alsa::Direction;
 use gtk::prelude::*;
-use gtk::{Adjustment, Align, ApplicationWindow, Button, CheckButton, Grid, Label, Notebook, Orientation, PositionType, Scale, SpinButton, Window};
+use gtk::{Adjustment, Align, ApplicationWindow, Builder, Button, CheckButton, ComboBoxText, DropDown, Grid, Label, Notebook, Orientation, PositionType, Scale, SpinButton, ToggleButton, Window};
 
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
-
-use crate::radio::Radio;
+use crate::radio::{Keyer, RadioMutex};
 use crate::audio::*;
 
-pub fn create_configure_dialog(parent: &ApplicationWindow, radio: &Arc<Mutex<Radio>>) -> Window {
+pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMutex) -> Window {
 
-    let window = Window::builder()
-        .title("rustyHPSDR Discovery")
-        .modal(true)
-        .transient_for(parent)
-        .destroy_with_parent(true)
-        .default_width(800)
-        .default_height(200)
-        .build();
 
-    let notebook = Notebook::new();
+    let ui_xml = include_str!("../ui/configure.xml");
+    let builder = Builder::from_string(ui_xml);
 
-    let mut r = radio.lock().unwrap();
-    let (grid, label, audio) = r.audio.configure();
+    let window: Window = builder
+            .object("configure_window")
+            .expect("Could not get object `configure_window` from builder.");
+    
+    //window.set_transient_for(Some(parent));
+    window.set_modal(true);
+
+    let notebook: Notebook = builder
+            .object("notebook")
+            .expect("Could not get object `notebook` from builder.");
+
+    // AUDIO
+
+    let r = radio_mutex.radio.lock().unwrap();
+        let remote_input = r.audio.remote_input;
+        let local_input = r.audio.local_input;
+        let input_device = r.audio.input_device.clone();
+        let remote_output = r.audio.remote_output;
+        let local_output = r.audio.local_output;
+        let output_device = r.audio.output_device.clone();
     drop(r);
-    notebook.append_page(&grid, Some(&label));
 
-    let display_label = Label::new(Some("Display"));
-    let display_grid = Grid::builder()
-            .margin_start(0)
-            .margin_end(0)
-            .margin_top(0)
-            .margin_bottom(0)
-            .halign(Align::Center)
-            .valign(Align::Center)
-            .row_spacing(0)
-            .column_spacing(0)
-            .build();
+    let input_devices = Audio::list_pcm_devices(Direction::Capture);
 
-    display_grid.set_column_homogeneous(true);
-    display_grid.set_row_homogeneous(true);
 
-    let band_title = Label::new(Some("Band"));
-    display_grid.attach(&band_title, 0, 0, 1, 1);
-    let spectrum_low_title = Label::new(Some("Spectrum Low"));
-    display_grid.attach(&spectrum_low_title, 1, 0, 1, 1);
-    let spectrum_high_title = Label::new(Some("Spectrum High"));
-    display_grid.attach(&spectrum_high_title, 2, 0, 1, 1);
-    let waterfall_low_title = Label::new(Some("Waterfall Low"));
-    display_grid.attach(&waterfall_low_title, 3, 0, 1, 1);
-    let waterfall_high_title = Label::new(Some("Waterfall High"));
-    display_grid.attach(&waterfall_high_title, 4, 0, 1, 1);
+    let remote_input_check_button: CheckButton = builder
+            .object("remote_input_check_button")
+            .expect("Could not get object `remote_input_check_button` from builder.");
+    
+    let remote_input_check_button = CheckButton::with_label("Remote Input");
+    remote_input_check_button.set_active(remote_input);
+    let radio_mutex_clone = radio_mutex.clone();
+    remote_input_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.audio.remote_input = is_active;
+    });
 
-    let band_info = radio.lock().unwrap().band_info.clone();
+    let local_input_check_button: CheckButton = builder
+            .object("local_input_check_button")
+            .expect("Could not get object `local_input_check_button` from builder.");
+    local_input_check_button.set_active(local_input);
+    let radio_mutex_clone = radio_mutex.clone();
+    local_input_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        if is_active {
+            r.audio.open_input();
+        }
+        r.audio.local_input = is_active;
+    });
 
-    for (i, info) in band_info.iter().enumerate() {
-
-        let row = (i+1) as i32;
-        let band_label = Label::new(Some(info.label.as_str()));
-        display_grid.attach(&band_label, 0, row, 1, 1);
-
-        let spectrum_low_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
-        spectrum_low_spin_button.set_value(info.spectrum_low.into());
-        display_grid.attach(&spectrum_low_spin_button, 1, row, 1, 1);
-
-        let radio_clone = Arc::clone(&radio);
-        let band_index = i;
-        spectrum_low_spin_button.connect_value_changed(move |spin_button| {
-            let value = spin_button.value() as f32;
-            let mut radio_lock = radio_clone.lock().unwrap();
-            radio_lock.band_info[band_index].spectrum_low = value;
-        });
-
-        let spectrum_high_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
-        spectrum_high_spin_button.set_value(info.spectrum_high.into());
-        display_grid.attach(&spectrum_high_spin_button, 2, row, 1, 1);
-
-        let radio_clone = Arc::clone(&radio);
-        let band_index = i;
-        spectrum_high_spin_button.connect_value_changed(move |spin_button| {
-            let value = spin_button.value() as f32;
-            let mut radio_lock = radio_clone.lock().unwrap();
-            radio_lock.band_info[band_index].spectrum_high = value;
-        });
-
-        let waterfall_low_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
-        waterfall_low_spin_button.set_value(info.waterfall_low.into());
-        display_grid.attach(&waterfall_low_spin_button, 3, row, 1, 1);
-
-        let radio_clone = Arc::clone(&radio);
-        let band_index = i;
-        waterfall_low_spin_button.connect_value_changed(move |spin_button| {
-            let value = spin_button.value() as f32;
-            let mut radio_lock = radio_clone.lock().unwrap();
-            radio_lock.band_info[band_index].waterfall_low = value;
-        });
-
-        let waterfall_high_spin_button = SpinButton::with_range(-140.0, -40.0, 1.0);
-        waterfall_high_spin_button.set_value(info.waterfall_high.into());
-        display_grid.attach(&waterfall_high_spin_button, 4, row, 1, 1);
-
-        let radio_clone = Arc::clone(&radio);
-        let band_index = i;
-        waterfall_high_spin_button.connect_value_changed(move |spin_button| {
-            let value = spin_button.value() as f32;
-            let mut radio_lock = radio_clone.lock().unwrap();
-            radio_lock.band_info[band_index].waterfall_high = value;
-        });
-
+    let input_combo_box: ComboBoxText = builder
+            .object("input_combo_box")
+            .expect("Could not get object `input_combo_box` from builder.");
+    for i in 0..input_devices.len() {
+        input_combo_box.append_text(&input_devices[i]);
+        if input_devices[i] == input_device {
+            input_combo_box.set_active(Some(i as u32));
+        }
     }
+    let radio_mutex_clone = radio_mutex.clone();
+    input_combo_box.connect_changed(move |combo_box| {
+        let input = combo_box.active_text();
+        if let Some(input_string) = input {
+            let mut r = radio_mutex_clone.radio.lock().unwrap();
+            r.audio.input_device = input_string.to_string();
+        }
+    });
 
-    notebook.append_page(&display_grid, Some(&display_label));
+    let output_devices = Audio::list_pcm_devices(Direction::Playback);
 
-    let rx_equalizer_label = Label::new(Some("RX Equalizer"));
-    let rx_equalizer_grid = Grid::builder()
-            .margin_start(0)
-            .margin_end(0)
-            .margin_top(0)
-            .margin_bottom(0)
-            .halign(Align::Center)
-            .valign(Align::Center)
-            .row_spacing(5)
-            .column_spacing(5)
-            .build();
-    rx_equalizer_grid.set_column_homogeneous(true);
-    rx_equalizer_grid.set_row_homogeneous(true);
+    let remote_output_check_button: CheckButton = builder
+            .object("remote_output_check_button")
+            .expect("Could not get object `remote_output_check_button` from builder.");
+    remote_output_check_button.set_active(remote_output);
+    let radio_mutex_clone = radio_mutex.clone();
+    remote_output_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.audio.remote_output = is_active;
+    });
 
-    let mut r = radio.lock().unwrap();
-    let enabled = r.receiver[0].equalizer_enabled;
-    let preamp = r.receiver[0].equalizer_preamp as f64;
-    let low = r.receiver[0].equalizer_low as f64;
-    let mid = r.receiver[0].equalizer_mid as f64;
-    let high = r.receiver[0].equalizer_high as f64;
+    let local_output_check_button: CheckButton = builder
+            .object("local_output_check_button")
+            .expect("Could not get object `local_output_check_button` from builder.");
+    local_output_check_button.set_active(local_output);
+    let radio_mutex_clone = radio_mutex.clone();
+    local_output_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        if is_active {
+            r.audio.open_output();
+        }
+        r.audio.local_output = is_active;
+    });
+
+    let output_combo_box: ComboBoxText = builder
+            .object("output_combo_box")
+            .expect("Could not get object `output_combo_box` from builder.");
+    for i in 0..output_devices.len() {
+        output_combo_box.append_text(&output_devices[i]);
+        if output_devices[i] == output_device {
+            output_combo_box.set_active(Some(i as u32));
+        }
+    }
+    let radio_mutex_clone = radio_mutex.clone();
+    output_combo_box.connect_changed(move |combo_box| {
+        let output = combo_box.active_text();
+        if let Some(output_string) = output {
+            let mut r = radio_mutex_clone.radio.lock().unwrap();
+            if r.audio.local_output {
+                r.audio.close_output();
+            }
+            r.audio.output_device = output_string.to_string();
+            if r.audio.local_output {
+                r.audio.open_output();
+            }
+        }
+     });
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let mic_boost = r.mic_boost;
+    let mic_ptt = r.mic_ptt;
+    let mic_bias_ring = r.mic_bias_ring;
+    let mic_bias_enable = r.mic_bias_enable;
     drop(r);
 
-    let equalizer_enabled_check_button = CheckButton::with_label("Equalizer Enabled");
-    equalizer_enabled_check_button.set_active(enabled);
-    rx_equalizer_grid.attach(&equalizer_enabled_check_button, 0, 0, 2, 1);
-    let enabled_radio = Arc::clone(&radio);
-    equalizer_enabled_check_button.connect_toggled(move |button| {
-        let mut r = enabled_radio.lock().unwrap();
-        r.receiver[0].equalizer_enabled = button.is_active();
-        r.receiver[0].enable_equalizer();
+    let mic_boost_check_button: CheckButton = builder
+            .object("mic_boost_check_button")
+            .expect("Could not get object `mic_boost_check_button` from builder.");
+    mic_boost_check_button.set_active(mic_boost);
+    let radio_mutex_clone = radio_mutex.clone();
+    mic_boost_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.mic_boost = is_active;
+        r.updated = true;
+    });
+
+    let ptt_enable_check_button: CheckButton = builder
+            .object("ptt_enable_check_button")
+            .expect("Could not get object `ptt_enable_check_button` from builder.");
+    ptt_enable_check_button.set_active(mic_ptt);
+    let radio_mutex_clone = radio_mutex.clone();
+    ptt_enable_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.mic_ptt = is_active;
+        r.updated = true;
+    });
+
+    let mic_bias_ring_toggle_button: ToggleButton = builder
+            .object("mic_bias_ring_toggle_button")
+            .expect("Could not get object `mic_bias_ring_toggle_button` from builder.");
+    mic_bias_ring_toggle_button.set_active(mic_bias_ring);
+    let radio_mutex_clone = radio_mutex.clone();
+    mic_bias_ring_toggle_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.mic_bias_ring = is_active;
+        r.updated = true;
+    });
+
+    let mic_bias_tip_toggle_button: ToggleButton = builder
+            .object("mic_bias_tip_toggle_button")
+            .expect("Could not get object `mic_bias_tip_toggle_button` from builder.");
+    mic_bias_tip_toggle_button.set_active(!mic_bias_ring);
+    let radio_mutex_clone = radio_mutex.clone();
+    mic_bias_tip_toggle_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.mic_bias_ring = !is_active;
+        r.updated = true;
     });
 
 
-    let preamp_label = Label::new(Some("Preamp"));
-    rx_equalizer_grid.attach(&preamp_label, 0, 1, 1, 1);
-    let low_label = Label::new(Some("Low"));
-    rx_equalizer_grid.attach(&low_label, 1, 1, 1, 1);
-    let mid_label = Label::new(Some("Mid"));
-    rx_equalizer_grid.attach(&mid_label, 2, 1, 1, 1);
-    let high_label = Label::new(Some("High"));
-    rx_equalizer_grid.attach(&high_label, 3, 1, 1, 1);
+    let mic_bias_enable_check_button: CheckButton = builder
+            .object("mic_bias_enable_check_button")
+            .expect("Could not get object `mic_bias_enable_check_button` from builder.");
+    mic_bias_enable_check_button.set_active(mic_bias_enable);
+    let radio_mutex_clone = radio_mutex.clone();
+    mic_bias_enable_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.mic_bias_enable = is_active;
+        r.updated = true;
+    });
 
-    let preamp_adjustment = Adjustment::new( 
-        preamp, // initial value
-        -12.0,  // Minimum value
-        15.0, // Maximum value
-        1.0,  // Step increment
-        1.0, // Page increment 
-        0.0,  // Page size (not typically used for simple scales)
-    );
-    let preamp_scale = Scale::new(Orientation::Vertical, Some(&preamp_adjustment)); 
-    preamp_scale.set_digits(0); // Display whole numbers
-    preamp_scale.set_draw_value(true);
-    preamp_scale.set_inverted(true);
+    // Display
+    let r = radio_mutex.radio.lock().unwrap();
+    let spectrum_average_time = r.receiver[0].spectrum_average_time;
+    drop(r);
+    let spectrum_average_adjustment: Adjustment = builder
+            .object("spectrum_average_adjustment")
+            .expect("Could not get object `spectrum_average_adjustment` from builder.");
+    spectrum_average_adjustment.set_value(spectrum_average_time.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    spectrum_average_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].spectrum_average_time = adjustment.value() as f32;
+        r.receiver[0].update_spectrum_average(r.receiver[0].channel);
+    }); 
+    let r = radio_mutex.radio.lock().unwrap();
+    let waterfall_average_time = r.receiver[0].waterfall_average_time;
+    drop(r);
+    let waterfall_average_adjustment: Adjustment = builder
+            .object("waterfall_average_adjustment")
+            .expect("Could not get object `waterfall_average_adjustment` from builder.");
+    waterfall_average_adjustment.set_value(waterfall_average_time.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    waterfall_average_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].waterfall_average_time = adjustment.value() as f32;
+        r.receiver[0].update_waterfall_average(r.receiver[0].channel);
+    }); 
+
+
+
+    // CW
+
+    let r = radio_mutex.radio.lock().unwrap();
+        let cw_keyer_mode = r.cw_keyer_mode;
+        let cw_keyer_internal = r.cw_keyer_internal;
+        let cw_keys_reversed = r.cw_keys_reversed;
+        let cw_breakin = r.cw_breakin;
+    drop(r);
+
+    let keyer_mode_dropdown: DropDown = builder
+            .object("keyer_mode_dropdown")
+            .expect("Could not get object `keyer_mode_dropdown` from builder.");
+    keyer_mode_dropdown.set_selected(cw_keyer_mode.to_u32());
+    let radio_mutex_clone = radio_mutex.clone();
+    keyer_mode_dropdown.connect_selected_notify(move |dropdown| {
+        let mode = dropdown.selected();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.cw_keyer_mode = Keyer::from_u32(mode).expect("Invalid CW Keyer Mode");
+        r.updated = true;
+    });
+
+    let cw_keyer_internal_check_button: CheckButton = builder
+            .object("cw_keyer_internal_check_button")
+            .expect("Could not get object `cw_keyer_internal_check_button` from builder.");
+    cw_keyer_internal_check_button.set_active(cw_keyer_internal);
+    let radio_mutex_clone = radio_mutex.clone();
+    cw_keyer_internal_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.cw_keyer_internal = is_active;
+        r.updated = true;
+    });
+
+    let cw_keys_reversed_check_button: CheckButton = builder
+            .object("cw_keys_reversed_check_button")
+            .expect("Could not get object `cw_keys_reversed_check_button` from builder.");
+    cw_keys_reversed_check_button.set_active(cw_keys_reversed);
+    let radio_mutex_clone = radio_mutex.clone();
+    cw_keys_reversed_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.cw_keys_reversed = is_active;
+        r.updated = true;
+    });
+
+    let cw_breakin_check_button: CheckButton = builder
+            .object("cw_breakin_check_button")
+            .expect("Could not get object `cw_breakin_check_button` from builder.");
+    cw_breakin_check_button.set_active(cw_breakin);
+    let radio_mutex_clone = radio_mutex.clone();
+    cw_breakin_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.cw_breakin = is_active;
+        r.updated = true;
+    });
+
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let rx = r.active_receiver;
+    let enabled = r.receiver[rx].equalizer_enabled;
+    let preamp = r.receiver[rx].equalizer_preamp as f64;
+    let low = r.receiver[rx].equalizer_low as f64;
+    let mid = r.receiver[rx].equalizer_mid as f64;
+    let high = r.receiver[rx].equalizer_high as f64;
+    drop(r);
+
+    let equalizer_enabled_check_button: CheckButton = builder
+            .object("equalizer_enabled_check_button")
+            .expect("Could not get object `equalizer_enabled_check_button` from builder.");
+    equalizer_enabled_check_button.set_active(enabled);
+    let radio_mutex_clone = radio_mutex.clone();
+    equalizer_enabled_check_button.connect_toggled(move |button| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        let rx = r.active_receiver;
+        r.receiver[rx].equalizer_enabled = button.is_active();
+        r.receiver[rx].enable_equalizer();
+    });
+
+    let preamp_scale: Scale = builder
+            .object("preamp_scale")
+            .expect("Could not get object `preamp_scale` from builder.");
     preamp_scale.add_mark(-12.0, PositionType::Left, Some("-12dB"));
     preamp_scale.add_mark(0.0, PositionType::Left, Some("0dB"));
     preamp_scale.add_mark(15.0, PositionType::Left, Some("15dB"));
-    rx_equalizer_grid.attach(&preamp_scale, 0, 2, 1, 10);
 
-    let low_adjustment = Adjustment::new(
-        low, // initial value
-        -12.0,  // Minimum value
-        15.0, // Maximum value
-        1.0,  // Step increment
-        1.0, // Page increment
-        0.0,  // Page size (not typically used for simple scales)
-    );
-    let low_scale = Scale::new(Orientation::Vertical, Some(&low_adjustment));
-    low_scale.set_digits(0); // Display whole numbers
-    low_scale.set_draw_value(true);
-    low_scale.set_inverted(true);
+    let low_scale: Scale = builder
+            .object("low_scale")
+            .expect("Could not get object `low_scale` from builder.");
     low_scale.add_mark(-12.0, PositionType::Left, Some("-12dB"));
     low_scale.add_mark(0.0, PositionType::Left, Some("0dB"));
     low_scale.add_mark(15.0, PositionType::Left, Some("15dB"));
-    rx_equalizer_grid.attach(&low_scale, 1, 2, 1, 10);
 
 
-    let mid_adjustment = Adjustment::new(
-        mid, // initial value
-        -12.0,  // Minimum value
-        15.0, // Maximum value
-        1.0,  // Step increment
-        1.0, // Page increment
-        0.0,  // Page size (not typically used for simple scales)
-    );
-    let mid_scale = Scale::new(Orientation::Vertical, Some(&mid_adjustment));
-    mid_scale.set_digits(0); // Display whole numbers
-    mid_scale.set_draw_value(true);
-    mid_scale.set_inverted(true);
+    let mid_scale: Scale = builder
+            .object("mid_scale")
+            .expect("Could not get object `mid_scale` from builder.");
     mid_scale.add_mark(-12.0, PositionType::Left, Some("-12dB"));
     mid_scale.add_mark(0.0, PositionType::Left, Some("0dB"));
     mid_scale.add_mark(15.0, PositionType::Left, Some("15dB"));
-    rx_equalizer_grid.attach(&mid_scale, 2, 2, 1, 10);
 
-    let high_adjustment = Adjustment::new(
-        high, // initial value
-        -12.0,  // Minimum value
-        15.0, // Maximum value
-        1.0,  // Step increment
-        1.0, // Page increment
-        0.0,  // Page size (not typically used for simple scales)
-    );
-    let high_scale = Scale::new(Orientation::Vertical, Some(&high_adjustment));
-    high_scale.set_digits(0); // Display whole numbers
-    high_scale.set_draw_value(true);
-    high_scale.set_inverted(true);
+    let high_scale: Scale = builder
+            .object("high_scale")
+            .expect("Could not get object `high_scale` from builder.");
     high_scale.add_mark(-12.0, PositionType::Left, Some("-12dB"));
     high_scale.add_mark(0.0, PositionType::Left, Some("0dB"));
     high_scale.add_mark(15.0, PositionType::Left, Some("15dB"));
-    rx_equalizer_grid.attach(&high_scale, 3, 2, 1, 10);
 
-    let preamp_radio = Arc::clone(&radio);
+    let preamp_adjustment: Adjustment = builder
+            .object("preamp_adjustment")
+            .expect("Could not get object `preamp_adjustment` from builder.");
+    preamp_adjustment.set_value(preamp);
+    let radio_mutex_clone = radio_mutex.clone();
     preamp_adjustment.connect_value_changed(move |adjustment| {
-        let mut r = preamp_radio.lock().unwrap();
-        r.receiver[0].equalizer_preamp = adjustment.value() as f32;
-        r.receiver[0].set_equalizer_values();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        let rx = r.active_receiver;
+        r.receiver[rx].equalizer_preamp = adjustment.value() as f32;
+        r.receiver[rx].set_equalizer_values();
     });
-    let low_radio = Arc::clone(&radio);
+    let low_adjustment: Adjustment = builder
+            .object("low_adjustment")
+            .expect("Could not get object `low_adjustment` from builder.");
+    low_adjustment.set_value(low);
+    let radio_mutex_clone = radio_mutex.clone();
     low_adjustment.connect_value_changed(move |adjustment| {
-        let mut r = low_radio.lock().unwrap();
-        r.receiver[0].equalizer_low = adjustment.value() as f32;
-        r.receiver[0].set_equalizer_values();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        let rx = r.active_receiver;
+        r.receiver[rx].equalizer_low = adjustment.value() as f32;
+        r.receiver[rx].set_equalizer_values();
     });
-    let mid_radio = Arc::clone(&radio);
+    let mid_adjustment: Adjustment = builder
+            .object("mid_adjustment")
+            .expect("Could not get object `mid_adjustment` from builder.");
+    mid_adjustment.set_value(mid);
+    let radio_mutex_clone = radio_mutex.clone();
     mid_adjustment.connect_value_changed(move |adjustment| {
-        let mut r = mid_radio.lock().unwrap();
-        r.receiver[0].equalizer_mid = adjustment.value() as f32;
-        r.receiver[0].set_equalizer_values();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        let rx = r.active_receiver;
+        r.receiver[rx].equalizer_mid = adjustment.value() as f32;
+        r.receiver[rx].set_equalizer_values();
     });
-    let high_radio = Arc::clone(&radio);
+    let high_adjustment: Adjustment = builder
+            .object("high_adjustment")
+            .expect("Could not get object `high_adjustment` from builder.");
+    high_adjustment.set_value(high);
+    let radio_mutex_clone = radio_mutex.clone();
     high_adjustment.connect_value_changed(move |adjustment| {
-        let mut r = high_radio.lock().unwrap();
-        r.receiver[0].equalizer_high = adjustment.value() as f32;
-        r.receiver[0].set_equalizer_values();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        let rx = r.active_receiver;
+        r.receiver[rx].equalizer_high = adjustment.value() as f32;
+        r.receiver[rx].set_equalizer_values();
     });
 
-    notebook.append_page(&rx_equalizer_grid, Some(&rx_equalizer_label));
-
-    let button_box = gtk::Box::new(Orientation::Horizontal, 5);
-    button_box.set_halign(gtk::Align::End);
-
-    let ok_button = Button::builder().label("Ok").build();
-
-    button_box.append(&ok_button);
-
-    let main_vbox = gtk::Box::new(Orientation::Vertical, 0);
-    main_vbox.append(&notebook);
-    main_vbox.append(&button_box);
-    window.set_child(Some(&main_vbox));
-
+    let ok_button: Button = builder
+            .object("ok_button")
+            .expect("Could not get object `ok_button` from builder.");
     let window_for_ok = window.clone();
-    let audio_clone = Rc::clone(&audio);
-    let radio_clone = radio.clone();
     ok_button.connect_clicked(move |_| {
-        let mut r = radio_clone.lock().unwrap();
-
-        if r.audio.input_device != String::from(&audio_clone.borrow().input_device) {
-            // input device changed
-            if r.audio.local_input {
-                //input was active
-                r.audio.close_input();
-            }
-            r.audio.input_device = String::from(&audio_clone.borrow().input_device);
-            r.audio.local_input = audio_clone.borrow().local_input;
-            if r.audio.local_input {
-                //input is active
-                r.audio.open_input();
-            }
-        } else if r.audio.local_input != audio_clone.borrow().local_input {
-            // device the same but state changed
-            r.audio.local_input = audio_clone.borrow().local_input;
-            if r.audio.local_input {
-                r.audio.open_input();
-            } else {
-                r.audio.close_input();
-            }
-        }
-
-        if r.audio.output_device != String::from(&audio_clone.borrow().output_device) {
-            // input device changed
-            if r.audio.local_output {
-                //input was active
-                r.audio.close_output();
-            }
-            r.audio.output_device = String::from(&audio_clone.borrow().output_device);
-            r.audio.local_output = audio_clone.borrow().local_output;
-            if r.audio.local_output {
-                //input is active
-                r.audio.open_output();
-            }
-        } else if r.audio.local_output != audio_clone.borrow().local_output {
-            // device the same but state changed
-            r.audio.local_output = audio_clone.borrow().local_output;
-            if r.audio.local_output {
-                r.audio.open_output();
-            } else {
-                r.audio.close_output();
-            }
-        }
-
         window_for_ok.close();
     });
-
 
     window
 }

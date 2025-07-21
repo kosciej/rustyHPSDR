@@ -16,15 +16,14 @@
 */
 
 use gtk::prelude::*;
-use gtk::{Button, Grid};
+use gtk::{Builder, Button, Grid};
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 
-use crate::radio::Radio;
+use crate::radio::RadioMutex;
 use crate::modes::Modes;
 use crate::filters::Filters;
 
@@ -105,7 +104,7 @@ impl BandInfo {
             BandInfo{ band: Bands::Band60, label: String::from("60"), low: 5330500.0, high: 5403500.0, current: 5365500.0,  filters: 0x01200020, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
             BandInfo{ band: Bands::Band40, label: String::from("40"), low: 7000000.0, high: 7300000.0, current: 7150000.0, filters: 0x01200010, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::LSB, filter: Filters::F5},
             BandInfo{ band: Bands::Band30, label: String::from("30"), low: 10100000.0, high: 10150000.0, current: 10125000.0, filters: 0x01200010, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
-            BandInfo{ band: Bands::Band20, label: String::from("20"), low: 14000000.0, high: 14350000.0, current: 14175000.0, filters: 0x01100002, spectrum_low: -110.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
+            BandInfo{ band: Bands::Band20, label: String::from("20"), low: 14000000.0, high: 14350000.0, current: 14175000.0, filters: 0x01100002, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
             BandInfo{ band: Bands::Band17, label: String::from("17"), low: 18068000.0, high: 18168000.0, current: 18118000.0, filters: 0x81000002, spectrum_low: -120.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
             BandInfo{ band: Bands::Band15, label: String::from("15"), low: 21000000.0, high: 21450000.0, current: 21215000.0, filters: 0x81000002, spectrum_low: -130.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
             BandInfo{ band: Bands::Band12, label: String::from("12"), low: 24890000.0, high: 24990000.0, current: 24940000.0, filters: 0x41000004, spectrum_low: -130.0, spectrum_high: -60.0, waterfall_low: -110.0, waterfall_high: -70.0, mode: Modes::USB, filter: Filters::F5},
@@ -119,6 +118,7 @@ impl BandInfo {
 
 }
 
+#[derive(Clone)]
 pub struct BandGrid {
     pub grid: Grid,
     buttons: Vec<Button>,
@@ -127,35 +127,23 @@ pub struct BandGrid {
 }
 
 impl BandGrid {
-    pub fn new(radio: Arc<Mutex<Radio>>) -> Self {
-        let r = radio.lock().unwrap();
-        // Create a grid
-        let grid = Grid::new();
-        grid.set_row_homogeneous(true);
-        grid.set_column_homogeneous(true);
-        grid.set_row_spacing(0);
-        grid.set_column_spacing(0);
-        grid.set_margin_start(0);
-        grid.set_margin_end(0);
-        grid.set_margin_top(0);
-        grid.set_margin_bottom(0);
-
+    pub fn new(radio_mutex: &RadioMutex, builder: &Builder) -> Self {
+        let r = radio_mutex.radio.lock().unwrap();
+        let grid: Grid = builder
+                .object("band_grid")
+                .expect("Could not get object 'band_grid' from builder.");
         let mut buttons = Vec::with_capacity(15);
         let active_index = Rc::new(RefCell::new(None));
         let callback = Rc::new(RefCell::new(Box::new(|_| {}) as Box<dyn Fn(usize)>));
 
-        let cols = 3;
-        
-        for (i, info) in r.band_info.iter().enumerate() {
-            let row = i / cols;
-            let col = i % cols;
-            
-            let button = Button::with_label(&info.label);
-            
+        for (_i, info) in r.band_info.iter().enumerate() {
+            let id = format!("{}_button", info.label);
+            let button: Button = builder
+                .object(id)
+                .expect("Could not get object band_button from builder.");
             // Set initial button style class
             button.add_css_class("inactive-band-button");
             buttons.push(button.clone());
-            grid.attach(&button, col as i32, row as i32, 1, 1);
         }
 
         BandGrid {
@@ -201,14 +189,13 @@ impl BandGrid {
                 button.add_css_class("active-band-button");
             }
         }
-
     }
 
     pub fn get_active_index(&self) -> Option<usize> {
         *self.active_index.borrow()
     }
 
-    pub fn set_active_index(&self, index: usize) {
+    pub fn set_active_index(&mut self, index: usize) {
         let mut active_idx = self.active_index.borrow_mut();
         *active_idx = Some(index);
     }

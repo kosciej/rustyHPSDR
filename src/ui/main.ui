@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkWindow" id="configure_window">
+    <property name="title">rustyHPSDR Configure</property>
+    <property name="default-width">800</property>
+    <property name="default-height">200</property>
+    <child>
+      <object class="GtkNotebook" id="notebook">
+        <child>
+          <object class="GtkBox" id="audio_box">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkBox" id="input_audio_box">
+                <property name="orientation">horizontal</property>
+                <child>
+                  <object class="GtkCheckButton" id="remote_input_check_button">
+                    <property name="label">Remote Input</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="local_input_check_button">
+                    <property name="label">Local Input"</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="input_combo_box"></object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox" id="output_audio_box">
+                <property name="orientation">horizontal</property>
+                <child>
+                  <object class="GtkCheckButton" id="remote_output_check_button">
+                    <property name="label">Remote Output</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="local_output_check_button">
+                    <property name="label">Local Output"</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="output_combo_box"></object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child type="tab">
+          <object class="GtkLabel" id="audio_label">
+            <property name="label">Audio</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="display_box">
+            <property name="orientation">vertical</property>
+          </object>
+        </child>
+        <child type="tab">
+          <object class="GtkLabel" id="display_label">
+            <property name="label">Display</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="radio_box">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkCheckButton" id="mic_boost_check_button">
+                <property name="label">Mic Boost Enable</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkCheckButton" id="ptt_enable_check_button">
+                <property name="label">Mic PTT Enable</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox" id="mic_bias_box">
+                <property name="orientation">horizontal</property>
+                <child>
+                  <object class="GtkCheckButton" id="mic_bias_enable_check_button">
+                    <property name="label">Mic Bias Enable</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="mic_bias_ring_radio_button">
+                    <property name="label">Mic/Bias on Ring</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="mic_bias_tip_radio_button">
+                    <property name="label">Mic/Bias on Tip</property>
+                    <property name="group">mic_bias_ring_radio_button</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child type="tab">
+          <object class="GtkLabel" id="radio_label">
+            <property name="label">Radio</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="rx_equalizer_box">
+            <property name="orientation">vertical</property>
+          </object>
+        </child>
+        <child type="tab">
+          <object class="GtkLabel" id="rx_equalizer_label">
+            <property name="label">RX Equalizer</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

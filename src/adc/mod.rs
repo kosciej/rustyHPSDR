@@ -15,23 +15,26 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pub mod discovery;
-pub mod radio;
-pub mod receiver;
-pub mod transmitter;
-pub mod bands;
-pub mod modes;
-pub mod filters;
-pub mod agc;
-pub mod configure;
-pub mod protocol1;
-pub mod protocol2;
-pub mod wdsp;
-pub mod audio;
-pub mod alex;
-pub mod adc;
-pub mod spectrum;
-pub mod waterfall;
-pub mod meter;
-pub mod util;
+use serde::{Deserialize, Serialize};
 
+use crate::alex::*;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Adc {
+    pub rx_antenna: u32,
+    pub tx_antenna: u32,
+    pub random: bool,
+    pub dither: bool,
+}
+
+impl Adc {
+
+    pub fn new() -> Adc {
+        let rx_antenna = ALEX_ANTENNA_1;
+        let tx_antenna = ALEX_ANTENNA_1;
+        let random = false;
+        let dither = false;
+
+        Adc {rx_antenna, tx_antenna, random, dither}
+    }
+}

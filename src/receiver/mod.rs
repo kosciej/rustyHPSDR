@@ -23,18 +23,20 @@ use std::os::raw::{c_char, c_int};
 
 use crate::agc::AGC;
 use crate::bands::Bands;
-use crate::bands::BandInfo;
 use crate::filters::Filters;
 use crate::modes::Modes;
 use crate::wdsp::*;
 
-const DEFAULT_SAMPLE_RATE: i32 =384000;
-const DISPLAY_AVERAGE_TIME: f32 = 170.0;
+const DEFAULT_SAMPLE_RATE: i32 = 384000; // 1536000;// 768000; // 384000;
+const DEFAULT_DISPLAY_AVERAGE_TIME: f32 = 120.0; // 170.0;
 const SUBRX_BASE_CHANNEL: i32 = 16;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Receiver {
+    pub protocol: u8,
     pub channel: i32,
+    pub active: bool,
+    pub adc: usize,
     pub buffer_size: usize,
     pub fft_size: i32,
     pub sample_rate: i32,
@@ -51,12 +53,16 @@ pub struct Receiver {
     pub ctun:  bool,
     pub ctun_frequency: f32,
     pub nr: bool,
+    pub nr2: bool,
     pub nb: bool,
+    pub nb2: bool,
     pub anf: bool,
     pub snb: bool,
-    pub fps: f32,
+    pub spectrum_fps: f32,
     pub spectrum_width: i32,
     pub spectrum_step: f32,
+    pub waterfall_fps: f32,
+    pub waterfall_width: i32,
     pub zoom: i32,
     pub pan: i32,
     pub afgain:  f32,
@@ -69,21 +75,27 @@ pub struct Receiver {
     pub filter_high: f32,
     pub mode: usize,
     pub filter: usize,
-    #[serde(skip_serializing, skip_deserializing)]
+#[serde(skip_serializing, skip_deserializing)]
     pub iq_input_buffer: Vec<f64>,
     pub samples: usize,
     pub local_audio_buffer_size: usize,
-    #[serde(skip_serializing, skip_deserializing)]
-    //pub local_audio_buffer: Vec<f64>,
+#[serde(skip_serializing, skip_deserializing)]
     pub local_audio_buffer: Vec<i16>,
     pub local_audio_buffer_offset: usize,
     pub remote_audio_buffer_size: usize,
-    #[serde(skip_serializing, skip_deserializing)]
+#[serde(skip_serializing, skip_deserializing)]
     pub remote_audio_buffer: Vec<u8>,
     pub remote_audio_buffer_offset: usize,
     pub attenuation: i32,
     pub rxgain: i32,
     pub cw_pitch: f32,
+    pub cw_decoder: bool,
+#[serde(skip_serializing, skip_deserializing)]
+    pub cw_decoder_audio_buffer_offset: usize,
+#[serde(skip_serializing, skip_deserializing)]
+    pub cw_decoder_audio_buffer: Vec<f32>,
+#[serde(skip_serializing, skip_deserializing)]
+    //pub morsedecoder: MorseDecoder,
 
     pub subrx: bool,
     pub subrx_channel: i32,
@@ -93,12 +105,18 @@ pub struct Receiver {
     pub equalizer_low: f32,
     pub equalizer_mid: f32,
     pub equalizer_high: f32,
+
+    pub spectrum_average_time: f32,
+    pub waterfall_average_time: f32,
 }
 
 impl Receiver {
 
-    pub fn new(chan: u8, band_info: &Vec<BandInfo>) -> Receiver {
+    pub fn new(chan: u8, proto: u8, pixels: i32) -> Receiver {
+        let protocol: u8 = proto;
         let channel: i32 = chan as i32;
+        let active: bool = chan == 0;
+        let adc: usize = 0;
         let buffer_size: usize = 1024;
         let fft_size: i32 = 2048;
         let sample_rate: i32 = DEFAULT_SAMPLE_RATE;
@@ -115,12 +133,16 @@ impl Receiver {
         let ctun: bool = false;
         let ctun_frequency: f32 = 0.0;
         let nr: bool = false;
+        let nr2: bool = false;
         let nb: bool = false;
+        let nb2: bool = false;
         let anf: bool = false;
         let snb: bool = false;
-        let fps = 50.0;
-        let spectrum_width: i32 = 1024;
+        let spectrum_fps = 80.0;
+        let spectrum_width: i32 = pixels;
         let spectrum_step: f32 = 10.0;
+        let waterfall_fps = 80.0;
+        let waterfall_width: i32 = pixels;
         let zoom: i32 = 1;
         let pan: i32 = 0;
         let afgain: f32 = 0.5;
@@ -136,7 +158,6 @@ impl Receiver {
         let iq_input_buffer = vec![0.0; (2*buffer_size) as usize];
         let samples: usize = 0;
         let local_audio_buffer_size: usize = 2048;
-        //let local_audio_buffer = vec![0.0; local_audio_buffer_size*2];
         let local_audio_buffer = vec![0i16; local_audio_buffer_size*2];
         let local_audio_buffer_offset: usize = 0;
         let remote_audio_buffer_size: usize = 260;
@@ -144,7 +165,12 @@ impl Receiver {
         let remote_audio_buffer_offset: usize = 4;
         let attenuation: i32 = 0;
         let rxgain: i32 = 0;
-        let cw_pitch: f32 = 200.0;
+        let cw_pitch: f32 = 400.0;
+        let cw_decoder: bool =  false;
+        let cw_decoder_audio_buffer_offset: usize =0;
+        let cw_decoder_audio_buffer = vec![0.0f32; local_audio_buffer_size];
+        //let morsedecoder = MorseDecoder::new((output_rate/4) as f32, 25.0);
+
         let subrx: bool = false;
         let subrx_channel: i32 = channel + SUBRX_BASE_CHANNEL;
         let equalizer_enabled: bool = true;
@@ -153,8 +179,11 @@ impl Receiver {
         let equalizer_mid: f32 = 0.0;
         let equalizer_high: f32 = 0.0;
 
+        let spectrum_average_time: f32 = DEFAULT_DISPLAY_AVERAGE_TIME;
+        let waterfall_average_time: f32 = DEFAULT_DISPLAY_AVERAGE_TIME;
 
-        let rx = Receiver{ channel, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nb, anf, snb, fps, spectrum_width, spectrum_step, zoom, pan, afgain, afpan, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_pitch, subrx, subrx_channel, equalizer_enabled, equalizer_preamp, equalizer_low, equalizer_mid, equalizer_high };
+
+        let rx = Receiver{ protocol, channel, active, adc, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nr2, nb, nb2, anf, snb, spectrum_fps, spectrum_width, spectrum_step, waterfall_fps, waterfall_width, zoom, pan, afgain, afpan, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_pitch, cw_decoder, cw_decoder_audio_buffer_offset, cw_decoder_audio_buffer, /*morsedecoder,*/ subrx, subrx_channel, equalizer_enabled, equalizer_preamp, equalizer_low, equalizer_mid, equalizer_high, spectrum_average_time, waterfall_average_time };
 
         rx
     }
@@ -162,25 +191,45 @@ impl Receiver {
     pub fn init(&mut self) {
         self.iq_input_buffer = vec![0.0; (2*self.buffer_size) as usize];
         self.samples = 0;
-        //self.local_audio_buffer = vec![0.0; self.local_audio_buffer_size*2];
         self.local_audio_buffer = vec![0i16; self.local_audio_buffer_size*2];
         self.local_audio_buffer_offset = 0;
         self.remote_audio_buffer = vec![0u8; self.remote_audio_buffer_size];
         self.remote_audio_buffer_offset = 4;
+        self.cw_decoder_audio_buffer_offset = 0;
+        self.cw_decoder_audio_buffer = vec![0.0f32; self.local_audio_buffer_size];
+        //self.morsedecoder = MorseDecoder::new((self.output_rate/4) as f32, 20.0);
 
         self.init_wdsp(self.channel);
         self.create_display(self.channel);
         self.init_analyzer(self.channel);
+
         self.init_wdsp(self.subrx_channel);
 
         self.enable_equalizer();
+
+        if self.nb {
+            self.set_nb();
+        }
+        if self.nb2 {
+            self.set_nb2();
+        }
+        if self.nr {
+            self.set_nr();
+        }
+        if self.nr2 {
+            self.set_nr2();
+        }
+        if self.snb {
+            self.set_snb();
+        }
+
     }
 
     fn init_wdsp(&self, channel: i32) {
         unsafe {
             OpenChannel(channel, self.buffer_size as i32, self.fft_size, self.sample_rate, self.dsp_rate, self.output_rate, 0, 1, 0.010, 0.025, 0.0, 0.010, 0);
             create_anbEXT(channel, 1, self.buffer_size as i32, self.sample_rate.into(), 0.0001, 0.0001, 0.0001, 0.05, 20.0);
-            create_nobEXT(channel,1,0,self.buffer_size as i32,self.sample_rate.into(),0.0001,0.0001,0.0001,0.05,20.0);
+            create_nobEXT(channel, 1, 0, self.buffer_size as i32, self.sample_rate.into(), 0.0001, 0.0001, 0.0001, 0.05, 20.0);
             RXASetNC(channel, self.fft_size);
             RXASetMP(channel, 0); // low_latency
 
@@ -201,6 +250,8 @@ impl Receiver {
               SetRXAEQRun(channel, 0);
             //}
 
+            SetEXTANBSamplerate (channel, self.sample_rate);
+            SetEXTNOBSamplerate (channel, self.sample_rate);
             SetEXTANBRun(channel, 0); //self.nb);
             SetEXTNOBRun(channel, self.nb.into()); //self.nb2);
 
@@ -243,14 +294,26 @@ impl Receiver {
         unsafe {
             let mut result: c_int = 0;
             XCreateAnalyzer(display, &mut result, 262144, 1, 1, c_char_ptr);
-            SetDisplayDetectorMode(display, 0, DETECTOR_MODE_AVERAGE.try_into().expect("SetDisplayDetectorMode failed!"));
-            SetDisplayAverageMode(display, 0,  AVERAGE_MODE_LOG_RECURSIVE.try_into().expect("SetDisplayAverageMode failed!"));
-            let t = 0.001 * DISPLAY_AVERAGE_TIME;
-            let display_avb = (-1.0 / (self.fps * t)).exp();
-            let display_average = max(2, min(60, (self.fps * t) as i32));
+        }
+    }
+
+    pub fn update_spectrum_average(&self, display: i32) {
+        unsafe {
+            let t = 0.001 * self.spectrum_average_time;
+            let display_avb = (-1.0 / (self.spectrum_fps * t)).exp(); 
+            let display_average = max(2, min(60, (self.spectrum_fps * t) as i32));
             SetDisplayAvBackmult(display, 0, display_avb.into());
             SetDisplayNumAverage(display, 0, display_average);
+        }
+    }
 
+    pub fn update_waterfall_average(&self, display: i32) {
+        unsafe {
+            let t = 0.001 * self.waterfall_average_time;
+            let display_avb = (-1.0 / (self.waterfall_fps * t)).exp(); 
+            let display_average = max(2, min(60, (self.waterfall_fps * t) as i32));
+            SetDisplayAvBackmult(display, 1, display_avb.into());
+            SetDisplayNumAverage(display, 1, display_average);
         }
     }
 
@@ -258,12 +321,18 @@ impl Receiver {
         let mut flp = [0];
         let keep_time: f32 = 0.1;
         let fft_size = 8192; 
-        let max_w = fft_size + min((keep_time * self.fps) as i32, (keep_time * fft_size as f32  * self.fps) as i32);
+        let max_w = fft_size + min((keep_time * self.spectrum_fps) as i32, (keep_time * fft_size as f32  * self.spectrum_fps) as i32);
         let buffer_size: i32 = self.buffer_size as i32;
         let pixels = self.spectrum_width * self.zoom;
         unsafe {
-            SetAnalyzer(display, 1, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
+            SetAnalyzer(display, 2, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
+            SetDisplayDetectorMode(display, 0, DETECTOR_MODE_AVERAGE.try_into().expect("SetDisplayDetectorMode failed!"));
+            SetDisplayAverageMode(display, 0,  AVERAGE_MODE_LOG_RECURSIVE.try_into().expect("SetDisplayAverageMode failed!"));
+            SetDisplayDetectorMode(display, 1, DETECTOR_MODE_AVERAGE.try_into().expect("SetDisplayDetectorMode failed!"));
+            SetDisplayAverageMode(display, 1,  AVERAGE_MODE_LOG_RECURSIVE.try_into().expect("SetDisplayAverageMode failed!"));
         }
+        self.update_spectrum_average(display);
+        self.update_waterfall_average(display);
     }
 
     pub fn set_filter(&self) {
@@ -330,12 +399,26 @@ impl Receiver {
 
     pub fn set_nr(&self) {
         unsafe {
-            SetRXAEMNRRun(self.channel, self.nr as i32);
-            SetRXAEMNRRun(self.subrx_channel, self.nr as i32);
+            SetRXAANRRun(self.channel, self.nr as i32);
+            SetRXAANRRun(self.subrx_channel, self.nr as i32);
+        }  
+    }
+
+    pub fn set_nr2(&self) {
+        unsafe {
+            SetRXAEMNRRun(self.channel, self.nr2 as i32);
+            SetRXAEMNRRun(self.subrx_channel, self.nr2 as i32);
         }  
     }
 
     pub fn set_nb(&self) {
+        unsafe {
+            SetEXTANBRun(self.channel, self.nb as i32);
+            SetEXTANBRun(self.subrx_channel, self.nb as i32);
+        }
+    }
+
+    pub fn set_nb2(&self) {
         unsafe {
             SetEXTNOBRun(self.channel, self.nb as i32);
             SetEXTNOBRun(self.subrx_channel, self.nb as i32);
@@ -391,4 +474,33 @@ impl Receiver {
         }
     }
 
+    pub fn process_iq_samples(&mut self) {
+        let mut audio_buffer: Vec<f64> = vec![0.0; (self.output_samples*2) as usize];
+        let mut subrx_audio_buffer: Vec<f64> = vec![0.0; (self.output_samples*2) as usize];
+
+        let raw_ptr: *mut f64 = self.iq_input_buffer.as_mut_ptr() as *mut f64;
+        let audio_ptr: *mut f64 =  audio_buffer.as_mut_ptr() as *mut f64;
+        let subrx_audio_ptr: *mut f64 =  subrx_audio_buffer.as_mut_ptr() as *mut f64;
+        if self.nb {
+            unsafe {
+                xanbEXT(self.channel, raw_ptr, raw_ptr);
+            }
+        }
+        if self.nb2{
+            unsafe {
+                xnobEXT(self.channel, raw_ptr, raw_ptr);
+            }
+        }
+
+        let mut result: c_int = 0;
+        unsafe {
+            fexchange0(self.channel, raw_ptr, audio_ptr, &mut result);
+            if self.subrx {
+                fexchange0(self.subrx_channel, raw_ptr, subrx_audio_ptr, &mut result);
+            }
+        }
+        unsafe {
+            Spectrum0(1, self.channel, 0, 0, raw_ptr);
+        }
+    }
 }

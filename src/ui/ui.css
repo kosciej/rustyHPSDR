@@ -1,0 +1,29 @@
+.vfo-a-label {
+  font-family: FreeSans;
+  font-size: 28px;
+  color: green;
+  min-width: 180px;
+}
+.vfo-b-label {
+  font-family: FreeSans;
+  font-size: 28px;
+  color: orange;
+  min-width: 180px;
+}
+.active-button {
+  color: orange;
+  background-image: none;
+}
+.inactive-button {
+  color: black;
+  background-image: none;
+}
+.active-band-button {
+  color: orange;
+  background-image: none;
+}
+.inactive-band-button {
+  color: black;
+  background-image: none;
+}
+

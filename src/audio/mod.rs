@@ -18,28 +18,21 @@
 use alsa::pcm::*;
 use alsa::device_name::HintIter;
 use alsa::{Direction, ValueOr, Error};
-use gtk::prelude::*;
-use gtk::{Align, CheckButton, ComboBoxText, Grid, Label};
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::time::SystemTime;
-
-use crate::receiver::Receiver;
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct Audio {
     pub remote_input: bool,
     pub local_input: bool,
     pub input_device: String,
-    #[serde(skip_serializing, skip_deserializing)]
+#[serde(skip_serializing, skip_deserializing)]
     input: Option<PCM>,
     pub remote_output: bool,
     pub local_output: bool,
     pub output_device: String,
-    #[serde(skip_serializing, skip_deserializing)]
+#[serde(skip_serializing, skip_deserializing)]
     output: Option<PCM>,
-    #[serde(skip_serializing, skip_deserializing)]
+#[serde(skip_serializing, skip_deserializing)]
     pub output_underruns: i32,
 }
 
@@ -61,7 +54,6 @@ impl Audio {
     }
 
     pub fn init(&mut self) {
-        println!("audio.init");
         self.input = None;
         self.output = None;
         self.output_underruns = 0;
@@ -74,7 +66,6 @@ impl Audio {
     }
 
     pub fn open_input(&mut self) -> Result<(), Error> {
-        println!("audio.open_input: {}", self.input_device);
         let pcm = PCM::new(&self.input_device, Direction::Capture, false)?;
         {
             let hwp = HwParams::any(&pcm)?;
@@ -89,13 +80,11 @@ impl Audio {
     }
 
     pub fn close_input(&mut self) ->  Result<(), Error> {
-        println!("audio.close_input");
         self.input= None;
         Ok(())
     }
 
     pub fn open_output(&mut self) -> Result<(), Error> {
-        println!("audio.open_output: {}", self.output_device);
         let pcm = PCM::new(&self.output_device, Direction::Playback, false)?;
         {
             let hwp = HwParams::any(&pcm)?;
@@ -110,7 +99,6 @@ impl Audio {
     }
 
     pub fn close_output(&mut self) ->  Result<(), Error> {
-        println!("audio.close_output");
         self.output = None;
         Ok(())
     }
@@ -119,7 +107,7 @@ impl Audio {
         match self.output.as_ref().expect("Could not access output to get delay").delay() {
             Ok(delay) => {
                 let mut trim = 0;
-                let max_delay = 2 * buffer.len() as i64;
+                let max_delay = 3 * buffer.len() as i64;
                 if delay > max_delay {
                     trim = delay - max_delay;
                 }
@@ -169,7 +157,7 @@ impl Audio {
         Ok(())
     }
 
-    fn list_pcm_devices(direction: Direction) -> Vec<String> {
+    pub fn list_pcm_devices(direction: Direction) -> Vec<String> {
         let mut devices = Vec::<String>::new();
         let hints = HintIter::new_str(None, "pcm").unwrap();
         for hint in hints {
@@ -178,110 +166,5 @@ impl Audio {
             }
         }
         devices
-    }
-
-    pub fn configure(&mut self) -> (Grid, Label, Rc<RefCell<Audio>>) {
-
-        let audio = Rc::new(RefCell::new(Audio {
-            remote_input: self.remote_input,
-            local_input: self.local_input,
-            input_device: self.input_device.clone(),
-            input: None,
-            remote_output: self.remote_output,
-            local_output: self.local_output,
-            output_device: self.output_device.clone(),
-            output: None,
-            output_underruns: self.output_underruns,
-        }));
-
-        let label = Label::new(Some("Audio"));
-        let grid = Grid::builder()
-            .margin_start(0)
-            .margin_end(0)
-            .margin_top(0)
-            .margin_bottom(0)
-            .halign(Align::Center)
-            .valign(Align::Center)
-            .row_spacing(0)
-            .column_spacing(0)
-            .build();
-
-        grid.set_column_homogeneous(true);
-        grid.set_row_homogeneous(true);
-
-        // build the UI
-        let input_devices = Self::list_pcm_devices(Direction::Capture);
-
-        let remote_input_check_button = CheckButton::with_label("Remote Input");
-        remote_input_check_button.set_active(self.remote_input);
-        grid.attach(&remote_input_check_button, 0, 0, 2, 1);
-        let audio_clone = Rc::clone(&audio);
-        remote_input_check_button.connect_toggled(move |button| {
-            let is_active = button.is_active();
-            audio_clone.borrow_mut().remote_input = is_active;
-        });
-
-        let local_input_check_button = CheckButton::with_label("Local Input");
-        local_input_check_button.set_active(self.local_input);
-        grid.attach(&local_input_check_button, 2, 0, 2, 1);
-        let audio_clone = Rc::clone(&audio);
-        local_input_check_button.connect_toggled(move |button| {
-            let is_active = button.is_active();
-            audio_clone.borrow_mut().local_input = is_active;
-        });
-
-        let input_combo_box = ComboBoxText::new();
-        grid.attach(&input_combo_box, 4, 0, 5, 1);
-        for i in 0..input_devices.len() {
-            input_combo_box.append_text(&input_devices[i]);
-            if input_devices[i] == self.input_device {
-                input_combo_box.set_active(Some(i as u32));
-            }
-        }
-	let audio_clone = Rc::clone(&audio);
-	input_combo_box.connect_changed(move |combo_box| {
-	    let input = combo_box.active_text();
-            if let Some(input_string) = input { 
-                audio_clone.borrow_mut().input_device = input_string.to_string();
-            }
-	});
-       
-        let output_devices = Self::list_pcm_devices(Direction::Playback);
-
-        let remote_output_check_button = CheckButton::with_label("Remote Output");
-        remote_output_check_button.set_active(self.remote_output);
-        grid.attach(&remote_output_check_button, 0, 1, 2, 1);
-        let audio_clone = Rc::clone(&audio);
-        remote_output_check_button.connect_toggled(move |button| {
-            let is_active = button.is_active();
-            audio_clone.borrow_mut().remote_output = is_active;
-        });
-
-        let local_output_check_button = CheckButton::with_label("Local Output");
-        local_output_check_button.set_active(self.local_output);
-        grid.attach(&local_output_check_button, 2, 1, 2, 1);
-        let audio_clone = Rc::clone(&audio);
-        local_output_check_button.connect_toggled(move |button| {
-            let is_active = button.is_active();
-            audio_clone.borrow_mut().local_output = is_active;
-        });
-
-        let output_combo_box = ComboBoxText::new();
-        grid.attach(&output_combo_box, 4, 1, 5, 1);
-        for i in 0..output_devices.len() {
-            output_combo_box.append_text(&output_devices[i]);
-            if output_devices[i] == self.output_device {
-                output_combo_box.set_active(Some(i as u32));
-            }
-        }
-        let audio_clone = Rc::clone(&audio);
-        output_combo_box.connect_changed(move |combo_box| {
-            let output = combo_box.active_text();
-            if let Some(output_string) = output { 
-                audio_clone.borrow_mut().output_device = output_string.to_string();
-            }
-        });
-
-        (grid, label, audio)
     }
 }

@@ -15,6 +15,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#![allow(non_camel_case_types)]
+
 pub const DETECTOR_MODE_PEAK: u32 = 0;
 pub const DETECTOR_MODE_ROSENFELL: u32 = 1;
 pub const DETECTOR_MODE_AVERAGE: u32 = 2;
@@ -885,5 +887,5 @@ unsafe extern "C" {
     pub fn wisdom_get_status() -> *mut ::std::os::raw::c_char;
 }
 unsafe extern "C" {
-    pub fn WDSPwisdom(directory: *mut ::std::os::raw::c_char);
+    pub fn WDSPwisdom(directory: *const ::std::os::raw::c_char);
 }

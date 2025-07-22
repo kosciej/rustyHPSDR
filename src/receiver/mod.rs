@@ -53,11 +53,22 @@ pub struct Receiver {
     pub ctun:  bool,
     pub ctun_frequency: f32,
     pub nr: bool,
+    pub nr_taps: i32,
+    pub nr_delay: i32,
+    pub nr_gain: f32,
+    pub nr_leak: f32,
     pub nr2: bool,
     pub nb: bool,
     pub nb2: bool,
     pub anf: bool,
+    pub anf_taps: i32,
+    pub anf_delay: i32,
+    pub anf_gain: f32,
+    pub anf_leak: f32,
     pub snb: bool,
+
+    pub agc_position: i32,
+
     pub spectrum_fps: f32,
     pub spectrum_width: i32,
     pub spectrum_step: f32,
@@ -133,11 +144,20 @@ impl Receiver {
         let ctun: bool = false;
         let ctun_frequency: f32 = 0.0;
         let nr: bool = false;
+        let nr_taps: i32 = 64;
+        let nr_delay: i32 = 16;
+        let nr_gain: f32 = 100.0;
+        let nr_leak: f32 = 100.0;
         let nr2: bool = false;
         let nb: bool = false;
         let nb2: bool = false;
         let anf: bool = false;
+        let anf_taps: i32 = 64;
+        let anf_delay: i32 = 16;
+        let anf_gain: f32 = 100.0;
+        let anf_leak: f32 = 100.0;
         let snb: bool = false;
+        let agc_position: i32 = 0;
         let spectrum_fps = 80.0;
         let spectrum_width: i32 = pixels;
         let spectrum_step: f32 = 10.0;
@@ -183,7 +203,7 @@ impl Receiver {
         let waterfall_average_time: f32 = DEFAULT_DISPLAY_AVERAGE_TIME;
 
 
-        let rx = Receiver{ protocol, channel, active, adc, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nr2, nb, nb2, anf, snb, spectrum_fps, spectrum_width, spectrum_step, waterfall_fps, waterfall_width, zoom, pan, afgain, afpan, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_pitch, cw_decoder, cw_decoder_audio_buffer_offset, cw_decoder_audio_buffer, /*morsedecoder,*/ subrx, subrx_channel, equalizer_enabled, equalizer_preamp, equalizer_low, equalizer_mid, equalizer_high, spectrum_average_time, waterfall_average_time };
+        let rx = Receiver{ protocol, channel, active, adc, buffer_size, fft_size, sample_rate, dsp_rate, output_rate, output_samples, band, filters_manual, filters, frequency_a, frequency_b, step_index, step, ctun, ctun_frequency, nr, nr_taps, nr_delay, nr_gain, nr_leak, nr2, nb, nb2, anf, anf_taps, anf_delay, anf_gain, anf_leak, snb, agc_position, spectrum_fps, spectrum_width, spectrum_step, waterfall_fps, waterfall_width, zoom, pan, afgain, afpan, agc, agcgain, agcslope, agcchangethreshold, filter_low, filter_high, mode, filter, iq_input_buffer, samples, local_audio_buffer_size, local_audio_buffer, local_audio_buffer_offset, remote_audio_buffer_size, remote_audio_buffer, remote_audio_buffer_offset, attenuation, rxgain, cw_pitch, cw_decoder, cw_decoder_audio_buffer_offset, cw_decoder_audio_buffer, /*morsedecoder,*/ subrx, subrx_channel, equalizer_enabled, equalizer_preamp, equalizer_low, equalizer_mid, equalizer_high, spectrum_average_time, waterfall_average_time };
 
         rx
     }
@@ -255,14 +275,18 @@ impl Receiver {
             SetEXTANBRun(channel, 0); //self.nb);
             SetEXTNOBRun(channel, self.nb.into()); //self.nb2);
 
-            SetRXAEMNRPosition(channel, 0); //self.nr_agc);
+            SetRXAEMNRPosition(channel, self.agc_position.into());
             SetRXAEMNRgainMethod(channel, 2); //self.nr2_gain_method);
             SetRXAEMNRnpeMethod(channel, 0); //self.nr2_npe_method);
             SetRXAEMNRRun(channel, self.nr.into()); //self.nr2);
             SetRXAEMNRaeRun(channel, 1); //self.nr2_ae);
 
-            SetRXAANRVals(channel, 64, 16, 16e-4, 10e-7); // defaults
+            SetRXAANRPosition(channel, self.agc_position.into());
+            SetRXAANRVals(channel, self.nr_taps, self.nr_delay, 1e-6 * self.nr_gain as f64, 1e-3 * self.nr_leak as f64);
             SetRXAANRRun(channel, 0); //self.nr);
+
+            SetRXAANFPosition(channel, self.agc_position.into());
+            SetRXAANFVals(channel, self.anf_taps, self.anf_delay, 1e-6 * self.anf_gain as f64, 1e-3 * self.anf_leak as f64);
             SetRXAANFRun(channel, self.anf.into()); //self.anf);
             SetRXASNBARun(channel, self.snb.into()); //self.snb);
 
@@ -284,6 +308,26 @@ impl Receiver {
                 SetRXAShiftFreq(channel, offset.into());
                 RXANBPSetShiftFrequency(channel, 0.0);
             }
+        }
+    }
+
+    pub fn update_Nrvals(&self) {
+        unsafe {
+            SetRXAANRVals(self.channel, self.nr_taps, self.nr_delay, 1e-6 * self.nr_gain as f64, 1e-3 * self.nr_leak as f64);
+        }
+    }
+
+    pub fn update_Anfvals(&self) {
+        unsafe {
+            SetRXAANFVals(self.channel, self.anf_taps, self.anf_delay, 1e-6 * self.anf_gain as f64, 1e-3 * self.anf_leak as f64);
+        }
+    }
+
+    pub fn update_AgcPosition(&self) {
+        unsafe {
+            SetRXAEMNRPosition(self.channel, self.agc_position.into());
+            SetRXAANRPosition(self.channel, self.agc_position.into());
+            SetRXAANFPosition(self.channel, self.agc_position.into());
         }
     }
 

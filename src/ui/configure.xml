@@ -350,14 +350,14 @@
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
                         <child>
-                          <object class="GtkCheckButton" id="pre_agc_checkbutton">
+                          <object class="GtkCheckButton" id="pre_agc_check_button">
                             <property name="label">Pre-AGC</property>
                           </object>>
                         </child>
                         <child>
-                          <object class="GtkCheckButton" id="post_agc_checkbutton">
+                          <object class="GtkCheckButton" id="post_agc_check_button">
                             <property name="label">Post-AGC</property>
-                            <property name="group">pre_agc_checkbutton</property>
+                            <property name="group">pre_agc_check_button</property>
                           </object>>
                         </child>
                       </object>
@@ -371,26 +371,26 @@
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
                         <child>
-                          <object class="GtkCheckButton" id="linear_checkbutton">
+                          <object class="GtkCheckButton" id="linear_check_button">
                             <property name="label">Linear</property>
                           </object>>
                         </child>
                         <child>
-                          <object class="GtkCheckButton" id="log_checkbutton">
+                          <object class="GtkCheckButton" id="log_check_button">
                             <property name="label">Log</property>
-                            <property name="group">linear_checkbutton</property>
+                            <property name="group">linear_check_button</property>
                           </object>>
                         </child>
                         <child>
-                          <object class="GtkCheckButton" id="gamma_checkbutton">
+                          <object class="GtkCheckButton" id="gamma_check_button">
                             <property name="label">Gamma</property>
-                            <property name="group">linear_checkbutton</property>
+                            <property name="group">linear_check_button</property>
                           </object>>
                         </child>
                         <child>
-                          <object class="GtkCheckButton" id="trained_checkbutton">
+                          <object class="GtkCheckButton" id="trained_check_button">
                             <property name="label">Trained</property>
-                            <property name="group">linear_checkbutton</property>
+                            <property name="group">linear_check_button</property>
                           </object>>
                         </child>
                         <child>

@@ -247,6 +247,12 @@ unsafe extern "C" {
     pub fn SetRXAEMNRPosition(channel: ::std::os::raw::c_int, position: ::std::os::raw::c_int);
 }
 unsafe extern "C" {
+    pub fn SetRXAANRPosition(channel: ::std::os::raw::c_int, position: ::std::os::raw::c_int);
+}
+unsafe extern "C" {
+    pub fn SetRXAANFPosition(channel: ::std::os::raw::c_int, position: ::std::os::raw::c_int);
+}
+unsafe extern "C" {
     pub fn SetRXAANFRun(channel: ::std::os::raw::c_int, run: ::std::os::raw::c_int);
 }
 unsafe extern "C" {
@@ -284,6 +290,15 @@ unsafe extern "C" {
 }
 unsafe extern "C" {
     pub fn SetRXAANRVals(
+        channel: ::std::os::raw::c_int,
+        taps: ::std::os::raw::c_int,
+        delay: ::std::os::raw::c_int,
+        gain: f64,
+        leakage: f64,
+    );
+}
+unsafe extern "C" {
+    pub fn SetRXAANFVals(
         channel: ::std::os::raw::c_int,
         taps: ::std::os::raw::c_int,
         delay: ::std::os::raw::c_int,

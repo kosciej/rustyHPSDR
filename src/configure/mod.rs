@@ -33,7 +33,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
             .expect("Could not get object `configure_window` from builder.");
     
     //window.set_transient_for(Some(parent));
-    window.set_modal(true);
+    //window.set_modal(true);
 
     let notebook: Notebook = builder
             .object("notebook")
@@ -304,7 +304,144 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         r.updated = true;
     });
 
+    // Noise
+    let r = radio_mutex.radio.lock().unwrap();
+        let taps = r.receiver[0].nr_taps;
+        let delay = r.receiver[0].nr_delay;
+        let gain = r.receiver[0].nr_gain;
+        let leak = r.receiver[0].nr_leak;
+    drop(r);
 
+    let nr_taps_adjustment: Adjustment = builder
+            .object("nr_taps_adjustment")
+            .expect("Could not get object `nr_taps_adjustment` from builder.");
+    nr_taps_adjustment.set_value(taps.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    nr_taps_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].nr_taps = adjustment.value() as i32;
+        r.receiver[0].update_Nrvals();
+    }); 
+
+    let nr_delay_adjustment: Adjustment = builder
+            .object("nr_delay_adjustment")
+            .expect("Could not get object `nr_delay_adjustment` from builder.");
+    nr_delay_adjustment.set_value(delay.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    nr_delay_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].nr_delay = adjustment.value() as i32;
+        r.receiver[0].update_Nrvals();
+    }); 
+
+    let nr_gain_adjustment: Adjustment = builder
+            .object("nr_gain_adjustment")
+            .expect("Could not get object `nr_gain_adjustment` from builder.");
+    nr_gain_adjustment.set_value(gain.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    nr_gain_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].nr_gain = adjustment.value() as f32;
+        r.receiver[0].update_Nrvals();
+    }); 
+
+    let nr_leak_adjustment: Adjustment = builder
+            .object("nr_leak_adjustment")
+            .expect("Could not get object `nr_leak_adjustment` from builder.");
+    nr_leak_adjustment.set_value(leak.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    nr_leak_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].nr_leak = adjustment.value() as f32;
+        r.receiver[0].update_Nrvals();
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+        let taps = r.receiver[0].anf_taps;
+        let delay = r.receiver[0].anf_delay;
+        let gain = r.receiver[0].anf_gain;
+        let leak = r.receiver[0].anf_leak;
+    drop(r);
+
+    let anf_taps_adjustment: Adjustment = builder
+            .object("anf_taps_adjustment")
+            .expect("Could not get object `anf_taps_adjustment` from builder.");
+    anf_taps_adjustment.set_value(taps.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    anf_taps_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].anf_taps = adjustment.value() as i32;
+        r.receiver[0].update_Anfvals();
+    });
+
+    let anf_delay_adjustment: Adjustment = builder
+            .object("anf_delay_adjustment")
+            .expect("Could not get object `anf_delay_adjustment` from builder.");
+    anf_delay_adjustment.set_value(delay.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    anf_delay_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].anf_delay = adjustment.value() as i32;
+        r.receiver[0].update_Anfvals();
+    });
+
+    let anf_gain_adjustment: Adjustment = builder
+            .object("anf_gain_adjustment")
+            .expect("Could not get object `anf_gain_adjustment` from builder.");
+    anf_gain_adjustment.set_value(gain.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    anf_gain_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].anf_gain = adjustment.value() as f32;
+        r.receiver[0].update_Anfvals();
+    });
+
+    let anf_leak_adjustment: Adjustment = builder
+            .object("anf_leak_adjustment")
+            .expect("Could not get object `anf_leak_adjustment` from builder.");
+    anf_leak_adjustment.set_value(leak.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    anf_leak_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].anf_leak = adjustment.value() as f32;
+        r.receiver[0].update_Anfvals();
+    });
+
+    let r = radio_mutex.radio.lock().unwrap();
+        let position = r.receiver[0].agc_position;
+    drop(r);
+    let pre_agc_check_button: CheckButton = builder
+            .object("pre_agc_check_button")
+            .expect("Could not get object `pre_agc_check_button` from builder.");
+    pre_agc_check_button.set_active(position == 0);
+    let radio_mutex_clone = radio_mutex.clone();
+    pre_agc_check_button.connect_toggled(move |button| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        if button.is_active() {
+            let rx = r.active_receiver;
+            r.receiver[rx].agc_position = 0;
+        }
+    });
+
+    let r = radio_mutex.radio.lock().unwrap();
+        let position = r.receiver[0].agc_position;
+    drop(r);
+    let post_agc_check_button: CheckButton = builder
+            .object("post_agc_check_button")
+            .expect("Could not get object `post_agc_check_button` from builder.");
+    post_agc_check_button.set_active(position == 1);
+    let radio_mutex_clone = radio_mutex.clone();
+    post_agc_check_button.connect_toggled(move |button| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        if button.is_active() {
+            let rx = r.active_receiver;
+            r.receiver[rx].agc_position = 1;
+        }
+    });
+
+
+
+    // Equalizer
     let r = radio_mutex.radio.lock().unwrap();
     let rx = r.active_receiver;
     let enabled = r.receiver[rx].equalizer_enabled;

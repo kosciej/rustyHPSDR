@@ -422,7 +422,33 @@ fn build_ui(app: &Application) {
 
                         app_widgets.zoom_adjustment.set_value(r.receiver[0].zoom.into());
                         app_widgets.pan_adjustment.set_value(r.receiver[0].pan.into());
-                       
+
+                        r.receiver[0].set_nr();
+                        if r.receiver[0].nr {
+                            app_widgets.nr_button.add_css_class("active-button");
+                        }
+                        r.receiver[0].set_nr2();
+                        if r.receiver[0].nr2 {
+                            app_widgets.nr_button.add_css_class("active-button");
+                        }
+                        r.receiver[0].set_nb();
+                        if r.receiver[0].nb {
+                            app_widgets.nb_button.add_css_class("active-button");
+                        }
+                        r.receiver[0].set_nb2();
+                        if r.receiver[0].nb2 {
+                            app_widgets.nb_button.set_label("NB2");
+                            app_widgets.nb_button.add_css_class("active-button");
+                        }
+                        r.receiver[0].set_anf();
+                        if r.receiver[0].anf {
+                            app_widgets.anf_button.add_css_class("active-button");
+                        }
+                        r.receiver[0].set_snb();
+                        if r.receiver[0].snb {
+                            app_widgets.snb_button.add_css_class("active-button");
+                        }
+
                     }
 
                     // handle ui events

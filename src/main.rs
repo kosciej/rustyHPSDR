@@ -703,14 +703,12 @@ fn build_ui(app: &Application) {
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     let press_state = middle_button_pressed.clone();
                     spectrum_click_gesture_clone.connect_pressed(move |gesture, controller, x, _y| {
-                        println!("spectrum_1 pressed");
                         let da = gesture.widget().unwrap();
                         let width = da.allocated_width();
                         if gesture.current_button() == 2 { // middle button
                             *press_state.borrow_mut() = true;
                         } else {
                             if !spectrum_waterfall_clicked(&radio_mutex_clone, &rc_app_widgets_clone_clone, 0, x, width, gesture.current_button()) {
-                                println!("spectrum_1 make active");
                                 update_ui(&radio_mutex_clone.clone(), &rc_app_widgets_clone_clone.clone());
                             }
                         }
@@ -731,14 +729,12 @@ fn build_ui(app: &Application) {
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     let press_state = middle_button_pressed.clone();
                     spectrum_2_click_gesture_clone.connect_pressed(move |gesture, controller, x, _y| {
-                        println!("spectrum_2 pressed");
                         let da = gesture.widget().unwrap();
                         let width = da.allocated_width();
                         if gesture.current_button() == 2 { // middle button
                             *press_state.borrow_mut() = true;
                         } else {
                             if !spectrum_waterfall_clicked(&radio_mutex_clone, &rc_app_widgets_clone_clone, 1, x, width, gesture.current_button()) {
-                                println!("spectrum_2 make active");
                                 update_ui(&radio_mutex_clone.clone(), &rc_app_widgets_clone_clone.clone());
                             }
                         }
@@ -833,8 +829,6 @@ fn build_ui(app: &Application) {
                         let height = app_widgets.spectrum_display.height();
                         let top = height / 4;
                         let bottom = height - top;
-
-                        println!("scroll_controller_spectrum: x={} y={}", last_spectrum_x_clone.get(), last_spectrum_y_clone.get());
 
                         if last_spectrum_x_clone.get() < 40.0 {
                             let mut r = radio_mutex_clone.radio.lock().unwrap();
@@ -1644,7 +1638,6 @@ fn update_ui(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCell<AppWidgets>>)
     let pan = r.receiver[rx].pan;
     drop(r);
 
-println!("update_ui: rx={} nr={} nr2={} nb={} nb2={} anf={} snb={} ctun={}", rx, nr, nr2, nb, nb2, anf, snb, ctun);
     let app_widgets = rc_app_widgets.borrow();
 
     // update band

@@ -13,7 +13,6 @@ pub struct Waterfall {
 impl Waterfall {
 
     pub fn new(id: usize, width: i32, height: i32) -> Self {
-        println!("Waterfall::new width={} height={}", width, height);
         let rx = id;
         let pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, width, height).unwrap();
         Self {
@@ -23,7 +22,6 @@ impl Waterfall {
     }
 
     pub fn resize(&mut self, width: i32, height: i32) {
-        println!("Waterfall::resize width={} height={}", width, height);
         let new_pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, width, height).unwrap();
         self.pixbuf = new_pixbuf;
     }

@@ -26,4 +26,12 @@
   color: black;
   background-image: none;
 }
+.toggle {
+  color: black;
+  background-image: none;
+}
 
+.toggle:checked {
+  color: orange;
+  background-image: none;
+}

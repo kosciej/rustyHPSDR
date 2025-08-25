@@ -6,14 +6,17 @@ use crate::util::*;
 
 #[derive(Clone)]
 pub struct Spectrum {
+    rx: usize,
     surface: ImageSurface,
 }
 
 impl Spectrum {
 
-    pub fn new(width: i32, height: i32) -> Self {
+    pub fn new(id: usize, width: i32, height: i32) -> Self {
+        let rx = id;
         let surface = ImageSurface::create(Format::ARgb32, width, height).expect("Failed to create surface");
         Self {
+            rx,
             surface,
         }
     }
@@ -78,7 +81,8 @@ impl Spectrum {
 
         } else {
 
-            let b = r.receiver[0].band.to_usize();
+            let b = r.receiver[self.rx].band.to_usize();
+            let active = r.receiver[self.rx].active;
             let dbm_per_line: f32 = height as f32/(r.band_info[b].spectrum_high-r.band_info[b].spectrum_low);
 
             cr.set_source_rgb(1.0, 1.0, 0.0);
@@ -86,24 +90,24 @@ impl Spectrum {
             cr.set_line_cap(LineCap::Round);
             cr.set_line_join(LineJoin::Round);
 
-            let frequency_low = r.receiver[0].frequency_a - (r.receiver[0].sample_rate/2) as f32;
-            let frequency_high = r.receiver[0].frequency_a + (r.receiver[0].sample_rate/2) as f32;
+            let frequency_low = r.receiver[self.rx].frequency_a - (r.receiver[self.rx].sample_rate/2) as f32;
+            let frequency_high = r.receiver[self.rx].frequency_a + (r.receiver[self.rx].sample_rate/2) as f32;
             let frequency_range = frequency_high - frequency_low;
             //let hz_per_pixel = frequency_range as f32 / pixels.len() as f32;
    
-            let display_frequency_range = frequency_range / r.receiver[0].zoom as f32;
-            let display_frequency_offset = ((frequency_range - display_frequency_range) / 100.0) * r.receiver[0].pan as f32;
+            let display_frequency_range = frequency_range / r.receiver[self.rx].zoom as f32;
+            let display_frequency_offset = ((frequency_range - display_frequency_range) / 100.0) * r.receiver[self.rx].pan as f32;
             let display_frequency_low = frequency_low + display_frequency_offset;
             let display_frequency_high = frequency_high + display_frequency_offset;
             let display_hz_per_pixel = display_frequency_range as f32 / width as f32;
 
-            cr.set_source_rgb(0.5, 0.5, 0.5);
+            //cr.set_source_rgb(0.5, 0.5, 0.5);
             let mut step = 25000.0;
-            match r.receiver[0].sample_rate {
+            match r.receiver[self.rx].sample_rate {
                  48000 => step = 50000.0,
                  96000 => step = 10000.0,
                 192000 => step = 20000.0,
-                384000 => match r.receiver[0].zoom {
+                384000 => match r.receiver[self.rx].zoom {
                               1 => step = 25000.0,
                               2 => step = 25000.0,
                               3 => step = 10000.0,
@@ -131,22 +135,34 @@ impl Spectrum {
             let mut f: f32 = (((display_frequency_low as i32 + step as i32) / step as i32) * step as i32) as f32;
             while f < display_frequency_high {
                 let x = (f - display_frequency_low) / display_hz_per_pixel;
-                cr.set_source_rgb(0.5, 0.5, 0.5);
+                if active {
+                    cr.set_source_rgb(0.5, 0.5, 0.5);
+                } else {
+                    cr.set_source_rgb(0.25, 0.25, 0.25);
+                }
                 cr.move_to( x.into(), 0.0);
                 cr.line_to( x.into(), height.into());
                 cr.stroke().unwrap();
                 let text = format_u32_with_separators((f / 1000.0) as u32);
-                cr.set_source_rgb(1.0, 1.0, 0.0);
+                if active {
+                    cr.set_source_rgb(1.0, 1.0, 0.0);
+                } else {
+                    cr.set_source_rgb(0.5, 0.5, 0.0);
+                }
                 let pango_layout = pangocairo::functions::create_layout(&cr);
                 pango_layout.set_text(&text);
                 let (text_width, _text_height) = pango_layout.pixel_size();
-                cr.move_to( (x - (text_width as f32 / 2.0)).into(), 20.0);
+                cr.move_to( (x - (text_width as f32 / 2.0)).into(), 10.0);
                 let _ = cr.show_text(&text);
                 f = f + step as f32;
             }
 
             // draw the band limits
-            cr.set_source_rgb(1.0, 0.0, 0.0);
+            if active {
+                cr.set_source_rgb(1.0, 0.0, 0.0);
+            } else {
+                cr.set_source_rgb(0.5, 0.0, 0.0);
+            }
             let dashes = [4.0, 4.0];
             let offset = 0.0;
             cr.set_dash(&dashes, offset);
@@ -168,14 +184,22 @@ impl Spectrum {
 
             // draw signal levels
             for i in r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32 {
-                if i % r.receiver[0].spectrum_step as i32 == 0 {
+                if i % r.receiver[self.rx].spectrum_step as i32 == 0 {
                     let y = (r.band_info[b].spectrum_high - i as f32) * dbm_per_line;
-                    cr.set_source_rgb(0.5, 0.5, 0.5);
+                    if active {
+                        cr.set_source_rgb(0.5, 0.5, 0.5);
+                    } else {
+                        cr.set_source_rgb(0.25, 0.25, 0.25);
+                    }
                     cr.move_to(0.0, y.into());
                     cr.line_to(width as f64, y.into());
                     cr.stroke().unwrap();
                     let text = format!("{} dBm", i);
-                    cr.set_source_rgb(1.0, 1.0, 0.0);
+                    if active {
+                        cr.set_source_rgb(1.0, 1.0, 0.0);
+                    } else {
+                        cr.set_source_rgb(0.5, 0.5, 0.0);
+                    }
                     cr.move_to( 5.0, (y-2.0).into());
                     let _ = cr.show_text(&text);
                 }
@@ -183,9 +207,13 @@ impl Spectrum {
 
             // draw the spectrum
             let spectrum_high = r.band_info[b].spectrum_high;
-            let spectrum_width = r.receiver[0].spectrum_width;
-            let pan = ((pixels.len() as f32 - spectrum_width as f32) / 100.0) * r.receiver[0].pan as f32;
-            cr.set_source_rgb(1.0, 1.0, 0.0);
+            let spectrum_width = r.receiver[self.rx].spectrum_width;
+            let pan = ((pixels.len() as f32 - spectrum_width as f32) / 100.0) * r.receiver[self.rx].pan as f32;
+            if active {
+                cr.set_source_rgb(1.0, 1.0, 0.0);
+            } else {
+                cr.set_source_rgb(0.5, 0.4, 0.0);
+            }
             cr.move_to(0.0, height as f64);
             for i in 0..spectrum_width {
                 let pixel = pixels[i as usize + pan as usize];
@@ -201,68 +229,59 @@ impl Spectrum {
                           * (height-20) as f32
                         / (r.band_info[b].spectrum_high - r.band_info[b].spectrum_low)).floor();
             s9 = 1.0-(s9/(height-20) as f32);
-            pattern.add_color_stop_rgb(0.0,0.0,1.0,0.0); // Green
-            pattern.add_color_stop_rgb((s9/3.0).into(),1.0,0.65,0.0); // Orange
-            pattern.add_color_stop_rgb(((s9/3.0)*2.0).into(),1.0,1.0,0.0); // Yellow
-            pattern.add_color_stop_rgb(s9.into(),1.0,0.0,0.0); // Red
+            if active {
+                pattern.add_color_stop_rgb(0.0,0.0,1.0,0.0); // Green
+                pattern.add_color_stop_rgb((s9/3.0).into(),1.0,0.65,0.0); // Orange
+                pattern.add_color_stop_rgb(((s9/3.0)*2.0).into(),1.0,1.0,0.0); // Yellow
+                pattern.add_color_stop_rgb(s9.into(),1.0,0.0,0.0); // Red
+            } else {
+                pattern.add_color_stop_rgb(0.0,0.0,0.5,0.0); // Green
+                pattern.add_color_stop_rgb((s9/3.0).into(),0.5,0.32,0.0); // Orange
+                pattern.add_color_stop_rgb(((s9/3.0)*2.0).into(),0.5,0.5,0.0); // Yellow
+                pattern.add_color_stop_rgb(s9.into(),0.5,0.0,0.0); // Red
+            }
             cr.set_source(&pattern).expect("Failed to set source");
             cr.close_path();
             let _ = cr.fill_preserve();
 
             cr.stroke().unwrap();
 
-            let mut frequency = r.receiver[0].frequency_a;
-            if r.receiver[0].ctun {
-                frequency = r.receiver[0].ctun_frequency;
+            let mut frequency = r.receiver[self.rx].frequency_a;
+            if r.receiver[self.rx].ctun {
+                frequency = r.receiver[self.rx].ctun_frequency;
             }
-            if r.receiver[0].mode == Modes::CWL.to_usize() {
-                frequency = frequency + r.receiver[0].cw_pitch;
-            } else if r.receiver[0].mode == Modes::CWU.to_usize() {
-                frequency = frequency - r.receiver[0].cw_pitch;
+            if r.receiver[self.rx].mode == Modes::CWL.to_usize() {
+                frequency = frequency + r.receiver[self.rx].cw_pitch;
+            } else if r.receiver[self.rx].mode == Modes::CWU.to_usize() {
+                frequency = frequency - r.receiver[self.rx].cw_pitch;
             }
 
-           // see if cursor and filter visible
+            // see if cursor and filter visible
             if display_frequency_low < frequency && display_frequency_high > frequency {
                 // draw the center line frequency marker
                 let x = (frequency - display_frequency_low) / display_hz_per_pixel;
-                cr.set_source_rgb(1.0, 0.0, 0.0);
+                if active {
+                    cr.set_source_rgb(1.0, 0.0, 0.0);
+                } else {
+                    cr.set_source_rgb(0.5, 0.0, 0.0);
+                }
                 cr.set_line_width(1.0);
                 cr.move_to(x.into(), 0.0);
                 cr.line_to(x.into(), height.into());
                 cr.stroke().unwrap();
 
                 // draw the filter
-                cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
-                let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
-                let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
+                if active {
+                    cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
+                } else {
+                    cr.set_source_rgba (0.25, 0.25, 0.25, 0.50);
+                }
+                let filter_left = ((frequency + r.receiver[self.rx].filter_low) - display_frequency_low) / display_hz_per_pixel;
+                let filter_right = ((frequency + r.receiver[self.rx].filter_high) - display_frequency_low) / display_hz_per_pixel;
                 cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
                 let _ = cr.fill();
             }
 
-            if r.receiver[0].subrx {
-                frequency = r.receiver[0].frequency_b;
-                if r.receiver[0].mode == Modes::CWL.to_usize() {
-                    frequency = frequency + r.receiver[0].cw_pitch;
-                } else if r.receiver[0].mode == Modes::CWU.to_usize() {
-                    frequency = frequency - r.receiver[0].cw_pitch;
-                }
-                if display_frequency_low < frequency && display_frequency_high > frequency {
-                    // draw the center line frequency marker
-                    let x = (frequency - display_frequency_low) / display_hz_per_pixel;
-                    cr.set_source_rgb(1.0, 0.64, 0.0); // orange
-                    cr.set_line_width(1.0);
-                    cr.move_to(x.into(), 0.0);
-                    cr.line_to(x.into(), height.into());
-                    cr.stroke().unwrap();
-
-                    // draw the filter
-                    cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
-                    let filter_left = ((frequency + r.receiver[0].filter_low) - display_frequency_low) / display_hz_per_pixel;
-                    let filter_right = ((frequency + r.receiver[0].filter_high) - display_frequency_low) / display_hz_per_pixel;
-                    cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
-                    let _ = cr.fill();
-                }
-            }
         }
     }
 

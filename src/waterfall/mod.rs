@@ -6,24 +6,25 @@ use crate::radio::RadioMutex;
 
 #[derive(Clone)]
 pub struct Waterfall {
-   pixbuf: Pixbuf,
+    rx: usize,
+    pixbuf: Pixbuf,
 }
 
 impl Waterfall {
 
-    pub fn new(width: i32, height: i32) -> Self {
+    pub fn new(id: usize, width: i32, height: i32) -> Self {
+        println!("Waterfall::new width={} height={}", width, height);
+        let rx = id;
         let pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, width, height).unwrap();
         Self {
+            rx,
             pixbuf,
         }
     }
 
     pub fn resize(&mut self, width: i32, height: i32) {
+        println!("Waterfall::resize width={} height={}", width, height);
         let new_pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, width, height).unwrap();
-        //unsafe {
-        //    let mut pixels = new_pixbuf.pixels();
-        //    pixels.fill(0); // Fill all bytes with 0 (black)
-        //}
         self.pixbuf = new_pixbuf;
     }
 
@@ -46,10 +47,10 @@ impl Waterfall {
             }
 
             // fill in the top line with the latest spectrum data
-            let waterfall_width = r.receiver[0].spectrum_width;
-            let pan = ((new_pixels.len() as f32 - waterfall_width as f32) / 100.0) * r.receiver[0].pan as f32;
+            let waterfall_width = r.receiver[self.rx].spectrum_width;
+            let pan = ((new_pixels.len() as f32 - waterfall_width as f32) / 100.0) * r.receiver[self.rx].pan as f32;
 
-            let b = r.receiver[0].band.to_usize();
+            let b = r.receiver[self.rx].band.to_usize();
             for x in 0..waterfall_width {
                 let mut value: f32 = new_pixels[x as usize + pan as usize] as f32;
                 average += value;

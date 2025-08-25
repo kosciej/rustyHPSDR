@@ -460,6 +460,10 @@ impl FilterGrid {
         }
     }
 
+    pub fn get_button(&self, index: usize) -> &Button {
+        &self.buttons[index]
+    }
+
     pub fn set_active_values(&self, low: f32, high: f32) {
         self.low_adjustment.set_value(low.into());
         self.high_adjustment.set_value(high.into());

@@ -163,6 +163,10 @@ impl ModeGrid {
         self.buttons[index].add_css_class("active-button");
     }
 
+    pub fn get_button(&self, index: usize) -> &Button {
+        &self.buttons[index]
+    }
+
     pub fn get_widget(&self) -> &Grid {
         &self.grid
     }

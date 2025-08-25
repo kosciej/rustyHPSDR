@@ -102,12 +102,11 @@ pub struct Radio {
     pub supported_receivers: u8,
     pub active_receiver: usize,
     pub receivers: u8,
+    pub rx2_enabled: bool,
     pub receiver: Vec<Receiver>,
     pub band_info: Vec<BandInfo>,
 #[serde(skip_serializing, skip_deserializing)]
     pub s_meter_dbm: f64,
-#[serde(skip_serializing, skip_deserializing)]
-    pub subrx_s_meter_dbm: f64,
 #[serde(skip_serializing, skip_deserializing)]
     pub ptt: bool,
 #[serde(skip_serializing, skip_deserializing)]
@@ -198,9 +197,21 @@ impl RadioMutex {
         (flag, pixels)
     }
 
+    pub fn update_spectrum_2(&self, width: i32) -> (c_int, Vec<f32>) {
+        let mut r = self.radio.lock().unwrap();
+        let (flag, pixels) = r.update_spectrum_2(width);
+        (flag, pixels)
+    }
+
     pub fn update_waterfall(&self, width: i32) -> (c_int, Vec<f32>) {
         let mut r = self.radio.lock().unwrap();
         let (flag, pixels) = r.update_waterfall(width);
+        (flag, pixels)
+    }
+
+    pub fn update_waterfall_2(&self, width: i32) -> (c_int, Vec<f32>) {
+        let mut r = self.radio.lock().unwrap();
+        let (flag, pixels) = r.update_waterfall_2(width);
         (flag, pixels)
     }
 
@@ -208,21 +219,20 @@ impl RadioMutex {
 
 impl Radio {
 
-    // currently only supports 1 receiver
     pub fn new(device: Device, spectrum_width: i32) -> Radio {
         let name = "HPSDR".to_string();
         let dev = device.device;
         let protocol = device.protocol;
         let supported_receivers = device.supported_receivers;
         let active_receiver = 0;
-        let receivers: u8 = device.supported_receivers;
+        let receivers: u8 = 2;
+        let rx2_enabled: bool = true;
         let mut receiver: Vec<Receiver> = Vec::new();
         let band_info = BandInfo::new();
         for i in 0..receivers {
             receiver.push(Receiver::new(i, device.protocol, spectrum_width));
         }
         let s_meter_dbm = -121.0;
-        let subrx_s_meter_dbm = -121.0;
         let ptt = false;
         let mox = false;
         let vox = false;
@@ -270,7 +280,7 @@ impl Radio {
         let mic_bias_enable = true;
         let mic_saturn_xlr = false;
 
-	let waterfall_auto = true;
+        let waterfall_auto = true;
         let waterfall_calibrate = 2.0;
 
         let spectrum_timeout_id = None;
@@ -284,10 +294,10 @@ impl Radio {
             supported_receivers,
             active_receiver,
             receivers,
+            rx2_enabled,
             receiver,
             band_info,
             s_meter_dbm,
-            subrx_s_meter_dbm,
             ptt,
             mox,
             vox,
@@ -342,7 +352,6 @@ impl Radio {
 
     pub fn init(&mut self) {
         self.s_meter_dbm = -121.0;
-        self.subrx_s_meter_dbm = -121.0;
         self.ptt = false;
         self.mox = false;
         self.vox = false;
@@ -369,8 +378,29 @@ impl Radio {
     }
 
     pub fn update_spectrum(&mut self, width: i32) -> (c_int, Vec<f32>) {
-        let mut zoom = self.receiver[self.active_receiver].zoom;
-        let mut channel = self.receiver[self.active_receiver].channel;
+        let mut zoom = self.receiver[0].zoom;
+        let mut channel = self.receiver[0].channel;
+        if self.is_transmitting() {
+            zoom = 1;
+            channel = self.transmitter.channel;
+        }
+        let mut pixels_len = width * zoom;
+        if self.is_transmitting() {
+            pixels_len = width * 12;
+        } 
+        let mut pixels = vec![0.0; pixels_len as usize];
+        let mut flag: c_int = 0;
+        if pixels.len() != 0 { // may happen at start of application before spectrum is setup
+            unsafe {
+                GetPixels(channel, 0, pixels.as_mut_ptr(), &mut flag);
+            }
+        }
+        (flag, pixels)
+    }
+    
+    pub fn update_spectrum_2(&mut self, width: i32) -> (c_int, Vec<f32>) {
+        let mut zoom = self.receiver[1].zoom;
+        let mut channel = self.receiver[1].channel;
         if self.is_transmitting() {
             zoom = 1;
             channel = self.transmitter.channel;
@@ -409,11 +439,31 @@ impl Radio {
                 GetPixels(channel, 1, pixels.as_mut_ptr(), &mut flag);
             }
         }
-
         (flag, pixels)
-
     }
 
+    pub fn update_waterfall_2(&mut self, width: i32) -> (c_int, Vec<f32>) {
+        let mut zoom = self.receiver[1].zoom;
+        let mut channel = self.receiver[1].channel;
+        if self.is_transmitting() {
+            zoom = 1;
+            channel = self.transmitter.channel;
+        }
+
+        let mut pixels_len = width * zoom;
+        if self.is_transmitting() {
+            pixels_len = width * 12;
+        }
+
+        let mut pixels = vec![0.0; pixels_len as usize];
+        let mut flag: c_int = 0;
+        if pixels.len() != 0 { // may happen at start of application before spectrum is setup
+            unsafe {
+                GetPixels(channel, 1, pixels.as_mut_ptr(), &mut flag);
+            }
+        }
+        (flag, pixels)
+    }
 
     pub fn set_state(&self) {
         if self.is_transmitting() {
@@ -690,30 +740,6 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
                 let _ = cr.fill();
             }
 
-            if r.receiver[rx].subrx {
-                frequency = r.receiver[rx].frequency_b;
-                if r.receiver[rx].mode == Modes::CWL.to_usize() {
-                    frequency = frequency + r.receiver[rx].cw_pitch;
-                } else if r.receiver[rx].mode == Modes::CWU.to_usize() {
-                    frequency = frequency - r.receiver[rx].cw_pitch;
-                }
-                if display_frequency_low < frequency && display_frequency_high > frequency {
-                    // draw the center line frequency marker
-                    let x = (frequency - display_frequency_low) / display_hz_per_pixel;
-                    cr.set_source_rgb(1.0, 0.64, 0.0); // orange
-                    cr.set_line_width(1.0);
-                    cr.move_to(x.into(), 0.0);
-                    cr.line_to(x.into(), height.into());
-                    cr.stroke().unwrap();
-        
-                    // draw the filter
-                    cr.set_source_rgba (0.5, 0.5, 0.5, 0.50);
-                    let filter_left = ((frequency + r.receiver[rx].filter_low) - display_frequency_low) / display_hz_per_pixel;
-                    let filter_right = ((frequency + r.receiver[rx].filter_high) - display_frequency_low) / display_hz_per_pixel;
-                    cr.rectangle(filter_left.into(), 0.0, (filter_right-filter_left).into(), height.into());
-                    let _ = cr.fill();
-                }
-            }
         }
     }
 }
@@ -734,7 +760,7 @@ fn format_u32_with_separators(value: u32) -> String {
     result
 }
 
-fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label, x: f64, width: i32, button: u32, button_subrx: &ToggleButton) {
+fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label, x: f64, width: i32, button: u32) {
     let mut r = radio.lock().unwrap();
     let rx = r.active_receiver;
         
@@ -751,32 +777,19 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label,
     let f1 = display_frequency_low + (x as f32 * display_hz_per_pixel);
     let f1 = (f1 as u32 / r.receiver[rx].step as u32 * r.receiver[rx].step as u32) as f32;
  
-    if button == 3 && r.receiver[rx].subrx {
-        r.receiver[rx].frequency_b = f1;
-        r.receiver[rx].set_subrx_frequency();
-        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency_b as u32);
-        fb.set_label(&formatted_value);
-    } else if r.receiver[rx].ctun {
+    if r.receiver[rx].ctun {
         r.receiver[rx].ctun_frequency = f1;
         r.receiver[rx].set_ctun_frequency();
         let formatted_value = format_u32_with_separators(r.receiver[rx].ctun_frequency as u32);
         fa.set_label(&formatted_value);
     } else {
         r.receiver[rx].frequency_a = f1;
-        if r.receiver[rx].subrx {
-            if r.receiver[rx].frequency_b < frequency_low || r.receiver[rx].frequency_b > frequency_high {
-                r.receiver[rx].subrx = false;
-                button_subrx.set_active(r.receiver[rx].subrx);
-            } else {
-                r.receiver[rx].set_subrx_frequency();
-            }
-        }
         let formatted_value = format_u32_with_separators(r.receiver[rx].frequency_a as u32);
         fa.set_label(&formatted_value);
     }
 }
 
-fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64, button_subrx: &ToggleButton) {
+fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64) {
     let mut r = radio.lock().unwrap();
     let rx = r.active_receiver;
     let frequency_low = r.receiver[rx].frequency_a - (r.receiver[rx].sample_rate/2) as f32;
@@ -793,32 +806,17 @@ fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64, butt
         r.receiver[rx].set_ctun_frequency();
     } else {
         r.receiver[rx].frequency_a = r.receiver[rx].frequency_a - (r.receiver[rx].step * dy as f32);
-        if r.receiver[rx].subrx {
-            if r.receiver[rx].frequency_b < frequency_low || r.receiver[rx].frequency_b > frequency_high {
-                r.receiver[rx].subrx = false;
-                button_subrx.set_active(r.receiver[rx].subrx);
-            } else {
-                r.receiver[rx].set_subrx_frequency();
-            }
-        }
         let formatted_value = format_u32_with_separators(r.receiver[rx].frequency_a as u32);
         f.set_label(&formatted_value);
     }
 }
 
-fn draw_meter(cr: &Context, dbm: f64, subrx: bool) {
+fn draw_meter(cr: &Context, dbm: f64) {
     let x_offset = 5.0;
     let mut y_offset = 0.0;
-    if subrx {
-        y_offset = 25.0;
-    }
     let db = 1.0; // size in pixels of each dbm
 
-    if subrx {
-        cr.set_source_rgb(1.0, 0.5, 0.0);
-    } else {
-        cr.set_source_rgb(0.0, 1.0, 0.0);
-    }
+    cr.set_source_rgb(0.0, 1.0, 0.0);
     cr.rectangle(x_offset, 0.0+y_offset, (dbm + 121.0) + db, 10.0);
     let _ = cr.fill();
 

@@ -107,6 +107,7 @@
                       </layout>
                     </object>
                   </child>
+<!--
                   <child>
                     <object class="GtkToggleButton" id="subrx_button">
                       <property name="label">SubRX</property>
@@ -116,9 +117,19 @@
                       </layout>
                     </object>
                   </child>
+-->
                   <child>
                     <object class="GtkToggleButton" id="ctun_button">
                       <property name="label">CTUN</property>
+                      <layout>
+                        <property name="column">2</property>
+                        <property name="row">0</property>
+                      </layout>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkToggleButton" id="rx2_button">
+                      <property name="label">RX2</property>
                       <layout>
                         <property name="column">2</property>
                         <property name="row">1</property>
@@ -214,7 +225,7 @@
             </object>
           </child>
           <child>
-            <object class="GtkDrawingArea" id="spectrum_display_2">
+            <object class="GtkDrawingArea" id="spectrum_2_display">
               <property name="content-width">1076</property>
               <property name="content-height">64</property>
               <property name="hexpand">True</property>
@@ -223,7 +234,7 @@
             </object>
           </child>
           <child>
-            <object class="GtkDrawingArea" id="waterfall_display_2">
+            <object class="GtkDrawingArea" id="waterfall_2_display">
               <property name="content-width">1024</property>
               <property name="content-height">64</property>
               <property name="hexpand">True</property>
@@ -337,7 +348,7 @@
                     </object>
                   </child>
                   <child>
-                    <object class="GtkButton" id="nr_button">
+                    <object class="GtkToggleButton" id="nr_button">
                       <property name="label">NR</property>
                       <layout>
                         <property name="column">1</property>
@@ -346,7 +357,7 @@
                     </object>
                   </child>
                   <child>
-                    <object class="GtkButton" id="nb_button">
+                    <object class="GtkToggleButton" id="nb_button">
                       <property name="label">NB</property>
                       <layout>
                         <property name="column">1</property>

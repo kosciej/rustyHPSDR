@@ -127,8 +127,7 @@ pub struct BandGrid {
 }
 
 impl BandGrid {
-    pub fn new(radio_mutex: &RadioMutex, builder: &Builder) -> Self {
-        let r = radio_mutex.radio.lock().unwrap();
+    pub fn new(builder: &Builder) -> Self {
         let grid: Grid = builder
                 .object("band_grid")
                 .expect("Could not get object 'band_grid' from builder.");
@@ -136,7 +135,8 @@ impl BandGrid {
         let active_index = Rc::new(RefCell::new(None));
         let callback = Rc::new(RefCell::new(Box::new(|_| {}) as Box<dyn Fn(usize)>));
 
-        for (_i, info) in r.band_info.iter().enumerate() {
+        let band_info = BandInfo::new();
+        for (_i, info) in band_info.iter().enumerate() {
             let id = format!("{}_button", info.label);
             let button: Button = builder
                 .object(id)
@@ -181,7 +181,6 @@ impl BandGrid {
 
                 // Update the active index
                 *active_idx = Some(button_index);
-
                 (callback_clone.borrow())(button_index);
             });
             if i == initial_button {
@@ -196,10 +195,19 @@ impl BandGrid {
     }
 
     pub fn set_active_index(&mut self, index: usize) {
+        let old_index: usize = self.active_index.borrow().expect("Bands: set_active_index error using active_index");
+        self.buttons[old_index].remove_css_class("active-button");
+        self.buttons[old_index].add_css_class("inactive-button");
         let mut active_idx = self.active_index.borrow_mut();
         *active_idx = Some(index);
+        self.buttons[index].remove_css_class("inactive-button");
+        self.buttons[index].add_css_class("active-button");
     }
-    
+
+    pub fn get_button(&self, index: usize) -> &Button {
+        &self.buttons[index]
+    }
+
     pub fn get_widget(&self) -> &Grid {
         &self.grid
     }

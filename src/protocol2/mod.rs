@@ -76,11 +76,9 @@ impl Protocol2 {
     }
 
     pub fn run(&mut self, radio_mutex: &RadioMutex) {
-        //let r = radio.lock().unwrap();
         let r = radio_mutex.radio.lock().unwrap();
         let mut buffer = vec![0; 65536];
         let mut audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
-        let mut subrx_audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
         let mut microphone_buffer: Vec<f64> = vec![0.0; (r.transmitter.microphone_buffer_size * 2) as usize];
         let mut microphone_buffer_offset: usize = 0;
         let mut microphone_iq_buffer: Vec<f64> = vec![0.0; (r.transmitter.iq_buffer_size * 2) as usize];
@@ -98,7 +96,6 @@ impl Protocol2 {
         loop {
             match self.socket.recv_from(&mut buffer) {
                 Ok((size, src)) => {
-                    //println!("recv_from: size={} from {}", size, src.port());
                     match src.port() {
                         1024 => {}, // Command responce
                         1025 => { // High Priority
@@ -117,21 +114,17 @@ impl Protocol2 {
                                     r.supply_volts = u16::from_be_bytes([buffer[49], buffer[50]]) as i32;
 
                                     if r.ptt != previous_ptt {
-                                        //println!("ptt {}", r.ptt);
                                         r.set_state();
                                     }
                                     if r.dot != previous_dot {
-                                        //println!("dot {}", r.dot);
                                         r.set_state();
                                     }
                                     if r.dash != previous_dash {
-                                        //println!("dash {}", r.dash);
                                         r.set_state();
                                     }
 
                                 drop(r);
                                 
-                                //let radio_for_high_priority = Arc::clone(&radio);
                                 self.send_high_priority(radio_mutex);
                                 },
                         1026 => { // Mic/Line In
@@ -195,68 +188,60 @@ impl Protocol2 {
                         1041 |
                         1042 => { // RX IQ samples
                             let ddc = (src.port()-1035) as usize;
-                            if ddc == 0 {
-                                let mut r = radio_mutex.radio.lock().unwrap();
-                                let iq_sample_count = u16::from_be_bytes([buffer[14], buffer[15]]) as usize;
-                                let data_size = iq_sample_count * SAMPLE_SIZE * INTERLEAVE_FACTOR;
-                                let mut i_sample: i32 = 0;
-                                let mut q_sample: i32 = 0;
-                                let mut b = HEADER_SIZE;
+                            let mut r = radio_mutex.radio.lock().unwrap();
+                            let iq_sample_count = u16::from_be_bytes([buffer[14], buffer[15]]) as usize;
+                            let data_size = iq_sample_count * SAMPLE_SIZE * INTERLEAVE_FACTOR;
+                            let mut i_sample: i32 = 0;
+                            let mut q_sample: i32 = 0;
+                            let mut b = HEADER_SIZE;
     
-                                if size >= HEADER_SIZE + data_size {
-                                    for _i in 0..iq_sample_count {
-                                        if buffer[b] & 0x80 != 0 {
-                                            i_sample = u32::from_be_bytes([0xFF, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
-                                        } else {
-                                            i_sample = u32::from_be_bytes([0, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
-                                        }
-                                        b = b + 3;
-                                        if buffer[b] & 0x80 != 0 {
-                                            q_sample = u32::from_be_bytes([0xFF, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
-                                        } else {
-                                            q_sample = u32::from_be_bytes([0, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
-                                        }
-                                        b = b + 3;
+                            if size >= HEADER_SIZE + data_size {
+                                for _i in 0..iq_sample_count {
+                                    if buffer[b] & 0x80 != 0 {
+                                        i_sample = u32::from_be_bytes([0xFF, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
+                                    } else {
+                                        i_sample = u32::from_be_bytes([0, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
+                                    }
+                                    b = b + 3;
+                                    if buffer[b] & 0x80 != 0 {
+                                        q_sample = u32::from_be_bytes([0xFF, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
+                                    } else {
+                                        q_sample = u32::from_be_bytes([0, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
+                                    }
+                                    b = b + 3;
 
-                                        let i = r.receiver[ddc].samples*2;
-                                        r.receiver[ddc].iq_input_buffer[i]=i_sample as f64/16777215.0;
-                                        r.receiver[ddc].iq_input_buffer[i+1]=q_sample as f64/16777215.0;
-                                        r.receiver[ddc].samples = r.receiver[ddc].samples+1;
-                                        if r.receiver[ddc].samples >= r.receiver[ddc].buffer_size {
-//                                            r.receiver[ddc].process_iq_samples();
-                                            let raw_ptr: *mut f64 = r.receiver[ddc].iq_input_buffer.as_mut_ptr() as *mut f64;
-                                            let audio_ptr: *mut f64 =  audio_buffer.as_mut_ptr() as *mut f64;
-                                            let subrx_audio_ptr: *mut f64 =  subrx_audio_buffer.as_mut_ptr() as *mut f64;
+                                    let i = r.receiver[ddc].samples*2;
+                                    r.receiver[ddc].iq_input_buffer[i]=i_sample as f64/16777215.0;
+                                    r.receiver[ddc].iq_input_buffer[i+1]=q_sample as f64/16777215.0;
+                                    r.receiver[ddc].samples = r.receiver[ddc].samples+1;
+                                    if r.receiver[ddc].samples >= r.receiver[ddc].buffer_size {
+                                        let raw_ptr: *mut f64 = r.receiver[ddc].iq_input_buffer.as_mut_ptr() as *mut f64;
+                                        let audio_ptr: *mut f64 =  audio_buffer.as_mut_ptr() as *mut f64;
 
-                                            if r.receiver[ddc].nb {
-                                                unsafe {
-                                                    xanbEXT(r.receiver[ddc].channel, raw_ptr, raw_ptr);
-                                                }
-                                            }
-                                            if r.receiver[ddc].nb2{
-                                                unsafe {
-                                                    xnobEXT(r.receiver[ddc].channel, raw_ptr, raw_ptr);
-                                                }
-                                            }
-
-                                            let mut result: c_int = 0;
+                                        if r.receiver[ddc].nb {
                                             unsafe {
-                                                fexchange0(r.receiver[ddc].channel, raw_ptr, audio_ptr, &mut result);
-                                                if r.receiver[ddc].subrx {
-                                                    fexchange0(r.receiver[ddc].subrx_channel, raw_ptr, subrx_audio_ptr, &mut result);
-                                                }
+                                                xanbEXT(r.receiver[ddc].channel, raw_ptr, raw_ptr);
                                             }
+                                        }
+                                        if r.receiver[ddc].nb2{
                                             unsafe {
-                                                Spectrum0(1, r.receiver[ddc].channel, 0, 0, raw_ptr);
+                                                xnobEXT(r.receiver[ddc].channel, raw_ptr, raw_ptr);
                                             }
-                                            r.receiver[ddc].samples = 0;
+                                        }
+
+                                        let mut result: c_int = 0;
+                                        unsafe {
+                                            fexchange0(r.receiver[ddc].channel, raw_ptr, audio_ptr, &mut result);
+                                        }
+                                        unsafe {
+                                            Spectrum0(1, r.receiver[ddc].channel, 0, 0, raw_ptr);
+                                        }
+                                        r.receiver[ddc].samples = 0;
+                                        if r.receiver[ddc].active {
                                             for i in 0..r.receiver[ddc].output_samples {
                                                 let ix = i * 2;
                                                 let left_sample: i32 = (audio_buffer[ix] * 32767.0) as i32;
                                                 let mut right_sample: i32 = (audio_buffer[ix+1] * 32767.0) as i32;
-                                                if r.receiver[0].subrx {
-                                                    right_sample = (subrx_audio_buffer[ix+1] * 32767.0) as i32;
-                                                }
                                                 let rox = r.receiver[ddc].remote_audio_buffer_offset;
                                                 if r.audio.remote_output {
                                                     r.receiver[ddc].remote_audio_buffer[rox] = (left_sample >> 8) as u8;
@@ -278,15 +263,11 @@ impl Protocol2 {
                                                 if r.audio.local_output {
                                                     let lox=r.receiver[ddc].local_audio_buffer_offset * 2;
                                                     r.receiver[ddc].local_audio_buffer[lox]=(audio_buffer[ix] * 32767.0) as i16;
-                                                    if r.receiver[0].subrx {
-                                                        r.receiver[ddc].local_audio_buffer[lox+1]=(subrx_audio_buffer[ix+1] * 32767.0) as i16;
-                                                    } else {
-                                                        r.receiver[ddc].local_audio_buffer[lox+1]=(audio_buffer[ix+1] * 32767.0) as i16;
-                                                    }
+                                                    r.receiver[ddc].local_audio_buffer[lox+1]=(audio_buffer[ix+1] * 32767.0) as i16;
                                                     r.receiver[ddc].local_audio_buffer_offset = r.receiver[ddc].local_audio_buffer_offset + 1;
                                                     if r.receiver[ddc].local_audio_buffer_offset == r.receiver[ddc].local_audio_buffer_size {
                                                         r.receiver[ddc].local_audio_buffer_offset = 0;
-                                                        let buffer_clone = r.receiver[0].local_audio_buffer.clone();
+                                                        let buffer_clone = r.receiver[ddc].local_audio_buffer.clone();
                                                         r.audio.write_output(&buffer_clone);
                                                     }
                                                 }
@@ -294,8 +275,6 @@ impl Protocol2 {
                                         }
                                     }
                                 }
-                            } else {
-                                println!("Only RX0 currently supported: this is for rx {}",ddc);
                             }
                         },
                         _ => println!("Unknown port {}", src.port()),
@@ -333,7 +312,7 @@ impl Protocol2 {
         buf[58] = 0x01; // enable PA
 
         if self.device.device == 5 {
-          buf[59] = 0x01; // enable ALEX 0 and 1
+          buf[59] = 0x03; // enable ALEX 0 and 1
         } else {
           buf[59] = 0x01; // enable ALEX 0
         }
@@ -348,7 +327,6 @@ impl Protocol2 {
         // port 1027
         //let r = radio.lock().unwrap();
         let r = radio_mutex.radio.lock().unwrap();
-        let rx = &r.receiver[0];
         let tx = &r.transmitter;
 
         let mut buf = [0u8; 1444];
@@ -362,42 +340,39 @@ impl Protocol2 {
             buf[4] = buf[4] | 0x02;
         }
     
-        // convert frequency to phase
-        let mut f = rx.frequency_a;
-        if rx.mode == Modes::CWL.to_usize() {
-             f = f + rx.cw_pitch;
-        } else if rx.mode == Modes::CWU.to_usize() {
-             f = f - rx.cw_pitch;
+        for i in 0..r.receivers {
+            let rx: &Receiver = &r.receiver[i as usize];
+            // convert frequency to phase
+            let mut f = rx.frequency_a;
+            if rx.mode == Modes::CWL.to_usize() {
+                 f = f + rx.cw_pitch;
+            } else if rx.mode == Modes::CWU.to_usize() {
+                 f = f - rx.cw_pitch;
+            }
+
+            let phase = ((4294967296.0*f)/122880000.0) as u32;
+            buf[(9+(i*4)) as usize] = ((phase>>24) & 0xFF) as u8;
+            buf[(10+(i*4)) as usize] = ((phase>>16) & 0xFF) as u8;
+            buf[(11+(i*4)) as usize] = ((phase>>8) & 0xFF) as u8;
+            buf[(12+(i*4)) as usize] = (phase & 0xFF) as u8;
+
+            if i==0 {
+                // assume transmit and receive on same frequency as RX0
+                buf[329] = ((phase>>24) & 0xFF) as u8;
+                buf[330] = ((phase>>16) & 0xFF) as u8;
+                buf[331] = ((phase>>8) & 0xFF) as u8;
+                buf[332] = (phase & 0xFF) as u8;
+            }
         }
 
-        let phase = ((4294967296.0*f)/122880000.0) as u32;
-        buf[9] = ((phase>>24) & 0xFF) as u8;
-        buf[10] = ((phase>>16) & 0xFF) as u8;
-        buf[11] = ((phase>>8) & 0xFF) as u8;
-        buf[12] = (phase & 0xFF) as u8;
-    
-        if self.device.device == 5 {
-            buf[13] = ((phase>>24) & 0xFF) as u8;
-            buf[14] = ((phase>>16) & 0xFF) as u8;
-            buf[15] = ((phase>>8) & 0xFF) as u8;
-            buf[16] = (phase & 0xFF) as u8;
-        }
 
-        // assume transmit and receive on same frequency
-        buf[329] = ((phase>>24) & 0xFF) as u8;
-        buf[330] = ((phase>>16) & 0xFF) as u8;
-        buf[331] = ((phase>>8) & 0xFF) as u8;
-        buf[332] = (phase & 0xFF) as u8;
-
-
-        let drive = ((tx.drive / 100.0) * 255.0) as u8;
-        buf[345] = drive;
 
         let mut filter: u32 = 0x00000000;
         if r.is_transmitting() {
             filter |= 0x08000000; // TX_ENABLE
         }
 
+        let mut f = r.receiver[0].frequency_a;
         if f < 1500000.0 {
             filter |= 0x1000;
         } else if f < 2100000.0 {
@@ -463,8 +438,8 @@ impl Protocol2 {
         if r.is_transmitting() {
             buf[1443] = 0;
         } else {
-            buf[1443] = rx.attenuation as u8;
-            buf[1442] = rx.attenuation as u8;
+            buf[1443] = r.receiver[0].attenuation as u8;
+            buf[1442] = r.receiver[1].attenuation as u8;
         }
 
         self.device.address.set_port(1027);
@@ -487,7 +462,6 @@ impl Protocol2 {
         // port 1025
         //let r = radio.lock().unwrap();
         let r = radio_mutex.radio.lock().unwrap();
-        let rx = &r.receiver[0];
 
         let mut buf = [0u8; 1444];
         buf[0] = ((self.receive_specific_sequence >> 24) & 0xFF) as u8;
@@ -500,18 +474,14 @@ impl Protocol2 {
             buf[5] |= (r.adc[i].dither as u8) << i;
             buf[6] |= (r.adc[i].random as u8) << i;
         }
-        buf[7] = 0x01; // DDC enable for 1 receiver
+        buf[7] = 0x03; // 2 receivers -- DDC0 and DDC1
 
-        buf[17] = 0x00; // ADC to use for DDC0
-        buf[18] = (((rx.sample_rate/1000)>>8)&0xFF) as u8; // sample_rate
-        buf[19] = ((rx.sample_rate/1000)&0xFF) as u8; // sample_rate to use for DDC0
-        buf[22] = 24;  // 24 bits per sample
-
-        if self.device.device == 5 {
-            buf[23] = 0x01; // ADC to use for DDC0
-            buf[24] = (((rx.sample_rate/1000)>>8)&0xFF) as u8; // sample_rate
-            buf[25] = ((rx.sample_rate/1000)&0xFF) as u8; // sample_rate to use for DDC0
-            buf[28] = 24;  // 24 bits per sample
+        for i in 0..r.receivers {
+          let mut rx = &r.receiver[i as usize];
+          buf[(17+(i*6)) as usize] = 0x00; // ADC to use for DDC0
+          buf[(18+(i*6)) as usize] = (((rx.sample_rate/1000)>>8)&0xFF) as u8; // sample_rate
+          buf[(19+(i*6)) as usize] = ((rx.sample_rate/1000)&0xFF) as u8; // sample_rate to use for DDC0
+          buf[(22+(i*6)) as usize] = 24;  // 24 bits per sample
         }
 
         self.device.address.set_port(1025);

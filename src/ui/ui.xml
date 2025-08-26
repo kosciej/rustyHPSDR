@@ -47,7 +47,7 @@
               </child>
               <child>
                 <object class="GtkFrame" id="vfo_a_frame">
-                  <property name="label">VFO A</property>
+                  <property name="label">VFO A (RX1)</property>
                   <layout>
                     <property name="column">1</property>
                     <property name="row">0</property>
@@ -99,7 +99,7 @@
                     </object>
                   </child>
                   <child>
-                    <object class="GtkButton" id="split_button">
+                    <object class="GtkToggleButton" id="split_button">
                       <property name="label">Split</property>
                       <layout>
                         <property name="column">1</property>
@@ -140,7 +140,7 @@
               </child>
               <child>
                 <object class="GtkFrame" id="vfo_b_frame">
-                  <property name="label">VFO B</property>
+                  <property name="label">VFO B (RX2)</property>
                   <layout>
                     <property name="column">3</property>
                     <property name="row">0</property>

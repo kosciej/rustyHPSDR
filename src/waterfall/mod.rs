@@ -22,8 +22,10 @@ impl Waterfall {
     }
 
     pub fn resize(&mut self, width: i32, height: i32) {
-        let new_pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, width, height).unwrap();
-        self.pixbuf = new_pixbuf;
+        if width!=0 && height !=0 {
+            let new_pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, width, height).unwrap();
+            self.pixbuf = new_pixbuf;
+        }
     }
 
     pub fn update(&mut self, width:i32, height: i32, radio_mutex: &RadioMutex, new_pixels: &Vec<f32>) {

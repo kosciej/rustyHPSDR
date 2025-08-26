@@ -103,6 +103,7 @@ pub struct Radio {
     pub active_receiver: usize,
     pub receivers: u8,
     pub rx2_enabled: bool,
+    pub split: bool,
     pub receiver: Vec<Receiver>,
     pub band_info: Vec<BandInfo>,
 #[serde(skip_serializing, skip_deserializing)]
@@ -227,6 +228,7 @@ impl Radio {
         let active_receiver = 0;
         let receivers: u8 = 2;
         let rx2_enabled: bool = true;
+        let split: bool = false;
         let mut receiver: Vec<Receiver> = Vec::new();
         let band_info = BandInfo::new();
         for i in 0..receivers {
@@ -295,6 +297,7 @@ impl Radio {
             active_receiver,
             receivers,
             rx2_enabled,
+            split,
             receiver,
             band_info,
             s_meter_dbm,
@@ -406,9 +409,9 @@ impl Radio {
             channel = self.transmitter.channel;
         }
         let mut pixels_len = width * zoom;
-        if self.is_transmitting() {
-            pixels_len = width * 12;
-        } 
+        //if self.is_transmitting() {
+        //    pixels_len = width * 12;
+        //} 
         let mut pixels = vec![0.0; pixels_len as usize];
         let mut flag: c_int = 0;
         if pixels.len() != 0 { // may happen at start of application before spectrum is setup

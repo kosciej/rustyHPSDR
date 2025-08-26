@@ -350,14 +350,22 @@ impl Protocol2 {
                  f = f - rx.cw_pitch;
             }
 
-            let phase = ((4294967296.0*f)/122880000.0) as u32;
+            let mut phase = ((4294967296.0*f)/122880000.0) as u32;
             buf[(9+(i*4)) as usize] = ((phase>>24) & 0xFF) as u8;
             buf[(10+(i*4)) as usize] = ((phase>>16) & 0xFF) as u8;
             buf[(11+(i*4)) as usize] = ((phase>>8) & 0xFF) as u8;
             buf[(12+(i*4)) as usize] = (phase & 0xFF) as u8;
 
+            if r.split {
+                f = rx.frequency_b;
+                if rx.mode == Modes::CWL.to_usize() {
+                     f = f + rx.cw_pitch;
+                } else if rx.mode == Modes::CWU.to_usize() {
+                     f = f - rx.cw_pitch;
+                }
+                phase = ((4294967296.0*f)/122880000.0) as u32;
+            }
             if i==0 {
-                // assume transmit and receive on same frequency as RX0
                 buf[329] = ((phase>>24) & 0xFF) as u8;
                 buf[330] = ((phase>>16) & 0xFF) as u8;
                 buf[331] = ((phase>>8) & 0xFF) as u8;

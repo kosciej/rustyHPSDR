@@ -61,7 +61,7 @@ struct AppWidgets {
     pub a_to_b_button: Button,
     pub b_to_a_button: Button,
     pub a_swap_b_button: Button,
-    pub split_button: Button,
+    pub split_button: ToggleButton,
     pub ctun_button: ToggleButton,
     pub rx2_button: ToggleButton,
     pub step_dropdown: DropDown,
@@ -87,6 +87,7 @@ struct AppWidgets {
     pub band_grid: BandGrid,
     pub mode_grid: ModeGrid,
     pub filter_grid: FilterGrid,
+    pub cwpitch_adjustment: Adjustment,
 
 }
 
@@ -120,7 +121,7 @@ impl AppWidgets {
             .object("a_swap_b_button")
             .expect("Could not get a_swap_b_button from builder");
 
-        let split_button: Button = builder
+        let split_button: ToggleButton = builder
             .object("split_button")
             .expect("Could not get split_button from builder");
 
@@ -224,6 +225,10 @@ impl AppWidgets {
             .object("drive_adjustment")
             .expect("Could not get drive_adjustment from builder");
 
+        let cwpitch_adjustment: Adjustment = builder
+            .object("cwpitch_adjustment")
+            .expect("Could not get cwpitch_adjustment from builder");
+
         let band_grid = BandGrid::new(&builder);
         let mode_grid = ModeGrid::new(&builder);
         let filter_grid = FilterGrid::new(&builder);
@@ -259,6 +264,7 @@ impl AppWidgets {
             adcattn_adjustment,
             micgain_adjustment,
             drive_adjustment,
+            cwpitch_adjustment,
             band_grid,
             mode_grid,
             filter_grid,
@@ -377,6 +383,7 @@ fn build_ui(app: &Application) {
                     let mut rc_spectrum_clone2 = rc_spectrum_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.spectrum_display.connect_resize(move |_, width, height| { 
+                        println!("spectrum_display resize {}x{}", width, height);
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[0].spectrum_width = width;
                         r.receiver[0].init_analyzer(r.receiver[0].channel);
@@ -387,6 +394,7 @@ fn build_ui(app: &Application) {
                     let mut rc_waterfall_clone2 = rc_waterfall_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.waterfall_display.connect_resize(move |_, width, height| {
+                        println!("waterfall_display resize {}x{}", width, height);
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[0].waterfall_width = width;
                         let mut waterfall = rc_waterfall_clone2.borrow_mut();
@@ -396,6 +404,7 @@ fn build_ui(app: &Application) {
                     let mut rc_spectrum_2_clone2 = rc_spectrum_2_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.spectrum_2_display.connect_resize(move |_, width, height| { 
+                        println!("spectrum_2_display resize {}x{}", width, height);
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[1].spectrum_width = width;
                         r.receiver[1].init_analyzer(r.receiver[1].channel);
@@ -406,6 +415,7 @@ fn build_ui(app: &Application) {
                     let mut rc_waterfall_2_clone2 = rc_waterfall_2_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.waterfall_2_display.connect_resize(move |_, width, height| {
+                        println!("waterfall_2_display resize {}x{}", width, height);
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[1].waterfall_width = width;
                         let mut waterfall = rc_waterfall_2_clone2.borrow_mut();
@@ -443,6 +453,10 @@ fn build_ui(app: &Application) {
                         style_context.add_class("toggle");
                         app_widgets.ctun_button.set_active(r.receiver[rx].ctun);
 
+                        let style_context = app_widgets.split_button.style_context();
+                        style_context.add_class("toggle");
+                        app_widgets.split_button.set_active(r.split);
+
                         let style_context = app_widgets.rx2_button.style_context();
                         style_context.add_class("toggle");
                         app_widgets.rx2_button.set_active(r.rx2_enabled);
@@ -460,6 +474,7 @@ fn build_ui(app: &Application) {
                         app_widgets.micgain_adjustment.set_value(r.transmitter.micgain.into());
                         app_widgets.micgain_adjustment.set_value(r.transmitter.micgain.into());
                         app_widgets.drive_adjustment.set_value(r.transmitter.drive.into());
+                        app_widgets.cwpitch_adjustment.set_value(r.receiver[rx].cw_pitch.into());
 
                         let mut rc_spectrum_clone2 = rc_spectrum_clone.clone();
                         let mut spectrum = rc_spectrum_clone2.borrow_mut();
@@ -649,6 +664,12 @@ fn build_ui(app: &Application) {
                                 app_widgets.vfo_b_frequency.set_label(&formatted_value);
                             }
                         }
+                    });
+
+                    let radio_mutex_clone = radio_mutex.clone();
+                    app_widgets.split_button.connect_clicked(move |button| {
+                        let mut r = radio_mutex_clone.radio.lock().unwrap();
+                        r.split = button.is_active();
                     });
 
                     let radio_mutex_clone = radio_mutex.clone();
@@ -917,6 +938,17 @@ fn build_ui(app: &Application) {
                         Propagation::Proceed
                     });
                     app_widgets.waterfall_display.add_controller(scroll_controller_waterfall.clone());
+
+                    let scroll_controller_waterfall_2 = EventControllerScroll::new(
+                        EventControllerScrollFlags::VERTICAL | EventControllerScrollFlags::KINETIC
+                    );
+                    let radio_mutex_clone = radio_mutex.clone();
+                    let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
+                    scroll_controller_waterfall_2.connect_scroll(move |controller, _dx, dy| {
+                        spectrum_waterfall_scroll(&radio_mutex_clone, &rc_app_widgets_clone_clone, 1, dy);
+                        Propagation::Proceed
+                    });
+                    app_widgets.waterfall_2_display.add_controller(scroll_controller_waterfall_2.clone());
 
                     let waterfall_click_gesture = Rc::new(GestureClick::new());
                     waterfall_click_gesture.set_button(0); // all buttons
@@ -1232,6 +1264,23 @@ fn build_ui(app: &Application) {
                         }
                         r.updated = true;
                         r.set_state();
+                        if r.mox {
+                            if r.split {
+                                app_widgets.vfo_b_frequency.remove_css_class("vfo-b-label");
+                                app_widgets.vfo_b_frequency.add_css_class("vfo-tx-label");
+                            } else {
+                                app_widgets.vfo_a_frequency.remove_css_class("vfo-a-label");
+                                app_widgets.vfo_a_frequency.add_css_class("vfo-tx-label");
+                            }
+                        } else {
+                            if r.split {
+                                app_widgets.vfo_b_frequency.remove_css_class("vfo-tx-label");
+                                app_widgets.vfo_b_frequency.add_css_class("vfo-b-label");
+                            } else {
+                                app_widgets.vfo_a_frequency.remove_css_class("vfo-tx-label");
+                                app_widgets.vfo_a_frequency.add_css_class("vfo-a-label");
+                            }
+                        }
                     });
 
                     let radio_mutex_clone = radio_mutex.clone();
@@ -1249,6 +1298,23 @@ fn build_ui(app: &Application) {
                         r.transmitter.set_tuning(r.tune, r.cw_keyer_sidetone_frequency);
                         r.updated = true;
                         r.set_state();
+                        if r.tune {
+                            if r.split {
+                                app_widgets.vfo_b_frequency.remove_css_class("vfo-b-label");
+                                app_widgets.vfo_b_frequency.add_css_class("vfo-tx-label");
+                            } else {
+                                app_widgets.vfo_a_frequency.remove_css_class("vfo-a-label");
+                                app_widgets.vfo_a_frequency.add_css_class("vfo-tx-label");
+                            }
+                        } else {
+                            if r.split {
+                                app_widgets.vfo_b_frequency.remove_css_class("vfo-tx-label");
+                                app_widgets.vfo_b_frequency.add_css_class("vfo-b-label");
+                            } else {
+                                app_widgets.vfo_a_frequency.remove_css_class("vfo-tx-label");
+                                app_widgets.vfo_a_frequency.add_css_class("vfo-a-label");
+                            }
+                        }
                     });
 
                     let radio_mutex_clone = radio_mutex.clone();
@@ -1298,18 +1364,29 @@ fn build_ui(app: &Application) {
                         r.transmitter.drive = adjustment.value() as f32;
                     });
 
-                    // initialize ui
-                    {
-                        let mut r = radio_mutex.radio.lock().unwrap();
-                        app_widgets.filter_grid.update_filter_buttons(r.receiver[0].mode);
-                        r.audio.init();
-                        r.receiver[0].set_mode();
-                        r.transmitter.init();
-
+                    let radio_mutex_clone = radio_mutex.clone();
+                    app_widgets.cwpitch_adjustment.connect_value_changed(move |adjustment| {
+                        let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
                             rx = 1;
                         }
+                        r.receiver[rx].cw_pitch = adjustment.value() as f32;
+                    });
+
+                    // initialize ui
+                    {
+                        let mut r = radio_mutex.radio.lock().unwrap();
+                        let mut rx = 0;
+                        if r.receiver[1].active {
+                            rx = 1;
+                        }
+
+                        app_widgets.filter_grid.update_filter_buttons(r.receiver[rx].mode);
+                        r.audio.init();
+                        r.receiver[rx].set_mode();
+                        r.transmitter.init();
+
 
                         if !r.rx2_enabled {
                             app_widgets.spectrum_2_display.set_visible(false);
@@ -1408,20 +1485,21 @@ fn build_ui(app: &Application) {
                     });
 
                     let mut update_interval = 100.0;
-                    let mut rx2 = false;
                     let r = radio_mutex.radio.lock().unwrap();
                     update_interval = 1000.0 / r.receiver[0].spectrum_fps;
-                    rx2 = r.rx2_enabled;
                     drop(r);
 
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone2 = rc_app_widgets_clone.clone();
                     let mut rc_spectrum_clone2 = rc_spectrum_clone.clone();
                     let mut rc_spectrum_2_clone2 = rc_spectrum_2_clone.clone();
-                    let rx2_clone = rx2;
                     let spectrum_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
+                        let mut rx2 = false;
+                        let r = radio_mutex_clone.radio.lock().unwrap();
+                        rx2 = r.rx2_enabled;
+                        drop(r);
                         spectrum_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_spectrum_clone2);
-                        if rx2_clone {
+                        if rx2 {
                             spectrum_2_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_spectrum_2_clone2);
                         }
                         Continue
@@ -1435,10 +1513,13 @@ fn build_ui(app: &Application) {
                     let rc_app_widgets_clone2 = rc_app_widgets_clone.clone();
                     let mut rc_waterfall_clone2 = rc_waterfall_clone.clone();
                     let mut rc_waterfall_2_clone2 = rc_waterfall_2_clone.clone();
-                    let rx2_clone = rx2;
                     let waterfall_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
+                        let mut rx2 = false;
+                        let r = radio_mutex_clone.radio.lock().unwrap();
+                        rx2 = r.rx2_enabled;
+                        drop(r);
                         waterfall_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_waterfall_clone2);
-                        if rx2_clone {
+                        if rx2 {
                             waterfall_2_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_waterfall_2_clone2);
                         }
                         Continue
@@ -1477,6 +1558,7 @@ fn build_ui(app: &Application) {
 }
 
 fn spectrum_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_spectrum: &Rc<RefCell<Spectrum>>) {
+    println!("spectrum_update");
     let app_widgets = rc_app_widgets.borrow();
     let (flag, pixels) = radio_mutex.update_spectrum(app_widgets.waterfall_display.width());
     if flag != 0 {
@@ -1487,6 +1569,7 @@ fn spectrum_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWid
 }
 
 fn spectrum_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_spectrum: &Rc<RefCell<Spectrum>>) {
+    println!("spectrum_2_update");
     let app_widgets = rc_app_widgets.borrow();
     let (flag, pixels) = radio_mutex.update_spectrum_2(app_widgets.waterfall_display.width());
     if flag != 0 {
@@ -1497,6 +1580,7 @@ fn spectrum_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppW
 }
 
 fn waterfall_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_waterfall: &Rc<RefCell<Waterfall>>) {
+    println!("waterfall_update");
     let app_widgets = rc_app_widgets.borrow();
     let (flag, pixels) = radio_mutex.update_waterfall(app_widgets.waterfall_display.width());
     if flag != 0 {
@@ -1507,6 +1591,7 @@ fn waterfall_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWi
 }
 
 fn waterfall_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_waterfall: &Rc<RefCell<Waterfall>>) {
+    println!("waterfall_2_update");
     let app_widgets = rc_app_widgets.borrow();
     let (flag, pixels) = radio_mutex.update_waterfall_2(app_widgets.waterfall_display.width());
     if flag != 0 {
@@ -1636,6 +1721,7 @@ fn update_ui(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCell<AppWidgets>>)
     let ctun = r.receiver[rx].ctun;
     let zoom = r.receiver[rx].zoom;
     let pan = r.receiver[rx].pan;
+    let cw_pitch = r.receiver[rx].cw_pitch;
     drop(r);
 
     let app_widgets = rc_app_widgets.borrow();
@@ -1682,6 +1768,9 @@ fn update_ui(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCell<AppWidgets>>)
 
     // update AGCGain
     app_widgets.agcgain_adjustment.set_value(agcgain.into());
+
+    // cw pitch
+    app_widgets.cwpitch_adjustment.set_value(cw_pitch.into());
 
     // update CTUN
     app_widgets.ctun_button.set_active(ctun);

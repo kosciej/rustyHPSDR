@@ -28,7 +28,7 @@
                     <property name="orientation">vertical</property>
                     <child>
                       <object class="GtkCheckButton" id="remote_input_check_button">
-                        <property name="label">Enable Remote Mic Input</property>
+                        <property name="label">Enable Remote Mic Input from Radio</property>
                       </object>
                     </child>
                     <child>
@@ -57,7 +57,7 @@
                     <property name="orientation">vertical</property>
                     <child>
                       <object class="GtkCheckButton" id="remote_output_check_button">
-                        <property name="label">Enable Remote Output</property>
+                        <property name="label">Enable Remote Output to Radio</property>
                       </object>
                     </child>
                     <child>
@@ -790,44 +790,91 @@
             <property name="margin-end">5</property>
             <child>
               <object class="GtkFrame">
-                <property name="label">ADC</property>
+                <property name="label">RX1</property>
                 <child>
-                  <object class="GtkBox">
-                  <property name="orientation">horizontal</property>
+                  <object class="GtkFrame">
+                    <property name="label">ADC</property>
                     <child>
-                      <object class="GtkSpinButton" id="adc_spinbutton">
-                        <property name="adjustment">
-                          <object class="GtkAdjustment" id="adc_adjustment">
-                            <property name="lower">0</property>
-                            <property name="upper">1</property>
-                            <property name="step-increment">1</property>
+                      <object class="GtkBox">
+                      <property name="orientation">horizontal</property>
+                        <child>
+                          <object class="GtkSpinButton" id="rx1_adc_spinbutton">
+                            <property name="adjustment">
+                              <object class="GtkAdjustment" id="rx1_adc_adjustment">
+                                <property name="lower">0</property>
+                                <property name="upper">1</property>
+                                <property name="step-increment">1</property>
+                              </object>
+                            </property>
                           </object>
-                        </property>
+                        </child>
+                        <child>
+                          <object class="GtkDropDown" id="rx1_sample_rate_dropdown">
+                            <property name="model">
+                            <object class="GtkStringList">
+                            <items>
+                              <item>48000</item>
+                              <item>96000</item>
+                              <item>192000</item>
+                              <item>384000</item>
+                              <item>768000</item>
+                              <item>1536000</item>
+                            </items>
+                            </object>
+                            </property>
+                            <property name="selected">3</property>
+                          </object>
+                        </child>
                       </object>
                     </child>
-                    <child>
-                      <object class="GtkDropDown" id="rx_sample_rate_dropdown">
-                        <property name="model">
-                        <object class="GtkStringList">
-                        <items>
-                          <item>48000</item>
-                          <item>96000</item>
-                          <item>192000</item>
-                          <item>384000</item>
-                          <item>768000</item>
-                          <item>1536000</item>
-                        </items>
-                        </object>
-                        </property>
-                        <property name="selected">3</property>
-                      </object>
-                    </child>
-
-
                   </object>
                 </child>
               </object>
             </child>
+            <child>
+              <object class="GtkFrame">
+                <property name="label">RX2</property>
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">ADC</property>
+                    <child>
+                      <object class="GtkBox">
+                      <property name="orientation">horizontal</property>
+                        <child>
+                          <object class="GtkSpinButton" id="rx2_adc_spinbutton">
+                            <property name="adjustment">
+                              <object class="GtkAdjustment" id="rx2_adc_adjustment">
+                                <property name="lower">0</property>
+                                <property name="upper">1</property>
+                                <property name="step-increment">1</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkDropDown" id="rx2_sample_rate_dropdown">
+                            <property name="model">
+                            <object class="GtkStringList">
+                            <items>
+                              <item>48000</item>
+                              <item>96000</item>
+                              <item>192000</item>
+                              <item>384000</item>
+                              <item>768000</item>
+                              <item>1536000</item>
+                            </items>
+                            </object>
+                            </property>
+                            <property name="selected">3</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
           </object>
         </child>
         <child type="tab">

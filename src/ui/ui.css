@@ -10,6 +10,12 @@
   color: orange;
   min-width: 180px;
 }
+.vfo-tx-label {
+  font-family: FreeSans;
+  font-size: 28px;
+  color: red;
+  min-width: 180px;
+}
 .active-button {
   color: orange;
   background-image: none;

@@ -370,7 +370,10 @@ impl Protocol1 {
                 1 => {
                     c0 = 0x02; // C0
                     // TX frequency
-                    let f: i32 = frequency_a as i32;
+                    let mut f: i32 = frequency_a as i32;
+                    if r.split {
+                        f = frequency_b as i32;
+                    }
                     c1 = (f >> 24) as u8; // C1
                     c2 = (f>>16) as u8; // C2
                     c3 = (f>>8) as u8; // C3

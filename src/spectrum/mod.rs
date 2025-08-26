@@ -37,7 +37,7 @@ impl Spectrum {
 
         let r = radio_mutex.radio.lock().unwrap();
 
-        if r.is_transmitting() {
+        if r.is_transmitting() && self.rx==0 {
             // draw the spectrum
             let dbm_per_line: f32 = height as f32/(r.transmitter.spectrum_high-r.transmitter.spectrum_low);     
             let spectrum_high = r.transmitter.spectrum_high;

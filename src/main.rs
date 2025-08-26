@@ -1558,7 +1558,6 @@ fn build_ui(app: &Application) {
 }
 
 fn spectrum_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_spectrum: &Rc<RefCell<Spectrum>>) {
-    println!("spectrum_update");
     let app_widgets = rc_app_widgets.borrow();
     let (flag, pixels) = radio_mutex.update_spectrum(app_widgets.waterfall_display.width());
     if flag != 0 {
@@ -1569,7 +1568,6 @@ fn spectrum_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWid
 }
 
 fn spectrum_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_spectrum: &Rc<RefCell<Spectrum>>) {
-    println!("spectrum_2_update");
     let app_widgets = rc_app_widgets.borrow();
     let (flag, pixels) = radio_mutex.update_spectrum_2(app_widgets.waterfall_display.width());
     if flag != 0 {
@@ -1580,7 +1578,6 @@ fn spectrum_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppW
 }
 
 fn waterfall_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_waterfall: &Rc<RefCell<Waterfall>>) {
-    println!("waterfall_update");
     let app_widgets = rc_app_widgets.borrow();
     let (flag, pixels) = radio_mutex.update_waterfall(app_widgets.waterfall_display.width());
     if flag != 0 {
@@ -1591,7 +1588,6 @@ fn waterfall_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWi
 }
 
 fn waterfall_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_waterfall: &Rc<RefCell<Waterfall>>) {
-    println!("waterfall_2_update");
     let app_widgets = rc_app_widgets.borrow();
     let (flag, pixels) = radio_mutex.update_waterfall_2(app_widgets.waterfall_display.width());
     if flag != 0 {

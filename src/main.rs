@@ -383,7 +383,6 @@ fn build_ui(app: &Application) {
                     let mut rc_spectrum_clone2 = rc_spectrum_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.spectrum_display.connect_resize(move |_, width, height| { 
-                        println!("spectrum_display resize {}x{}", width, height);
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[0].spectrum_width = width;
                         r.receiver[0].init_analyzer(r.receiver[0].channel);
@@ -394,7 +393,6 @@ fn build_ui(app: &Application) {
                     let mut rc_waterfall_clone2 = rc_waterfall_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.waterfall_display.connect_resize(move |_, width, height| {
-                        println!("waterfall_display resize {}x{}", width, height);
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[0].waterfall_width = width;
                         let mut waterfall = rc_waterfall_clone2.borrow_mut();
@@ -404,7 +402,6 @@ fn build_ui(app: &Application) {
                     let mut rc_spectrum_2_clone2 = rc_spectrum_2_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.spectrum_2_display.connect_resize(move |_, width, height| { 
-                        println!("spectrum_2_display resize {}x{}", width, height);
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[1].spectrum_width = width;
                         r.receiver[1].init_analyzer(r.receiver[1].channel);
@@ -415,7 +412,6 @@ fn build_ui(app: &Application) {
                     let mut rc_waterfall_2_clone2 = rc_waterfall_2_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.waterfall_2_display.connect_resize(move |_, width, height| {
-                        println!("waterfall_2_display resize {}x{}", width, height);
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[1].waterfall_width = width;
                         let mut waterfall = rc_waterfall_2_clone2.borrow_mut();
@@ -1053,7 +1049,7 @@ fn build_ui(app: &Application) {
                         }
 
                         let b = r.receiver[rx].band.to_usize();
-                        if b != index { // band has not changed
+                        if b != index { // band has changed
                             r.band_info[b].current = r.receiver[rx].frequency_a;
 
                             // get new band info
@@ -1071,8 +1067,9 @@ fn build_ui(app: &Application) {
                         app_widgets.filter_grid.update_filter_buttons(r.band_info[index].mode.to_usize());
                         app_widgets.filter_grid.set_active_index(r.band_info[index].filter.to_usize());
 
-                        if b != index { // band has not changed
+                        if b != index { // band has changed
                             r.receiver[rx].mode = r.band_info[index].mode.to_usize();
+                            app_widgets.mode_grid.set_active_index(r.receiver[rx].mode);
                             let (low, high) = app_widgets.filter_grid.get_filter_values(r.band_info[index].mode.to_usize(), r.band_info[index].filter.to_usize());
                             app_widgets.filter_grid.set_active_values(low, high);
                             r.receiver[rx].filter_low = low;

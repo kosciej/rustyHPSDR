@@ -27,6 +27,8 @@ pub struct Audio {
     pub input_device: String,
 #[serde(skip_serializing, skip_deserializing)]
     input: Option<PCM>,
+#[serde(skip_serializing, skip_deserializing)]
+    pub period_size: i64,
     pub remote_output: bool,
     pub local_output: bool,
     pub output_device: String,
@@ -43,13 +45,14 @@ impl Audio {
         let local_input = false;
         let input_device = String::from("default"); 
         let input = None;
+        let period_size = 0;
         let remote_output = true;
         let local_output = false;
         let output_device = String::from("default"); 
         let output = None;
         let output_underruns = 0;
 
-        let audio = Audio{remote_input, local_input, input_device, input, remote_output, local_output, output_device, output, output_underruns};
+        let audio = Audio{remote_input, local_input, input_device, input, period_size, remote_output, local_output, output_device, output, output_underruns};
         audio
     }
 
@@ -66,21 +69,59 @@ impl Audio {
     }
 
     pub fn open_input(&mut self) -> Result<(), Error> {
+        println!("audio::open_input");
         let pcm = PCM::new(&self.input_device, Direction::Capture, false)?;
         {
             let hwp = HwParams::any(&pcm)?;
+            println!("audio::open_input configure hardware params");
             hwp.set_channels(2).expect("create_input failed to set channels");
             hwp.set_rate(48000, ValueOr::Nearest)?;
             hwp.set_format(Format::s16())?;
             hwp.set_access(Access::RWInterleaved)?;
             pcm.hw_params(&hwp)?;
+            let period_size = match hwp.get_period_size() {
+                Ok(s) => {
+                    self.period_size = s;
+                    println!("audio::open_input period_size={}", s);
+                },
+                Err(e) => {
+                    eprintln!("Failed to get period_size");
+                }
+            };
         }
         self.input = Some(pcm);
+        println!("audio::open_input Ok");
         Ok(())
     }
 
+    pub fn read_input(&mut self) -> Vec<i16> {
+        println!("audio::read_input");
+        let mut buffer = vec![0i16; self.period_size as usize];
+        let mut frames_read = 0;
+        let io = match self.input.as_ref().expect("failed to get self.input").io_i16() {
+            Ok(i) => i,
+            Err(e) => {
+                eprintln!("Failed to get io_i16: {}", e);
+                let audio_data = buffer[..frames_read as usize].to_vec();
+                return audio_data;
+            }
+        };
+        frames_read = match io.readi(&mut buffer) {
+            Ok(f) => f,
+            Err(e) => {
+                eprintln!("Failed to read frames: {}", e);
+                let audio_data = buffer[..frames_read as usize].to_vec();
+                return audio_data;
+            }
+        };
+        println!("audio::read_input frames read={}", frames_read);
+        let audio_data = buffer[..frames_read as usize].to_vec();
+        audio_data
+    }
+
     pub fn close_input(&mut self) ->  Result<(), Error> {
-        self.input= None;
+        println!("audio::close_input");
+        self.input = None;
         Ok(())
     }
 

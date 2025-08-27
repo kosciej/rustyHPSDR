@@ -284,10 +284,16 @@ impl Protocol2 {
                     eprintln!("Error receiving UDP packet: {}", e);
                 }
             }
+
+
             let mut r = radio_mutex.radio.lock().unwrap();
             let updated = r.updated;
             if updated {
                 r.updated = false;
+            }
+            if r.audio.local_input {
+                let mic_buffer = r.audio.read_input();
+                println!("mic_buffer read {}", mic_buffer.len());
             }
             drop(r);
             if updated {

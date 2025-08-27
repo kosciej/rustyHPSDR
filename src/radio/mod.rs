@@ -404,10 +404,10 @@ impl Radio {
     pub fn update_spectrum_2(&mut self, width: i32) -> (c_int, Vec<f32>) {
         let mut zoom = self.receiver[1].zoom;
         let mut channel = self.receiver[1].channel;
-        if self.is_transmitting() {
-            zoom = 1;
-            channel = self.transmitter.channel;
-        }
+        //if self.is_transmitting() {
+        //    zoom = 1;
+        //    channel = self.transmitter.channel;
+        //}
         let mut pixels_len = width * zoom;
         //if self.is_transmitting() {
         //    pixels_len = width * 12;

@@ -42,12 +42,15 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     // AUDIO
 
     let r = radio_mutex.radio.lock().unwrap();
-        let remote_input = r.audio.remote_input;
-        let local_input = r.audio.local_input;
-        let input_device = r.audio.input_device.clone();
-        let remote_output = r.audio.remote_output;
-        let local_output = r.audio.local_output;
-        let output_device = r.audio.output_device.clone();
+        let remote_input = r.audio[0].remote_input;
+        let local_input = r.audio[0].local_input;
+        let input_device = r.audio[0].input_device.clone();
+        let remote_output1 = r.audio[0].remote_output;
+        let local_output1 = r.audio[0].local_output;
+        let output_device1 = r.audio[0].output_device.clone();
+        let remote_output2 = r.audio[1].remote_output;
+        let local_output2 = r.audio[1].local_output;
+        let output_device2 = r.audio[1].output_device.clone();
     drop(r);
 
     let input_devices = Audio::list_pcm_devices(Direction::Capture);
@@ -63,7 +66,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     remote_input_check_button.connect_toggled(move |button| {
         let is_active = button.is_active();
         let mut r = radio_mutex_clone.radio.lock().unwrap();
-        r.audio.remote_input = is_active;
+        r.audio[0].remote_input = is_active;
     });
 
     let local_input_check_button: CheckButton = builder
@@ -75,9 +78,9 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         let is_active = button.is_active();
         let mut r = radio_mutex_clone.radio.lock().unwrap();
         if is_active {
-            r.audio.open_input();
+            r.audio[0].open_input();
         }
-        r.audio.local_input = is_active;
+        r.audio[0].local_input = is_active;
     });
 
     let input_combo_box: ComboBoxText = builder
@@ -94,7 +97,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         let input = combo_box.active_text();
         if let Some(input_string) = input {
             let mut r = radio_mutex_clone.radio.lock().unwrap();
-            r.audio.input_device = input_string.to_string();
+            r.audio[0].input_device = input_string.to_string();
         }
     });
 
@@ -103,26 +106,29 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     let remote_output_check_button: CheckButton = builder
             .object("remote_output_check_button")
             .expect("Could not get object `remote_output_check_button` from builder.");
-    remote_output_check_button.set_active(remote_output);
+    remote_output_check_button.set_active(remote_output1);
     let radio_mutex_clone = radio_mutex.clone();
     remote_output_check_button.connect_toggled(move |button| {
         let is_active = button.is_active();
         let mut r = radio_mutex_clone.radio.lock().unwrap();
-        r.audio.remote_output = is_active;
+        r.audio[0].remote_output = is_active;
+        r.audio[1].remote_output = is_active;
     });
 
     let local_output_check_button: CheckButton = builder
             .object("local_output_check_button")
             .expect("Could not get object `local_output_check_button` from builder.");
-    local_output_check_button.set_active(local_output);
+    local_output_check_button.set_active(local_output1);
     let radio_mutex_clone = radio_mutex.clone();
     local_output_check_button.connect_toggled(move |button| {
         let is_active = button.is_active();
         let mut r = radio_mutex_clone.radio.lock().unwrap();
         if is_active {
-            r.audio.open_output();
+            r.audio[0].open_output();
+            r.audio[1].open_output();
         }
-        r.audio.local_output = is_active;
+        r.audio[0].local_output = is_active;
+        r.audio[1].local_output = is_active;
     });
 
     let output_combo_box: ComboBoxText = builder
@@ -130,7 +136,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
             .expect("Could not get object `output_combo_box` from builder.");
     for i in 0..output_devices.len() {
         output_combo_box.append_text(&output_devices[i]);
-        if output_devices[i] == output_device {
+        if output_devices[i] == output_device1 {
             output_combo_box.set_active(Some(i as u32));
         }
     }
@@ -139,12 +145,15 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         let output = combo_box.active_text();
         if let Some(output_string) = output {
             let mut r = radio_mutex_clone.radio.lock().unwrap();
-            if r.audio.local_output {
-                r.audio.close_output();
+            if r.audio[0].local_output {
+                r.audio[0].close_output();
+                r.audio[1].close_output();
             }
-            r.audio.output_device = output_string.to_string();
-            if r.audio.local_output {
-                r.audio.open_output();
+            r.audio[0].output_device = output_string.to_string();
+            r.audio[1].output_device = output_string.to_string();
+            if r.audio[0].local_output {
+                r.audio[0].open_output();
+                r.audio[1].open_output();
             }
         }
      });

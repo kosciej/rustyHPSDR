@@ -128,8 +128,14 @@ impl Protocol2 {
                                 self.send_high_priority(radio_mutex);
                                 },
                         1026 => { // Mic/Line In
+
                                 let data_size = MIC_SAMPLES * MIC_SAMPLE_SIZE;
                                 let mut r = radio_mutex.radio.lock().unwrap();
+                                if r.transmitter.local_microphone {
+                                //if r.audio.local_input {
+                                    let mic_buffer = r.audio[0].read_input();
+                                    println!("mic_buffer read {}", mic_buffer.len());
+                                } else {
                                 if !r.transmitter.local_microphone {
                                     let mut sample:i32 = 0;
                                     let mut b = MIC_HEADER_SIZE;
@@ -176,6 +182,7 @@ impl Protocol2 {
                                             }
                                         }
                                     }
+                                }
                                 }
                                 },
                         1027 => {}, // Wide Band IQ samples
@@ -237,13 +244,12 @@ impl Protocol2 {
                                             Spectrum0(1, r.receiver[ddc].channel, 0, 0, raw_ptr);
                                         }
                                         r.receiver[ddc].samples = 0;
-                                        if r.receiver[ddc].active {
                                             for i in 0..r.receiver[ddc].output_samples {
                                                 let ix = i * 2;
                                                 let left_sample: i32 = (audio_buffer[ix] * 32767.0) as i32;
                                                 let mut right_sample: i32 = (audio_buffer[ix+1] * 32767.0) as i32;
                                                 let rox = r.receiver[ddc].remote_audio_buffer_offset;
-                                                if r.audio.remote_output {
+                                                if r.audio[ddc].remote_output {
                                                     r.receiver[ddc].remote_audio_buffer[rox] = (left_sample >> 8) as u8;
                                                     r.receiver[ddc].remote_audio_buffer[rox+1] = left_sample as u8;
                                                     r.receiver[ddc].remote_audio_buffer[rox+2] = (right_sample >> 8) as u8;
@@ -260,7 +266,7 @@ impl Protocol2 {
                                                     r.receiver[ddc].remote_audio_buffer_offset = 4;
                                                 }
 
-                                                if r.audio.local_output {
+                                                if r.audio[ddc].local_output {
                                                     let lox=r.receiver[ddc].local_audio_buffer_offset * 2;
                                                     r.receiver[ddc].local_audio_buffer[lox]=(audio_buffer[ix] * 32767.0) as i16;
                                                     r.receiver[ddc].local_audio_buffer[lox+1]=(audio_buffer[ix+1] * 32767.0) as i16;
@@ -268,10 +274,9 @@ impl Protocol2 {
                                                     if r.receiver[ddc].local_audio_buffer_offset == r.receiver[ddc].local_audio_buffer_size {
                                                         r.receiver[ddc].local_audio_buffer_offset = 0;
                                                         let buffer_clone = r.receiver[ddc].local_audio_buffer.clone();
-                                                        r.audio.write_output(&buffer_clone);
+                                                        r.audio[ddc].write_output(&buffer_clone);
                                                     }
                                                 }
-                                            }
                                         }
                                     }
                                 }
@@ -291,10 +296,10 @@ impl Protocol2 {
             if updated {
                 r.updated = false;
             }
-            if r.audio.local_input {
-                let mic_buffer = r.audio.read_input();
-                println!("mic_buffer read {}", mic_buffer.len());
-            }
+            //if r.audio.local_input {
+            //    let mic_buffer = r.audio.read_input();
+            //    println!("mic_buffer read {}", mic_buffer.len());
+            //}
             drop(r);
             if updated {
                 self.send_transmit_specific(radio_mutex);

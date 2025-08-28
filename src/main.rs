@@ -18,7 +18,7 @@
 use glib::ControlFlow::Continue;
 use glib::timeout_add_local;
 use gtk::prelude::*;
-use gtk::{Adjustment, Application, ApplicationWindow, Builder, Button, DrawingArea, DropDown, Grid, Label, Scale, ToggleButton, Window};
+use gtk::{Adjustment, Application, ApplicationWindow, Box, Builder, Button, DrawingArea, DropDown, Frame, Grid, Label, Scale, ToggleButton, Window};
 use gtk::{EventController, EventControllerMotion, EventControllerScroll, EventControllerScrollFlags, GestureClick};
 use gtk::gdk::Cursor;
 use gtk::glib::Propagation;
@@ -84,11 +84,13 @@ struct AppWidgets {
     pub adcattn_adjustment: Adjustment,
     pub micgain_adjustment: Adjustment,
     pub drive_adjustment: Adjustment,
+    pub band_frame: Frame,
+    pub mode_frame: Frame,
+    pub filter_frame: Frame,
     pub band_grid: BandGrid,
     pub mode_grid: ModeGrid,
     pub filter_grid: FilterGrid,
     pub cwpitch_adjustment: Adjustment,
-
 }
 
 impl AppWidgets {
@@ -229,6 +231,18 @@ impl AppWidgets {
             .object("cwpitch_adjustment")
             .expect("Could not get cwpitch_adjustment from builder");
 
+        let band_frame: Frame = builder
+            .object("band_frame")
+            .expect("Could not get band_frame from builder");
+
+        let mode_frame: Frame = builder
+            .object("mode_frame")
+            .expect("Could not get mode_frame from builder");
+
+        let filter_frame: Frame = builder
+            .object("filter_frame")
+            .expect("Could not get filter_frame from builder");
+
         let band_grid = BandGrid::new(&builder);
         let mode_grid = ModeGrid::new(&builder);
         let filter_grid = FilterGrid::new(&builder);
@@ -265,6 +279,9 @@ impl AppWidgets {
             micgain_adjustment,
             drive_adjustment,
             cwpitch_adjustment,
+            band_frame,
+            mode_frame,
+            filter_frame,
             band_grid,
             mode_grid,
             filter_grid,
@@ -424,6 +441,16 @@ fn build_ui(app: &Application) {
                         let mut rx = 0;
                         if r.receiver[1].active {
                             rx = 1;
+                        }
+
+                        if rx==0 {
+                            app_widgets.band_frame.set_label(Some("RX1 Band"));
+                            app_widgets.mode_frame.set_label(Some("RX1 Mode"));
+                            app_widgets.filter_frame.set_label(Some("RX1 Filter"));
+                        } else {
+                            app_widgets.band_frame.set_label(Some("RX2 Band"));
+                            app_widgets.mode_frame.set_label(Some("RX2 Mode"));
+                            app_widgets.filter_frame.set_label(Some("RX2 Filter"));
                         }
 
                         if r.receiver[0].ctun {
@@ -1380,7 +1407,8 @@ fn build_ui(app: &Application) {
                         }
 
                         app_widgets.filter_grid.update_filter_buttons(r.receiver[rx].mode);
-                        r.audio.init();
+                        r.audio[0].init();
+                        r.audio[1].init();
                         r.receiver[rx].set_mode();
                         r.transmitter.init();
 
@@ -1720,6 +1748,15 @@ fn update_ui(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCell<AppWidgets>>)
     let app_widgets = rc_app_widgets.borrow();
 
     // update band
+    if rx==0 {
+        app_widgets.band_frame.set_label(Some("RX1 Band"));
+        app_widgets.mode_frame.set_label(Some("RX1 Mode"));
+        app_widgets.filter_frame.set_label(Some("RX1 Filter"));
+    } else {
+        app_widgets.band_frame.set_label(Some("RX2 Band"));
+        app_widgets.mode_frame.set_label(Some("RX2 Mode"));
+        app_widgets.filter_frame.set_label(Some("RX2 Filter"));
+    }
     let band_button = app_widgets.band_grid.get_button(band.to_usize());
     band_button.emit_by_name::<()>("clicked", &[]);
 

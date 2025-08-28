@@ -120,7 +120,7 @@ pub struct Radio {
     pub dot: bool,
 #[serde(skip_serializing, skip_deserializing)]
     pub dash: bool,
-    pub audio: Audio,
+    pub audio: Vec<Audio>,
     pub transmitter: Transmitter,
 
     pub filter_board: FilterBoards,
@@ -241,9 +241,11 @@ impl Radio {
         let tune = false;
         let dot = false;
         let dash = false;
-        let audio = Audio::new();
+        let mut audio: Vec<Audio> = Vec::new();
+        for i in 0..receivers {
+            audio.push(Audio::new());
+        }
         let transmitter = Transmitter::new(8, device.protocol);
-
         let filter_board = FilterBoards::ALEX;
         let cw_keyer_mode = Keyer::Straight;
         let cw_keyer_internal = true;

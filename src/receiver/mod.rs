@@ -160,7 +160,7 @@ impl Receiver {
         let waterfall_width: i32 = pixels;
         let zoom: i32 = 1;
         let pan: i32 = 0;
-        let afgain: f32 = 0.5;
+        let afgain: f32 = 0.1;
         let afpan: f32 = 0.5;
         let agc: AGC = AGC::FAST;
         let agcgain: f32 = 80.0;

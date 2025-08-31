@@ -22,12 +22,21 @@
     <property name="title">rustyHPSDR</property>
     <property name="default-width">400</property>
     <property name="default-height">300</property>
+    <style>
+        <class name="main-window"/>
+    </style>
     <child>
       <object class="GtkBox" id="main_h_box">
         <property name="orientation">horizontal</property>
+                  <style>
+                    <class name="basic-button"/>
+                  </style>
         <child>
         <object class="GtkBox" id="main_v_box">
           <property name="orientation">vertical</property>
+                  <style>
+                    <class name="basic-button"/>
+                  </style>
           <child>
             <object class="GtkGrid" id="top_grid">
               <property name="margin-start">0</property>
@@ -39,6 +48,9 @@
               <child>
                 <object class="GtkButton" id="configure_button">
                   <property name="label">Configure</property>
+                  <style>
+                    <class name="basic-button"/>
+                  </style>
                   <layout>
                     <property name="column">0</property>
                     <property name="row">0</property>
@@ -74,6 +86,9 @@
                   <child>
                     <object class="GtkButton" id="a_to_b_button">
                       <property name="label">A&gt;B</property>
+                      <style>
+                        <class name="basic-button"/>
+                      </style>
                       <layout>
                         <property name="column">0</property>
                         <property name="row">0</property>
@@ -83,6 +98,9 @@
                   <child>
                     <object class="GtkButton" id="b_to_a_button">
                       <property name="label">B&lt;A</property>
+                      <style>
+                        <class name="basic-button"/>
+                      </style>
                       <layout>
                         <property name="column">1</property>
                         <property name="row">0</property>
@@ -92,6 +110,9 @@
                   <child>
                     <object class="GtkButton" id="a_swap_b_button">
                       <property name="label">A&lt;&gt;B</property>
+                      <style>
+                        <class name="basic-button"/>
+                      </style>
                       <layout>
                         <property name="column">0</property>
                         <property name="row">1</property>
@@ -107,17 +128,6 @@
                       </layout>
                     </object>
                   </child>
-<!--
-                  <child>
-                    <object class="GtkToggleButton" id="subrx_button">
-                      <property name="label">SubRX</property>
-                      <layout>
-                        <property name="column">2</property>
-                        <property name="row">0</property>
-                      </layout>
-                    </object>
-                  </child>
--->
                   <child>
                     <object class="GtkToggleButton" id="ctun_button">
                       <property name="label">CTUN</property>
@@ -319,6 +329,9 @@
           <child>
             <object class="GtkBox" id="bottom_h_box">
               <property name="orientation">horizontal</property>
+                  <style>
+                    <class name="basic-button"/>
+                  </style>
               <child>
                 <object class="GtkGrid" id="bottom_button_grid">
                   <property name="margin-start">0</property>
@@ -574,6 +587,9 @@
         <child>
           <object class="GtkBox" id="rx1_v_box">
             <property name="orientation">vertical</property>
+                  <style>
+                    <class name="basic-button"/>
+                  </style>
             <child>
               <object class="GtkFrame" id="band_frame">
                 <property name="label">Band</property>
@@ -979,6 +995,9 @@
                     </child>
                     <child>
                       <object class="GtkSpinButton" id="low_spinbutton">
+                        <style>
+                          <class name="basic-button"/>
+                        </style>
                         <property name="adjustment">
                           <object class="GtkAdjustment" id="low_adjustment">
                             <property name="lower">-8000</property>
@@ -1004,6 +1023,9 @@
                     </child>
                     <child>
                       <object class="GtkSpinButton" id="high_spinbutton">
+                        <style>
+                          <class name="basic-button"/>
+                        </style>
                         <property name="adjustment">
                           <object class="GtkAdjustment" id="high_adjustment">
                             <property name="lower">-8000</property>
@@ -1048,6 +1070,9 @@
                     </child>
                     <child>
                       <object class="GtkSpinButton" id="cwpitch_spinbutton">
+                        <style>
+                          <class name="basic-button"/>
+                        </style>
                         <property name="adjustment">
                           <object class="GtkAdjustment" id="cwpitch_adjustment">
                             <property name="lower">200</property>

@@ -472,6 +472,13 @@ fn build_ui(app: &Application) {
                         let formatted_value = format_u32_with_separators(r.receiver[1].frequency_a as u32);
                         app_widgets.vfo_b_frequency.set_label(&formatted_value);
 
+                        let style_context = app_widgets.a_to_b_button.style_context();
+                        style_context.add_class("basic-button");
+                        let style_context = app_widgets.b_to_a_button.style_context();
+                        style_context.add_class("basic-button");
+                        let style_context = app_widgets.a_swap_b_button.style_context();
+                        style_context.add_class("basic-button");
+
                         let style_context = app_widgets.ctun_button.style_context();
                         style_context.add_class("toggle");
                         app_widgets.ctun_button.set_active(r.receiver[rx].ctun);
@@ -1632,6 +1639,14 @@ fn meter_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidget
             r.s_meter_dbm = GetRXAMeter(r.receiver[0].channel,rxaMeterType_RXA_S_AV as i32);
         }
         meter.update_rx(r.s_meter_dbm, false);
+
+        if r.rx2_enabled {
+            unsafe {
+                r.s_meter_dbm = GetRXAMeter(r.receiver[1].channel,rxaMeterType_RXA_S_AV as i32);
+            }
+            meter.update_rx(r.s_meter_dbm, true);
+        }
+
         app_widgets.meter_display.queue_draw();
     }
 }

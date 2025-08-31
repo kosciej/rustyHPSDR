@@ -205,6 +205,7 @@ impl Protocol1 {
                         Spectrum0(1, r.receiver[rx as usize].channel, 0, 0, raw_ptr);
                     }
                     r.receiver[rx as usize].samples = 0;
+                    if rx==0 || (rx==1 && r.rx2_enabled) {
                     //if r.receiver[rx as usize].active {
                         for i in 0..r.receiver[rx as usize].output_samples {
                             let ix = i * 2 ;
@@ -271,7 +272,7 @@ impl Protocol1 {
                                 }
                             }
                         }
-                    //}
+                    }
                 }
             }
 

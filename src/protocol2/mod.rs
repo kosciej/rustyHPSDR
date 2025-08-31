@@ -268,8 +268,17 @@ impl Protocol2 {
 
                                                 if r.audio[ddc].local_output {
                                                     let lox=r.receiver[ddc].local_audio_buffer_offset * 2;
-                                                    r.receiver[ddc].local_audio_buffer[lox]=(audio_buffer[ix] * 32767.0) as i16;
-                                                    r.receiver[ddc].local_audio_buffer[lox+1]=(audio_buffer[ix+1] * 32767.0) as i16;
+                                                    if ddc == 0 {
+                                                        r.receiver[ddc].local_audio_buffer[lox]=(audio_buffer[ix] * 32767.0) as i16;
+                                                        if r.rx2_enabled {
+                                                            r.receiver[ddc].local_audio_buffer[lox+1]=0;
+                                                        } else {
+                                                            r.receiver[ddc].local_audio_buffer[lox+1]=(audio_buffer[ix+1] * 32767.0) as i16;
+                                                        }
+                                                    } else if ddc == 1 {
+                                                        r.receiver[ddc].local_audio_buffer[lox]=0;
+                                                        r.receiver[ddc].local_audio_buffer[lox+1]=(audio_buffer[ix+1] * 32767.0) as i16;
+                                                    }
                                                     r.receiver[ddc].local_audio_buffer_offset = r.receiver[ddc].local_audio_buffer_offset + 1;
                                                     if r.receiver[ddc].local_audio_buffer_offset == r.receiver[ddc].local_audio_buffer_size {
                                                         r.receiver[ddc].local_audio_buffer_offset = 0;

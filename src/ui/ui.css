@@ -1,13 +1,16 @@
+.main-window {
+  background-color: Linen;
+}
 .vfo-a-label {
   font-family: FreeSans;
   font-size: 28px;
-  color: green;
+  color: Green;
   min-width: 180px;
 }
 .vfo-b-label {
   font-family: FreeSans;
   font-size: 28px;
-  color: orange;
+  color: Green;
   min-width: 180px;
 }
 .vfo-tx-label {
@@ -18,26 +21,41 @@
 }
 .active-button {
   color: orange;
+  background-color: black;
   background-image: none;
 }
 .inactive-button {
-  color: black;
+  color: white;
+  background-color: black;
   background-image: none;
 }
 .active-band-button {
   color: orange;
+  background-color: black;
   background-image: none;
 }
 .inactive-band-button {
-  color: black;
+  color: white;
+  background-color: black;
   background-image: none;
 }
 .toggle {
-  color: black;
+  color: white;
+  background-color: black;
   background-image: none;
 }
-
 .toggle:checked {
   color: orange;
+  background-color: black;
+  background-image: none;
+}
+.basic-button {
+  color: white;
+  background-color: black;
+  background-image: none;
+}
+.basic-frame {
+  color: white;
+  background-color: black;
   background-image: none;
 }

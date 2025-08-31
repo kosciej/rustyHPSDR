@@ -473,13 +473,19 @@ impl Radio {
     pub fn set_state(&self) {
         if self.is_transmitting() {
             unsafe {
-                SetChannelState(self.receiver[self.active_receiver].channel, 0, 1);
+                SetChannelState(self.receiver[0].channel, 0, 1);
+                if self.rx2_enabled {
+                    SetChannelState(self.receiver[1].channel, 0, 1);
+                }
                 SetChannelState(self.transmitter.channel, 1, 0);
             }
         } else {
             unsafe {
                 SetChannelState(self.transmitter.channel, 0, 0);
-                SetChannelState(self.receiver[self.active_receiver].channel, 1, 0);
+                SetChannelState(self.receiver[0].channel, 1, 0);
+                if self.rx2_enabled {
+                    SetChannelState(self.receiver[1].channel, 1, 0);
+                }
             }
         }
     }

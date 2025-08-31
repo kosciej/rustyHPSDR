@@ -33,29 +33,25 @@ impl Meter {
         }
     }
 
-    pub fn update_rx(&mut self, dbm: f64, subrx: bool) {
+    pub fn update_rx(&mut self, dbm: f64, rx2: bool) {
         let cr = Context::new(self.surface.clone()).expect("Couldn't create cairo context from surface");
 
-        if !subrx {
-            cr.set_source_rgb (1.0, 1.0, 1.0);
+        if !rx2 {
+            cr.set_source_rgb (0.0, 0.0, 0.0);
             cr.paint().unwrap();
         }
         let x_offset = 5.0;
         let mut y_offset = 10.0;
-        if subrx {
+        if rx2 {
             y_offset = 40.0;
         }
         let db = 2.0; // size in pixels of each dbm
 
-        if subrx {
-            cr.set_source_rgb(1.0, 0.5, 0.0);
-        } else {
-            cr.set_source_rgb(0.0, 1.0, 0.0);
-        }
+        cr.set_source_rgb(0.0, 1.0, 0.0);
         cr.rectangle(x_offset, 0.0+y_offset, (dbm + 121.0) * db, 10.0);
         let _ = cr.fill();
 
-        cr.set_source_rgb (0.0, 0.0, 0.0);
+        cr.set_source_rgb (1.0, 1.0, 1.0);
         for i in 0..54 {
             cr.move_to(x_offset+(i as f64 * db),10.0+y_offset);
             if i%18 == 0 {

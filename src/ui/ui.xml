@@ -28,15 +28,15 @@
     <child>
       <object class="GtkBox" id="main_h_box">
         <property name="orientation">horizontal</property>
-                  <style>
-                    <class name="basic-button"/>
-                  </style>
+        <style>
+          <class name="basic-button"/>
+        </style>
         <child>
         <object class="GtkBox" id="main_v_box">
           <property name="orientation">vertical</property>
-                  <style>
-                    <class name="basic-button"/>
-                  </style>
+          <style>
+            <class name="basic-button"/>
+          </style>
           <child>
             <object class="GtkGrid" id="top_grid">
               <property name="margin-start">0</property>
@@ -345,6 +345,9 @@
                   <child>
                     <object class="GtkToggleButton" id="mox_button">
                       <property name="label">Mox</property>
+                      <style>
+                        <class name="tx-button"/>
+                      </style>
                       <layout>
                         <property name="column">0</property>
                         <property name="row">0</property>
@@ -354,6 +357,9 @@
                   <child>
                     <object class="GtkToggleButton" id="tun_button">
                       <property name="label">Tun</property>
+                      <style>
+                        <class name="tx-button"/>
+                      </style>
                       <layout>
                         <property name="column">0</property>
                         <property name="row">1</property>

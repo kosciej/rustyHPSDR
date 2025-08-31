@@ -20,8 +20,8 @@
   min-width: 180px;
 }
 .active-button {
-  color: orange;
-  background-color: black;
+  color: black;
+  background-color: orange;
   background-image: none;
 }
 .inactive-button {
@@ -30,8 +30,8 @@
   background-image: none;
 }
 .active-band-button {
-  color: orange;
-  background-color: black;
+  color: black;
+  background-color: orange;
   background-image: none;
 }
 .inactive-band-button {
@@ -45,8 +45,8 @@
   background-image: none;
 }
 .toggle:checked {
-  color: orange;
-  background-color: black;
+  color: black;
+  background-color: orange;
   background-image: none;
 }
 .basic-button {
@@ -57,5 +57,15 @@
 .basic-frame {
   color: white;
   background-color: black;
+  background-image: none;
+}
+.tx-button {
+  color: white;
+  background-color: black;
+  background-image: none;
+}
+.tx-button:checked {
+  color: black;
+  background-color: red;
   background-image: none;
 }

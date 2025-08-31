@@ -715,6 +715,16 @@ fn build_ui(app: &Application) {
                             app_widgets.spectrum_2_display.set_visible(false);
                             app_widgets.waterfall_2_display.set_visible(false);
                         }
+                        let mut update = false;
+                        if r.receiver[1].active {
+                            r.receiver[1].active = false;
+                            r.receiver[0].active = true;
+                            update = true;
+                        }
+                        drop(r);
+                        if update {
+                            update_ui(&radio_mutex_clone.clone(), &rc_app_widgets_clone_clone.clone());
+                        }
                     });
 
                     let radio_mutex_clone = radio_mutex.clone();

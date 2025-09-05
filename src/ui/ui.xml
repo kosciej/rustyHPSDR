@@ -65,12 +65,26 @@
                     <property name="row">0</property>
                   </layout>
                   <child>
-                    <object class="GtkLabel" id="vfo_a_frequency">
-                      <property name="label">14.175.000</property>
+                    <object class="GtkBox" id="vfo_a_v_box">
+                      <property name="orientation">vertical</property>
                       <style>
-                        <class name="vfo-a-label"/>
+                        <class name="basic-button"/>
                       </style>
-                      <property name="xalign">1.0</property>
+                      <child>
+                        <object class="GtkLabel" id="vfo_a_frequency">
+                          <property name="label">14.175.000</property>
+                          <style>
+                            <class name="vfo-a-label"/>
+                          </style>
+                          <property name="xalign">1.0</property>
+                        </object>
+                      </child>
+                      <child>
+                        <object class="GtkDrawingArea" id="meter_1_display">
+                          <property name="content-width">256</property>
+                          <property name="content-height">36</property>
+                        </object>
+                      </child>
                     </object>
                   </child>
                 </object>
@@ -156,12 +170,26 @@
                     <property name="row">0</property>
                   </layout>
                   <child>
-                    <object class="GtkLabel" id="vfo_b_frequency">
-                      <property name="label">14.250.000</property>
+                    <object class="GtkBox" id="vfo_b_v_box">
+                      <property name="orientation">vertical</property>
                       <style>
-                        <class name="vfo-b-label"/>
+                        <class name="basic-button"/>
                       </style>
-                      <property name="xalign">1.0</property>
+                      <child>
+                        <object class="GtkLabel" id="vfo_b_frequency">
+                          <property name="label">14.250.000</property>
+                          <style>
+                            <class name="vfo-b-label"/>
+                          </style>
+                          <property name="xalign">1.0</property>
+                        </object>
+                      </child>
+                      <child>
+                        <object class="GtkDrawingArea" id="meter_2_display">
+                          <property name="content-width">256</property>
+                          <property name="content-height">36</property>
+                        </object>
+                      </child>
                     </object>
                   </child>
                 </object>

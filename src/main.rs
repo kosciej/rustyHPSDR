@@ -65,7 +65,8 @@ struct AppWidgets {
     pub ctun_button: ToggleButton,
     pub rx2_button: ToggleButton,
     pub step_dropdown: DropDown,
-    pub meter_display: DrawingArea,
+    pub meter_1_display: DrawingArea,
+    pub meter_2_display: DrawingArea,
     pub spectrum_display: DrawingArea,
     pub waterfall_display: DrawingArea,
     pub spectrum_2_display: DrawingArea,
@@ -139,9 +140,13 @@ impl AppWidgets {
             .object("step_dropdown")
             .expect("Could not get step_dropdown from builder");
 
-        let meter_display: DrawingArea = builder
-            .object("meter_display")
-            .expect("Could not get meter_display from builder");
+        let meter_1_display: DrawingArea = builder
+            .object("meter_1_display")
+            .expect("Could not get meter_1_display from builder");
+
+        let meter_2_display: DrawingArea = builder
+            .object("meter_2_display")
+            .expect("Could not get meter_2_display from builder");
 
         let spectrum_display: DrawingArea = builder
             .object("spectrum_display")
@@ -259,7 +264,8 @@ impl AppWidgets {
             ctun_button,
             rx2_button,
             step_dropdown,
-            meter_display,
+            meter_1_display,
+            meter_2_display,
             spectrum_display,
             waterfall_display,
             spectrum_2_display,
@@ -361,8 +367,10 @@ fn build_ui(app: &Application) {
     let rc_spectrum_2 = Rc::new(RefCell::new(spectrum_2));
     let mut waterfall_2 = Waterfall::new(1,1024,168);
     let rc_waterfall_2 = Rc::new(RefCell::new(waterfall_2));
-    let mut meter = Meter::new(256,72);
-    let rc_meter = Rc::new(RefCell::new(meter));
+    let mut meter_1 = Meter::new(256,36);
+    let rc_meter_1 = Rc::new(RefCell::new(meter_1));
+    let mut meter_2 = Meter::new(256,36);
+    let rc_meter_2 = Rc::new(RefCell::new(meter_2));
 
     let discovery_data = Rc::new(RefCell::new(Vec::new()));
     let selected_index: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
@@ -382,7 +390,8 @@ fn build_ui(app: &Application) {
     let rc_waterfall_clone = rc_waterfall.clone();
     let rc_spectrum_2_clone = rc_spectrum_2.clone();
     let rc_waterfall_2_clone = rc_waterfall_2.clone();
-    let rc_meter_clone = rc_meter.clone();
+    let rc_meter_1_clone = rc_meter_1.clone();
+    let rc_meter_2_clone = rc_meter_2.clone();
     let rc_app_widgets_clone = rc_app_widgets.clone();
     discovery_dialog.connect_close_request(move |_| {
         let mut app_widgets = rc_app_widgets_clone.borrow_mut();
@@ -457,7 +466,7 @@ fn build_ui(app: &Application) {
                             let formatted_value = format_u32_with_separators(r.receiver[0].ctun_frequency as u32);
                             app_widgets.vfo_a_frequency.set_label(&formatted_value);
                         } else {
-                            let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
+                            let formatted_value = format_u32_with_separators(r.receiver[0].frequency as u32);
                             app_widgets.vfo_a_frequency.set_label(&formatted_value);
                         }
 
@@ -465,11 +474,11 @@ fn build_ui(app: &Application) {
                             let formatted_value = format_u32_with_separators(r.receiver[1].ctun_frequency as u32);
                             app_widgets.vfo_b_frequency.set_label(&formatted_value);
                         } else {
-                            let formatted_value = format_u32_with_separators(r.receiver[1].frequency_a as u32);
+                            let formatted_value = format_u32_with_separators(r.receiver[1].frequency as u32);
                             app_widgets.vfo_b_frequency.set_label(&formatted_value);
                         }
 
-                        let formatted_value = format_u32_with_separators(r.receiver[1].frequency_a as u32);
+                        let formatted_value = format_u32_with_separators(r.receiver[1].frequency as u32);
                         app_widgets.vfo_b_frequency.set_label(&formatted_value);
 
                         let style_context = app_widgets.a_to_b_button.style_context();
@@ -493,9 +502,11 @@ fn build_ui(app: &Application) {
                         if r.rx2_enabled {
                             app_widgets.spectrum_2_display.set_visible(true);
                             app_widgets.waterfall_2_display.set_visible(true);
+                            app_widgets.meter_2_display.set_visible(true);
                         } else {
                             app_widgets.spectrum_2_display.set_visible(false);
                             app_widgets.waterfall_2_display.set_visible(false);
+                            app_widgets.meter_2_display.set_visible(false);
                         }
 
                         app_widgets.afgain_adjustment.set_value((r.receiver[rx].afgain * 100.0).into());
@@ -620,12 +631,12 @@ fn build_ui(app: &Application) {
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
                         if r.receiver[0].ctun {
-                            r.receiver[1].frequency_a = r.receiver[0].ctun_frequency; 
+                            r.receiver[1].frequency = r.receiver[0].ctun_frequency; 
                         } else {
-                            r.receiver[1].frequency_a = r.receiver[0].frequency_a; 
+                            r.receiver[1].frequency = r.receiver[0].frequency; 
                         }
                         r.receiver[1].band = r.receiver[0].band; 
-                        let formatted_value = format_u32_with_separators(r.receiver[1].frequency_a as u32);
+                        let formatted_value = format_u32_with_separators(r.receiver[1].frequency as u32);
                         app_widgets.vfo_b_frequency.set_label(&formatted_value);
                     });                         
                     
@@ -635,13 +646,13 @@ fn build_ui(app: &Application) {
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
                         if r.receiver[1].ctun {
-                            r.receiver[0].ctun_frequency = r.receiver[1].frequency_a;
+                            r.receiver[0].ctun_frequency = r.receiver[1].frequency;
                             r.receiver[0].set_ctun_frequency();
                         } else {
-                            r.receiver[0].frequency_a = r.receiver[1].frequency_a;
+                            r.receiver[0].frequency = r.receiver[1].frequency;
                         }
                         r.receiver[0].band = r.receiver[1].band; 
-                        let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
+                        let formatted_value = format_u32_with_separators(r.receiver[0].frequency as u32);
                         app_widgets.vfo_a_frequency.set_label(&formatted_value);
                     });
 
@@ -649,24 +660,24 @@ fn build_ui(app: &Application) {
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.a_swap_b_button.connect_clicked(move |_| {
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
-                        let temp_frequency = r.receiver[1].frequency_a;
+                        let temp_frequency = r.receiver[1].frequency;
                         let temp_band = r.receiver[1].band;
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
                         if r.receiver[0].ctun {
-                            r.receiver[1].frequency_a = r.receiver[0].ctun_frequency;
+                            r.receiver[1].frequency = r.receiver[0].ctun_frequency;
                             r.receiver[0].ctun_frequency = temp_frequency;
                             let formatted_value = format_u32_with_separators(r.receiver[0].ctun_frequency as u32);
                             app_widgets.vfo_a_frequency.set_label(&formatted_value);
                             r.receiver[0].set_ctun_frequency();
                         } else {
-                            r.receiver[1].frequency_a = r.receiver[0].frequency_a;
-                            r.receiver[0].frequency_a = temp_frequency;
-                            let formatted_value = format_u32_with_separators(r.receiver[0].frequency_a as u32);
+                            r.receiver[1].frequency = r.receiver[0].frequency;
+                            r.receiver[0].frequency = temp_frequency;
+                            let formatted_value = format_u32_with_separators(r.receiver[0].frequency as u32);
                             app_widgets.vfo_a_frequency.set_label(&formatted_value);
                         }
                         r.receiver[1].band = r.receiver[0].band;
                         r.receiver[0].band = temp_band;
-                        let formatted_value = format_u32_with_separators(r.receiver[1].frequency_a as u32);
+                        let formatted_value = format_u32_with_separators(r.receiver[1].frequency as u32);
                         app_widgets.vfo_b_frequency.set_label(&formatted_value);
                     });
 
@@ -682,12 +693,12 @@ fn build_ui(app: &Application) {
                         let style_context = button.style_context();
                         r.receiver[rx].ctun = button.is_active();
                         if r.receiver[rx].ctun {
-                            r.receiver[rx].ctun_frequency = r.receiver[rx].frequency_a;
+                            r.receiver[rx].ctun_frequency = r.receiver[rx].frequency;
                             r.receiver[rx].set_ctun(true);
                         } else {
                             r.receiver[rx].ctun_frequency = 0.0;
                             r.receiver[rx].set_ctun(false);
-                            let formatted_value = format_u32_with_separators(r.receiver[rx].frequency_a as u32);
+                            let formatted_value = format_u32_with_separators(r.receiver[rx].frequency as u32);
                             if rx == 0 {
                                 app_widgets.vfo_a_frequency.set_label(&formatted_value);
                             } else {
@@ -711,9 +722,11 @@ fn build_ui(app: &Application) {
                         if r.rx2_enabled {
                             app_widgets.spectrum_2_display.set_visible(true);
                             app_widgets.waterfall_2_display.set_visible(true);
+                            app_widgets.meter_2_display.set_visible(true);
                         } else {
                             app_widgets.spectrum_2_display.set_visible(false);
                             app_widgets.waterfall_2_display.set_visible(false);
+                            app_widgets.meter_2_display.set_visible(false);
                         }
                         let mut update = false;
                         if r.receiver[1].active {
@@ -1035,11 +1048,11 @@ fn build_ui(app: &Application) {
                             r.receiver[rx].pan = p as i32;
                         } else {
                             // try to keep the current frequency in the zoomed area
-                            let frequency_low = r.receiver[rx].frequency_a - (r.receiver[rx].sample_rate/2) as f32;
-                            let frequency_high = r.receiver[rx].frequency_a + (r.receiver[rx].sample_rate/2) as f32;
+                            let frequency_low = r.receiver[rx].frequency - (r.receiver[rx].sample_rate/2) as f32;
+                            let frequency_high = r.receiver[rx].frequency + (r.receiver[rx].sample_rate/2) as f32;
                             let frequency_range = frequency_high - frequency_low;
                             let width = r.receiver[rx].spectrum_width * r.receiver[rx].zoom;
-                            let mut f = r.receiver[rx].frequency_a;
+                            let mut f = r.receiver[rx].frequency;
                             let hz_per_pixel = frequency_range as f32 / width as f32;
                             if r.receiver[rx].ctun {
                                 f = r.receiver[rx].ctun_frequency;
@@ -1094,13 +1107,13 @@ fn build_ui(app: &Application) {
 
                         let b = r.receiver[rx].band.to_usize();
                         if b != index { // band has changed
-                            r.band_info[b].current = r.receiver[rx].frequency_a;
+                            r.band_info[b].current = r.receiver[rx].frequency;
 
                             // get new band info
                             r.receiver[rx].band = Bands::from_usize(index).expect("invalid band index");
-                            r.receiver[rx].frequency_a = r.band_info[index].current;
+                            r.receiver[rx].frequency = r.band_info[index].current;
                             if r.receiver[rx].ctun {
-                                r.receiver[rx].ctun_frequency = r.receiver[rx].frequency_a;
+                                r.receiver[rx].ctun_frequency = r.receiver[rx].frequency;
                                 r.receiver[rx].set_ctun_frequency();
                             }
 
@@ -1133,7 +1146,7 @@ fn build_ui(app: &Application) {
                             r.transmitter.set_mode();
                             r.transmitter.set_filter();
 
-                            let formatted_value = format_u32_with_separators(r.receiver[rx].frequency_a as u32);
+                            let formatted_value = format_u32_with_separators(r.receiver[rx].frequency as u32);
                             if rx == 0 {
                                 app_widgets.vfo_a_frequency.set_label(&formatted_value);
                             } else {
@@ -1435,7 +1448,7 @@ fn build_ui(app: &Application) {
                             app_widgets.waterfall_2_display.set_visible(false);
                         }
 
-                        let mut f = r.receiver[0].frequency_a;
+                        let mut f = r.receiver[0].frequency;
                         if r.receiver[0].ctun {
                             f = r.receiver[0].ctun_frequency;
                         }
@@ -1443,7 +1456,7 @@ fn build_ui(app: &Application) {
                         app_widgets.vfo_a_frequency.set_label(&formatted_value);
 
 
-                        f = r.receiver[1].frequency_a;
+                        f = r.receiver[1].frequency;
                         if r.receiver[1].ctun {
                             f = r.receiver[1].ctun_frequency;
                         }
@@ -1495,9 +1508,15 @@ fn build_ui(app: &Application) {
                         waterfall.draw(cr, width, height);
                     });
 
-                    let rc_meter_clone2 = rc_meter_clone.clone();
-                    app_widgets.meter_display.set_draw_func(move |_da, cr, width, height| {
-                        let mut meter = rc_meter_clone2.borrow_mut();
+                    let rc_meter_1_clone2 = rc_meter_1_clone.clone();
+                    app_widgets.meter_1_display.set_draw_func(move |_da, cr, width, height| {
+                        let mut meter = rc_meter_1_clone2.borrow_mut();
+                        meter.draw(cr);
+                    });
+
+                    let rc_meter_2_clone2 = rc_meter_2_clone.clone();
+                    app_widgets.meter_2_display.set_draw_func(move |_da, cr, width, height| {
+                        let mut meter = rc_meter_2_clone2.borrow_mut();
                         meter.draw(cr);
                     });
 
@@ -1530,6 +1549,7 @@ fn build_ui(app: &Application) {
                     let r = radio_mutex.radio.lock().unwrap();
                     update_interval = 1000.0 / r.receiver[0].spectrum_fps;
                     drop(r);
+
 
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone2 = rc_app_widgets_clone.clone();
@@ -1569,18 +1589,35 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone2 = rc_app_widgets_clone.clone();
-                    let mut rc_meter_clone2 = rc_meter_clone.clone();
-                    let meter_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
-                        meter_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_clone2);
+                    let mut rc_meter_1_clone2 = rc_meter_1_clone.clone();
+                    let meter_1_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
+                        meter_1_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_1_clone2);
+                        Continue
+                    });
+
+                    let radio_mutex_clone = radio_mutex.clone();
+                    let rc_app_widgets_clone2 = rc_app_widgets_clone.clone();
+                    let mut rc_meter_2_clone2 = rc_meter_2_clone.clone();
+                    let meter_2_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
+                        meter_2_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_2_clone2);
                         Continue
                     });
 
 
-                    {
-                        let mut r = radio_mutex.radio.lock().unwrap();
-                        r.spectrum_timeout_id = Some(spectrum_timeout_id);
-                        r.waterfall_timeout_id = Some(waterfall_timeout_id);
-                        r.meter_timeout_id = Some(meter_timeout_id);
+                    let mut r = radio_mutex.radio.lock().unwrap();
+                    r.spectrum_timeout_id = Some(spectrum_timeout_id);
+                    r.waterfall_timeout_id = Some(waterfall_timeout_id);
+                    r.meter_1_timeout_id = Some(meter_1_timeout_id);
+                    r.meter_2_timeout_id = Some(meter_2_timeout_id);
+                    drop(r);
+
+                    if device.protocol == 2 {
+                        let radio_mutex_clone = radio_mutex.clone();
+                        let keepalive_timeout_id = timeout_add_local(Duration::from_millis(500), move || {
+                            let mut r = radio_mutex_clone.radio.lock().unwrap();
+                            r.keepalive = true;
+                            Continue
+                        });
                     }
 
                 } else {
@@ -1600,46 +1637,70 @@ fn build_ui(app: &Application) {
 }
 
 fn spectrum_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_spectrum: &Rc<RefCell<Spectrum>>) {
-    let app_widgets = rc_app_widgets.borrow();
-    let (flag, pixels) = radio_mutex.update_spectrum(app_widgets.waterfall_display.width());
-    if flag != 0 {
-        let mut spectrum = rc_spectrum.borrow_mut();
-        spectrum.update(app_widgets.spectrum_display.width(), app_widgets.spectrum_display.height(), &radio_mutex, &pixels);
-        app_widgets.spectrum_display.queue_draw();
+    let mut r = radio_mutex.radio.lock().unwrap();
+    let is_transmitting = r.is_transmitting();
+    drop(r);
+
+    if !is_transmitting {
+        let app_widgets = rc_app_widgets.borrow();
+        let (flag, pixels) = radio_mutex.update_spectrum(app_widgets.waterfall_display.width());
+        if flag != 0 {
+            let mut spectrum = rc_spectrum.borrow_mut();
+            spectrum.update(app_widgets.spectrum_display.width(), app_widgets.spectrum_display.height(), &radio_mutex, &pixels);
+            app_widgets.spectrum_display.queue_draw();
+        }
     }
 }
 
 fn spectrum_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_spectrum: &Rc<RefCell<Spectrum>>) {
-    let app_widgets = rc_app_widgets.borrow();
-    let (flag, pixels) = radio_mutex.update_spectrum_2(app_widgets.waterfall_display.width());
-    if flag != 0 {
-        let mut spectrum = rc_spectrum.borrow_mut();
-        spectrum.update(app_widgets.spectrum_2_display.width(), app_widgets.spectrum_2_display.height(), &radio_mutex, &pixels);
-        app_widgets.spectrum_2_display.queue_draw();
+    let mut r = radio_mutex.radio.lock().unwrap();
+    let is_transmitting = r.is_transmitting();
+    drop(r);
+
+    if !is_transmitting {
+        let app_widgets = rc_app_widgets.borrow();
+        let (flag, pixels) = radio_mutex.update_spectrum_2(app_widgets.waterfall_display.width());
+        if flag != 0 {
+            let mut spectrum = rc_spectrum.borrow_mut();
+            spectrum.update(app_widgets.spectrum_2_display.width(), app_widgets.spectrum_2_display.height(), &radio_mutex, &pixels);
+            app_widgets.spectrum_2_display.queue_draw();
+        }
     }
 }
 
 fn waterfall_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_waterfall: &Rc<RefCell<Waterfall>>) {
-    let app_widgets = rc_app_widgets.borrow();
-    let (flag, pixels) = radio_mutex.update_waterfall(app_widgets.waterfall_display.width());
-    if flag != 0 {
-        let mut waterfall = rc_waterfall.borrow_mut();
-        waterfall.update(app_widgets.waterfall_display.width(), app_widgets.waterfall_display.height(), &radio_mutex, &pixels);
-        app_widgets.waterfall_display.queue_draw();
+    let mut r = radio_mutex.radio.lock().unwrap();
+    let is_transmitting = r.is_transmitting();
+    drop(r);
+
+    if !is_transmitting {
+        let app_widgets = rc_app_widgets.borrow();
+        let (flag, pixels) = radio_mutex.update_waterfall(app_widgets.waterfall_display.width());
+        if flag != 0 {
+            let mut waterfall = rc_waterfall.borrow_mut();
+            waterfall.update(app_widgets.waterfall_display.width(), app_widgets.waterfall_display.height(), &radio_mutex, &pixels);
+            app_widgets.waterfall_display.queue_draw();
+        }
     }
 }
 
 fn waterfall_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_waterfall: &Rc<RefCell<Waterfall>>) {
-    let app_widgets = rc_app_widgets.borrow();
-    let (flag, pixels) = radio_mutex.update_waterfall_2(app_widgets.waterfall_display.width());
-    if flag != 0 {
-        let mut waterfall = rc_waterfall.borrow_mut();
-        waterfall.update(app_widgets.waterfall_2_display.width(), app_widgets.waterfall_2_display.height(), &radio_mutex, &pixels);
-        app_widgets.waterfall_2_display.queue_draw();
+    let mut r = radio_mutex.radio.lock().unwrap();
+    let is_transmitting = r.is_transmitting();
+    drop(r);
+
+    if !is_transmitting {
+        let app_widgets = rc_app_widgets.borrow();
+        let (flag, pixels) = radio_mutex.update_waterfall_2(app_widgets.waterfall_display.width());
+        if flag != 0 {
+            let mut waterfall = rc_waterfall.borrow_mut();
+            waterfall.update(app_widgets.waterfall_2_display.width(), app_widgets.waterfall_2_display.height(), &radio_mutex, &pixels);
+            app_widgets.waterfall_2_display.queue_draw();
+        }
     }
 }
 
-fn meter_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_meter: &Rc<RefCell<Meter>>) {
+fn meter_1_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_meter: &Rc<RefCell<Meter>>) {
     let app_widgets = rc_app_widgets.borrow();
     let mut meter = rc_meter.borrow_mut();
     let mut r = radio_mutex.radio.lock().unwrap();
@@ -1649,15 +1710,21 @@ fn meter_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidget
             r.s_meter_dbm = GetRXAMeter(r.receiver[0].channel,rxaMeterType_RXA_S_AV as i32);
         }
         meter.update_rx(r.s_meter_dbm, false);
+        app_widgets.meter_1_display.queue_draw();
+    }
+}
 
-        if r.rx2_enabled {
-            unsafe {
-                r.s_meter_dbm = GetRXAMeter(r.receiver[1].channel,rxaMeterType_RXA_S_AV as i32);
-            }
-            meter.update_rx(r.s_meter_dbm, true);
+fn meter_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_meter: &Rc<RefCell<Meter>>) {
+    let app_widgets = rc_app_widgets.borrow();
+    let mut meter = rc_meter.borrow_mut();
+    let mut r = radio_mutex.radio.lock().unwrap();
+    if r.is_transmitting() {
+    } else {
+        unsafe {
+            r.s_meter_dbm = GetRXAMeter(r.receiver[1].channel,rxaMeterType_RXA_S_AV as i32);
         }
-
-        app_widgets.meter_display.queue_draw();
+        meter.update_rx(r.s_meter_dbm, false);
+        app_widgets.meter_2_display.queue_draw();
     }
 }
 
@@ -1679,8 +1746,8 @@ fn spectrum_waterfall_clicked(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefC
 
     let app_widgets = rc_app_widgets.borrow();
         
-    let frequency_low = r.receiver[rx].frequency_a - (r.receiver[rx].sample_rate/2) as f32;
-    let frequency_high = r.receiver[rx].frequency_a + (r.receiver[rx].sample_rate/2) as f32;
+    let frequency_low = r.receiver[rx].frequency - (r.receiver[rx].sample_rate/2) as f32;
+    let frequency_high = r.receiver[rx].frequency + (r.receiver[rx].sample_rate/2) as f32;
     let frequency_range = frequency_high - frequency_low;
                 
     let display_frequency_range = frequency_range / r.receiver[rx].zoom as f32;
@@ -1703,8 +1770,8 @@ fn spectrum_waterfall_clicked(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefC
             app_widgets.vfo_b_frequency.set_label(&formatted_value);
         }
     } else {
-        r.receiver[rx].frequency_a = f1;
-        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency_a as u32);
+        r.receiver[rx].frequency = f1;
+        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency as u32);
         if rx == 0 {
             app_widgets.vfo_a_frequency.set_label(&formatted_value);
         } else {
@@ -1719,8 +1786,8 @@ fn spectrum_waterfall_scroll(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCe
     let mut r = radio_mutex.radio.lock().unwrap();
     let app_widgets = rc_app_widgets.borrow();
 
-    let frequency_low = r.receiver[rx].frequency_a - (r.receiver[rx].sample_rate/2) as f32;
-    let frequency_high = r.receiver[rx].frequency_a + (r.receiver[rx].sample_rate/2) as f32;
+    let frequency_low = r.receiver[rx].frequency - (r.receiver[rx].sample_rate/2) as f32;
+    let frequency_high = r.receiver[rx].frequency + (r.receiver[rx].sample_rate/2) as f32;
     if r.receiver[rx].ctun {
         r.receiver[rx].ctun_frequency = r.receiver[rx].ctun_frequency - (r.receiver[rx].step * dy as f32);
         if r.receiver[rx].ctun_frequency < frequency_low {
@@ -1736,8 +1803,8 @@ fn spectrum_waterfall_scroll(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCe
         }
         r.receiver[rx].set_ctun_frequency();
     } else {
-        r.receiver[rx].frequency_a = r.receiver[rx].frequency_a - (r.receiver[rx].step * dy as f32);
-        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency_a as u32);
+        r.receiver[rx].frequency = r.receiver[rx].frequency - (r.receiver[rx].step * dy as f32);
+        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency as u32);
         if rx == 0 {
             app_widgets.vfo_a_frequency.set_label(&formatted_value);
         } else {

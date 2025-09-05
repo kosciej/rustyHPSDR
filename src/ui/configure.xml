@@ -476,17 +476,16 @@
                           <item>ANAN 10</item>
                           <item>ANAN 10E</item>
                           <item>ANAN 100</item>
+                          <item>ANAN 100B</item>
                           <item>ANAN 100D</item>
                           <item>ANAN 200D</item>
                           <item>ANAN 7000D</item>
-                          <item>ANAN 8000D</item>
-                          <item>HERMES</item>
-                          <item>HERMES 2</item>
-                          <item>ANGELIA</item>
-                          <item>ORION</item>
-                          <item>ORION 2</item>
+                          <item>ANAN 8000DLE</item>
+                          <item>ANAN G1</item>
+                          <item>ANAN G2</item>
                           <item>HERMES LITE</item>
                           <item>HERMES LITE 2</item>
+                          <item>Undefined</item>
                         </items>
                         </object>
                         </property>
@@ -598,7 +597,7 @@
               </object>
             </child>
             <child>
-              <object class="GtkFrame">
+              <object class="GtkFrame" id="adc-1-frame">
                 <property name="label">ADC-1</property>
                 <child>
                   <object class="GtkBox">
@@ -798,9 +797,9 @@
                       <object class="GtkBox">
                       <property name="orientation">horizontal</property>
                         <child>
-                          <object class="GtkSpinButton" id="rx1_adc_spinbutton">
+                          <object class="GtkSpinButton" id="rx0_adc_spinbutton">
                             <property name="adjustment">
-                              <object class="GtkAdjustment" id="rx1_adc_adjustment">
+                              <object class="GtkAdjustment" id="rx0_adc_adjustment">
                                 <property name="lower">0</property>
                                 <property name="upper">1</property>
                                 <property name="step-increment">1</property>
@@ -809,7 +808,7 @@
                           </object>
                         </child>
                         <child>
-                          <object class="GtkDropDown" id="rx1_sample_rate_dropdown">
+                          <object class="GtkDropDown" id="rx0_sample_rate_dropdown">
                             <property name="model">
                             <object class="GtkStringList">
                             <items>
@@ -832,7 +831,7 @@
               </object>
             </child>
             <child>
-              <object class="GtkFrame">
+              <object class="GtkFrame" id="rx1-adc">
                 <property name="label">RX2</property>
                 <child>
                   <object class="GtkFrame">
@@ -841,9 +840,9 @@
                       <object class="GtkBox">
                       <property name="orientation">horizontal</property>
                         <child>
-                          <object class="GtkSpinButton" id="rx2_adc_spinbutton">
+                          <object class="GtkSpinButton" id="rx1_adc_spinbutton">
                             <property name="adjustment">
-                              <object class="GtkAdjustment" id="rx2_adc_adjustment">
+                              <object class="GtkAdjustment" id="rx1_adc_adjustment">
                                 <property name="lower">0</property>
                                 <property name="upper">1</property>
                                 <property name="step-increment">1</property>
@@ -852,7 +851,7 @@
                           </object>
                         </child>
                         <child>
-                          <object class="GtkDropDown" id="rx2_sample_rate_dropdown">
+                          <object class="GtkDropDown" id="rx1_sample_rate_dropdown">
                             <property name="model">
                             <object class="GtkStringList">
                             <items>

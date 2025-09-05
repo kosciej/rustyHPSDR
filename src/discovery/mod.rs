@@ -28,12 +28,26 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
+#[derive(Copy, Clone, Debug)]
+pub enum Boards {
+    Metis,
+    Hermes,
+    Hermes2,
+    Angelia,
+    Orion,
+    Orion2,
+    Saturn,
+    HermesLite,
+    HermesLite2,
+    Unknown,
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct Device {
     pub address: SocketAddr,
     pub my_address: SocketAddr,
-    pub device: u8,
+    pub device: u8, // protocol relative
+    pub board: Boards, // system relative
     pub protocol: u8,
     pub version: u8,
     pub status: u8,
@@ -46,8 +60,8 @@ pub struct Device {
 }
 
 
-fn add_device(devices: Rc<RefCell<Vec<Device>>>, address: SocketAddr, my_address: SocketAddr, device: u8,protocol: u8,version:u8,status: u8,mac: [u8;6],supported_receivers: u8,supported_transmitters: u8,adcs: u8,frequency_min: u64,frequency_max: u64) {
-    devices.borrow_mut().push(Device{address,my_address,device,protocol,version,status,mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max});
+fn add_device(devices: Rc<RefCell<Vec<Device>>>, address: SocketAddr, my_address: SocketAddr, device: u8, board: Boards,protocol: u8,version:u8,status: u8,mac: [u8;6],supported_receivers: u8,supported_transmitters: u8,adcs: u8,frequency_min: u64,frequency_max: u64) {
+    devices.borrow_mut().push(Device{address,my_address,device,board,protocol,version,status,mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max});
 }
 
 pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: SocketAddr) {
@@ -76,14 +90,16 @@ pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                 let local_addr = socket.local_addr().expect("failed to get local address");
                 if amt == 60 {
                     let mac: [u8;6] = [buf[3],buf[4],buf[5],buf[6],buf[7],buf[8]];
+                    let mut board = Boards::Unknown; 
                     let mut adcs=1;
                     let mut supported_receivers=1;
                     let mut supported_transmitters=1;
                     let mut frequency_min=0;
                     let mut frequency_max=61440000;
 
-                    match  buf[11] {
+                    match  buf[10] {
                         0=>{ // METIS
+                           board = Boards::Metis;
                            adcs=1;
                            supported_receivers=5;
                            supported_transmitters=1;
@@ -91,6 +107,7 @@ pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                            frequency_max=61440000;
                            },
                         1=>{ // HERMES
+                           board = Boards::Hermes;
                            adcs=1;
                            supported_receivers=5;
                            supported_transmitters=1;
@@ -98,6 +115,7 @@ pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                            frequency_max=61440000;
                            },
                         4=>{ // ANGELIA
+                           board = Boards::Angelia;
                            adcs=2;
                            supported_receivers=7;
                            supported_transmitters=1;
@@ -105,6 +123,7 @@ pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                            frequency_max=61440000;
                            },
                         5=>{ // ORION
+                           board = Boards::Orion;
                            adcs=2;
                            supported_receivers=7;
                            supported_transmitters=1;
@@ -114,9 +133,11 @@ pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                         6=>{ // HERMES_LITE
                            if buf[9] < 42 {
                                // HERMES_LITE V1
+                               board = Boards::HermesLite;
                                supported_receivers=2;
                            } else {
                                // HERMES_LITE V2
+                               board = Boards::HermesLite2;
                                supported_receivers=buf[19];
                            }
                            adcs=1;
@@ -125,6 +146,7 @@ pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                            frequency_max=30720000;
                            },
                         10=>{ // ORION2
+                           board = Boards::Orion2;
                            adcs=2;
                            supported_receivers=7;
                            supported_transmitters=1;
@@ -134,7 +156,7 @@ pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                         _=>{ // UNKNOWN - use defaults
                            },
                     }
-                    add_device(Rc::clone(&devices),src,local_addr,buf[10],1,buf[9],buf[2],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
+                    add_device(Rc::clone(&devices),src,local_addr,buf[10],board,1,buf[9],buf[2],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
                 } else {
                 }
             },
@@ -169,6 +191,7 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
             Ok((amt,src)) => {
                 if amt == 60 {
                     let mac: [u8;6] = [buf[5],buf[6],buf[7],buf[8],buf[9],buf[10]];
+                    let mut board = Boards::Unknown;
                     let mut adcs=1;
                     let mut supported_receivers=1;
                     let mut supported_transmitters=1;
@@ -177,6 +200,7 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
 
                     match  buf[11] {
                         0=>{ // ATLAS
+                            board = Boards::Metis;
                             adcs=1;
                             supported_receivers=5;
                             supported_transmitters=1;
@@ -184,6 +208,7 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                             frequency_max=61440000;
                            },
                         1=>{ // HERMES
+                            board = Boards::Hermes;
                             adcs=1;
                             supported_receivers=5;
                             supported_transmitters=1;
@@ -191,6 +216,7 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                             frequency_max=61440000;
                            },
                         2=>{ // HERMES2
+                            board = Boards::Hermes2;
                             adcs=1;
                             supported_receivers=5;
                             supported_transmitters=1;
@@ -198,6 +224,8 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                             frequency_max=61440000;
                            },
                         3=>{ // ANGELIA
+                            board = Boards::Angelia;
+                            adcs=1;
                             adcs=2;
                             supported_receivers=7;
                             supported_transmitters=1;
@@ -205,6 +233,7 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                             frequency_max=61440000;
                            },
                         4=>{ // ORION
+                            board = Boards::Orion;
                             adcs=2;
                             supported_receivers=7;
                             supported_transmitters=1;
@@ -212,6 +241,7 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                             frequency_max=61440000;
                            },
                         5=>{ // ORION2
+                            board = Boards::Orion2;
                             adcs=2;
                             supported_receivers=7;
                             supported_transmitters=1;
@@ -219,17 +249,26 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                             frequency_max=61440000;
                            },
                         6=>{ // HERMES_LITE
+                            board = Boards::HermesLite2;
                             adcs=1;
                             supported_receivers=5;
                             supported_transmitters=1;
                             frequency_min=0;
                             frequency_max=30720000;
                            },
+                        10=>{ // SATURN
+                            board = Boards::Saturn;
+                            adcs=2;
+                            supported_receivers=7;
+                            supported_transmitters=1;
+                            frequency_min=0;
+                            frequency_max=61440000;
+                           },
                         _=>{ // UNKNOWN - use defaults
                            },
                     }
                     let local_addr = socket.local_addr().expect("failed to get local address");
-                    add_device(Rc::clone(&devices),src,local_addr,buf[11],2,buf[13],buf[4],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
+                    add_device(Rc::clone(&devices),src,local_addr,buf[11],board,2,buf[13],buf[4],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
                 } else {
                     println!("Expected 60 bytes but Received: {:?} From {:?}",amt,src);
                 }
@@ -345,37 +384,8 @@ pub fn create_discovery_dialog(parent: &ApplicationWindow, discovery_data: Rc<Re
 }
 
 pub fn device_name(device: Device) -> String {
-    let mut radio = "Unknown";
-    match device.protocol {
-        1 => match device.device {
-             0 => radio = "METIS",
-             1 => radio = "HERMES",
-             2 => radio = "GRIFFIN",
-             4 => radio = "ANGELIA",
-             5 => radio = "ORION",
-             6 => {
-                 if device.version < 42 {
-                     radio = "HERMES LITE 1";
-                 } else {
-                     radio = "HERMES LITE 2";
-                 }
-                 },
-             10 => radio = "ORION2",
-             _ => radio = "Unknown Radio",
-        },
-        2 => match device.device {
-             0 => radio = "ATLAS",
-             1 => radio = "HERMES",
-             2 => radio = "HERMES2",
-             3 => radio = "ANGELIA",
-             4 => radio = "ORION",
-             5 => radio = "ORION2",
-             6 => radio = "HERMES_LITE",
-             _ => radio = "Unknown Radio",
-        },
-        _ => radio = "Unknown Protocol",
-    }
-    radio.to_string()
+    let board = format!("{:?}", device.board);
+    board
 }
 
 fn populate_list_box(list: &ListBox, discovery_data: Rc<RefCell<Vec<Device>>>) {
@@ -386,14 +396,15 @@ fn populate_list_box(list: &ListBox, discovery_data: Rc<RefCell<Vec<Device>>>) {
     }
 
     // add the Devices
-    let header = create_discovery_row(&["Device", "IP", "MAC", "Protocol", "Version", "Status"], true);
+    let header = create_discovery_row(&["Device", "IFace", "IP", "MAC", "Protocol", "Version", "Status"], true);
     header.set_sensitive(false); // Disable selection
     list.append(&header);
 
     let discovery_iter = discovery_data.borrow().clone().into_iter();
     for val in discovery_iter {
         let radio = device_name(val);
-        let ip=format!("{}",val.address);
+        let iface=format!("{}",val.my_address.ip());
+        let ip=format!("{}",val.address.ip());
         let mac=format!("{:02X?}",val.mac);
         let protocol=format!("{}",val.protocol);
         let version=format!("{}.{}",val.version/10,val.version%10);
@@ -406,7 +417,7 @@ fn populate_list_box(list: &ListBox, discovery_data: Rc<RefCell<Vec<Device>>>) {
             status = "Unknown";
         }
 
-        let row = create_discovery_row(&[&radio, &ip, &mac, &protocol, &version, &status], false);
+        let row = create_discovery_row(&[&radio, &iface, &ip, &mac, &protocol, &version, &status], false);
         if val.status != 2 {
             row.set_sensitive(false); // Disable selection if in use
         }
@@ -426,8 +437,10 @@ fn create_discovery_row(columns: &[&str], is_header: bool) -> ListBoxRow {
             label.add_css_class("heading");
         }
         if col==0 {
-            label.set_size_request(100,-1);
+            label.set_size_request(90,-1);
         } else if col==1 || col==2 {
+            label.set_size_request(100,-1);
+        } else if col==3 {
             label.set_size_request(150,-1);
         } else {
             label.set_size_request(70,-1);

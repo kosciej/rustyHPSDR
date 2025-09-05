@@ -17,9 +17,9 @@
 
 use alsa::Direction;
 use gtk::prelude::*;
-use gtk::{Adjustment, Align, ApplicationWindow, Builder, Button, CheckButton, ComboBoxText, DropDown, Grid, Label, Notebook, Orientation, PositionType, Scale, SpinButton, ToggleButton, Window};
+use gtk::{Adjustment, Align, ApplicationWindow, Builder, Button, CheckButton, ComboBoxText, DropDown, Frame, Grid, Label, Notebook, Orientation, PositionType, Scale, SpinButton, ToggleButton, Window};
 
-use crate::radio::{Keyer, RadioMutex};
+use crate::radio::{Keyer, RadioModels, RadioMutex};
 use crate::audio::*;
 
 pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMutex) -> Window {
@@ -158,6 +158,53 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         }
      });
 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let adc_0_rx_antenna = r.adc[0].rx_antenna;
+    let adc_0_dither = r.adc[0].dither;
+    let adc_0_random = r.adc[0].random;
+    drop(r);
+
+    let adc_0_antenna_dropdown: DropDown = builder
+            .object("adc0_antenna_dropdown")
+            .expect("Could not get object `adc0_antenna_dropdown` from builder.");
+    adc_0_antenna_dropdown.set_selected(adc_0_rx_antenna);
+    let radio_mutex_clone = radio_mutex.clone();
+    adc_0_antenna_dropdown.connect_selected_notify(move |dropdown| {
+        let antenna = dropdown.selected();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.adc[0].rx_antenna = antenna;
+        r.updated = true;
+    });
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let adcs = r.adc.len();
+    drop(r);
+    if adcs == 2 {
+        let r = radio_mutex.radio.lock().unwrap();
+        let adc_1_rx_antenna = r.adc[1].rx_antenna;
+        let adc_1_dither = r.adc[1].dither;
+        let adc_1_random = r.adc[1].random;
+        drop(r);
+        let adc_1_antenna_dropdown: DropDown = builder
+                .object("adc1_antenna_dropdown")
+                .expect("Could not get object `adc1_antenna_dropdown` from builder.");
+        adc_1_antenna_dropdown.set_selected(adc_1_rx_antenna);
+        let radio_mutex_clone = radio_mutex.clone();
+        adc_1_antenna_dropdown.connect_selected_notify(move |dropdown| {
+            let antenna = dropdown.selected();
+            let mut r = radio_mutex_clone.radio.lock().unwrap();
+            r.adc[1].rx_antenna = antenna;
+            r.updated = true;
+        });
+    } else {
+        let adc1_frame: Frame = builder
+                .object("adc-1-frame")
+                .expect("Could not get object `adc-1-frame` from builder.");
+        adc1_frame.set_visible(false);
+    }
+
+
     let r = radio_mutex.radio.lock().unwrap();
     let mic_boost = r.mic_boost;
     let mic_ptt = r.mic_ptt;
@@ -256,7 +303,22 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
 
 
 
-    // CW
+    // Radio
+
+    let r = radio_mutex.radio.lock().unwrap();
+        let model = r.model;
+    drop(r);
+    let model_dropdown: DropDown = builder
+            .object("model_dropdown")
+            .expect("Could not get object `model_dropdown` from builder.");
+    model_dropdown.set_selected(model.to_u32());
+    let radio_mutex_clone = radio_mutex.clone();
+    model_dropdown.connect_selected_notify(move |dropdown| {
+        let model = dropdown.selected();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.model = RadioModels::from_u32(model).expect("Invalid RadioModel");
+        r.updated = true;
+    });
 
     let r = radio_mutex.radio.lock().unwrap();
         let cw_keyer_mode = r.cw_keyer_mode;
@@ -448,7 +510,42 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         }
     });
 
+    // Receiver
+    let r = radio_mutex.radio.lock().unwrap();
+    let rx_0_adc = r.receiver[0].adc;
+    let rx_1_adc = r.receiver[1].adc;
+    drop(r);
+    let rx_0_adc_adjustment: Adjustment = builder
+            .object("rx0_adc_adjustment")
+            .expect("Could not get object `rx0_adc_adjustment` from builder.");
+    rx_0_adc_adjustment.set_value(rx_0_adc as f64);
+    let radio_mutex_clone = radio_mutex.clone();
+    rx_0_adc_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].adc = adjustment.value() as usize;
+        r.updated = true;
+    });
 
+    let r = radio_mutex.radio.lock().unwrap();
+    let adcs = r.adc.len();
+    drop(r);
+    if adcs == 2 {
+        let rx_1_adc_adjustment: Adjustment = builder
+                .object("rx1_adc_adjustment")
+                .expect("Could not get object `rx1_adc_adjustment` from builder.");
+        rx_1_adc_adjustment.set_value(rx_1_adc as f64);
+        let radio_mutex_clone = radio_mutex.clone();
+        rx_1_adc_adjustment.connect_value_changed(move |adjustment| {
+            let mut r = radio_mutex_clone.radio.lock().unwrap();
+            r.receiver[1].adc = adjustment.value() as usize;
+            r.updated = true;
+        });
+    } else {
+        let rx1_adc: Frame = builder
+                .object("rx1-adc")
+                .expect("Could not get object `rx1-adc` from builder.");
+        rx1_adc.set_visible(false);
+    }
 
     // Equalizer
     let r = radio_mutex.radio.lock().unwrap();

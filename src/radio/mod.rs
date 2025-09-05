@@ -26,8 +26,9 @@ use pangocairo;
 use std::cell::RefCell;
 //use std::{env, fs, path::{PathBuf}};
 use std::env;
-use std::fmt::Write;
-use std::fs;
+use std::fmt::Write as FormatWrite;
+use std::fs::*;
+use std::io::{Read,Write};
 use std::os::raw::c_int;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -36,7 +37,7 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 
 
-use crate::discovery::Device;
+use crate::discovery::{Boards,Device};
 use crate::bands::BandInfo;
 use crate::modes::Modes;
 use crate::receiver::Receiver;
@@ -46,31 +47,73 @@ use crate::audio::*;
 use crate::alex::*;
 use crate::adc::*;
 
-#[derive(Serialize, Deserialize)]
-enum RadioModels {
+#[derive(PartialEq, Serialize, Deserialize, Copy, Clone)]
+pub enum RadioModels {
     ANAN_10,
     ANAN_10E,
     ANAN_100,
+    ANAN_100B,
     ANAN_100D,
     ANAN_200D,
-    ANAN_7000D,
-    ANAN_8000D,
-    HERMES,
-    HERMES_2,
-    ANGELIA,
-    ORION,
-    ORION_2,
+    ANAN_7000DLE,
+    ANAN_8000DLE,
+    ANAN_G1,
+    ANAN_G2,
     HERMES_LITE,
-    HERMES_LITE_2,
+    HERMES_LITE2,
+    Undefined,
 }
 
-#[derive(Serialize, Deserialize)]
-enum FilterBoards {
+impl RadioModels {
+    pub fn from_u32(value: u32) -> Option<Self> {
+        match value {
+            0 => Some(RadioModels::ANAN_10),
+            1 => Some(RadioModels::ANAN_10E),
+            2 => Some(RadioModels::ANAN_100),
+            3 => Some(RadioModels::ANAN_100B),
+            4 => Some(RadioModels::ANAN_100D),
+            5 => Some(RadioModels::ANAN_200D),
+            6 => Some(RadioModels::ANAN_7000DLE),
+            7 => Some(RadioModels::ANAN_8000DLE),
+            8 => Some(RadioModels::ANAN_G1),
+            9 => Some(RadioModels::ANAN_G2),
+            10 => Some(RadioModels::HERMES_LITE),
+            11 => Some(RadioModels::HERMES_LITE2),
+            12 => Some(RadioModels::Undefined),
+            _ => None,
+        }
+    }
+
+    pub fn to_u32(&self) -> u32 {
+        *self as u32
+    }
+}
+
+
+#[derive(PartialEq, Serialize, Deserialize, Copy, Clone)]
+pub enum FilterBoards {
     NONE,
     ALEX,
     APOLLO,
     N2ADR,
 }
+
+impl FilterBoards {
+    pub fn from_u32(value: u32) -> Option<Self> {
+        match value {
+            0 => Some(FilterBoards::NONE),
+            1 => Some(FilterBoards::ALEX),
+            2 => Some(FilterBoards::APOLLO),
+            3 => Some(FilterBoards::N2ADR),
+            _ => None,
+        }
+    }
+
+    pub fn to_u32(&self) -> u32 {
+        *self as u32
+    }
+}
+
 
 #[derive(PartialEq, Serialize, Deserialize, Copy, Clone)]
 pub enum Keyer {
@@ -98,6 +141,7 @@ impl Keyer {
 pub struct Radio {
     pub name: String,
     pub dev: u8,
+    pub model: RadioModels,
     pub protocol: u8,
     pub supported_receivers: u8,
     pub active_receiver: usize,
@@ -145,6 +189,8 @@ pub struct Radio {
 
 #[serde(skip_serializing, skip_deserializing)]
     pub updated: bool,
+#[serde(skip_serializing, skip_deserializing)]
+    pub keepalive: bool,
 
 #[serde(skip_serializing, skip_deserializing)]
     pub pll_locked: bool,
@@ -177,7 +223,9 @@ pub struct Radio {
 #[serde(skip_serializing, skip_deserializing)]
     pub waterfall_timeout_id: Option<SourceId>,
 #[serde(skip_serializing, skip_deserializing)]
-    pub meter_timeout_id: Option<SourceId>,
+    pub meter_1_timeout_id: Option<SourceId>,
+#[serde(skip_serializing, skip_deserializing)]
+    pub meter_2_timeout_id: Option<SourceId>,
 }
 
 #[derive(Clone)]
@@ -223,6 +271,18 @@ impl Radio {
     pub fn new(device: Device, spectrum_width: i32) -> Radio {
         let name = "HPSDR".to_string();
         let dev = device.device;
+        // take a guess on the model based on the device
+        let mut model = RadioModels::Undefined;
+        match device.board {
+            Boards::Hermes => model = RadioModels::ANAN_100,
+            Boards::Angelia => model = RadioModels::ANAN_100D,
+            Boards::Orion => model = RadioModels::ANAN_200D,
+            Boards::Orion2 => model = RadioModels::ANAN_8000DLE,
+            Boards::Saturn => model = RadioModels::ANAN_G1,
+            Boards::HermesLite => model = RadioModels::HERMES_LITE,
+            Boards::HermesLite2 => model = RadioModels::HERMES_LITE2,
+            _ => model = RadioModels::Undefined,
+        }
         let protocol = device.protocol;
         let supported_receivers = device.supported_receivers;
         let active_receiver = 0;
@@ -246,7 +306,13 @@ impl Radio {
             audio.push(Audio::new());
         }
         let transmitter = Transmitter::new(8, device.protocol);
-        let filter_board = FilterBoards::ALEX;
+        let mut filter_board = FilterBoards::ALEX;
+        match device.board {
+            Boards::HermesLite => filter_board = FilterBoards::N2ADR,
+            Boards::HermesLite2 => filter_board = FilterBoards::N2ADR,
+            _ => filter_board = FilterBoards::ALEX,
+        }
+
         let cw_keyer_mode = Keyer::Straight;
         let cw_keyer_internal = true;
         let cw_keys_reversed = false;
@@ -268,6 +334,7 @@ impl Radio {
         let alex = ALEX_ANTENNA_1;
 
         let updated = false;
+        let keepalive = false;
 
         let pll_locked = false;
         let adc_overload = false;
@@ -285,15 +352,17 @@ impl Radio {
         let mic_saturn_xlr = false;
 
         let waterfall_auto = true;
-        let waterfall_calibrate = 2.0;
+        let waterfall_calibrate = 0.0;
 
         let spectrum_timeout_id = None;
         let waterfall_timeout_id = None;
-        let meter_timeout_id = None;
+        let meter_1_timeout_id = None;
+        let meter_2_timeout_id = None;
 
         Radio {
             name,
             dev,
+            model,
             protocol,
             supported_receivers,
             active_receiver,
@@ -331,6 +400,7 @@ impl Radio {
             alex,
 
             updated,
+            keepalive,
 
             pll_locked,
             adc_overload,
@@ -351,7 +421,8 @@ impl Radio {
 
             spectrum_timeout_id,
             waterfall_timeout_id,
-            meter_timeout_id,
+            meter_1_timeout_id,
+            meter_2_timeout_id,
         }
     }
 
@@ -473,15 +544,17 @@ impl Radio {
     pub fn set_state(&self) {
         if self.is_transmitting() {
             unsafe {
-                SetChannelState(self.receiver[0].channel, 0, 1);
                 if self.rx2_enabled {
+                    SetChannelState(self.receiver[0].channel, 0, 0);
                     SetChannelState(self.receiver[1].channel, 0, 1);
+                } else {
+                    SetChannelState(self.receiver[0].channel, 0, 1);
                 }
                 SetChannelState(self.transmitter.channel, 1, 0);
             }
         } else {
             unsafe {
-                SetChannelState(self.transmitter.channel, 0, 0);
+                SetChannelState(self.transmitter.channel, 0, 1);
                 SetChannelState(self.receiver[0].channel, 1, 0);
                 if self.rx2_enabled {
                     SetChannelState(self.receiver[1].channel, 1, 0);
@@ -494,23 +567,28 @@ impl Radio {
         let d = format!("{:02X}-{:02X}-{:02X}-{:02X}-{:02X}-{:02X}", device.mac[0], device.mac[1], device.mac[2], device.mac[3], device.mac[4], device.mac[5]);
         let app_name = env!("CARGO_PKG_NAME");
         let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-        config_dir.join(app_name).join(d).join("radio.ron")
+        config_dir.join(app_name).join(d).join("radio.json")
     }
 
     pub fn load(device: Device, spectrum_width: i32) -> Self {
         let path = Self::config_file_path(device);
         if path.exists() {
-            match fs::read_to_string(&path) {
-                Ok(s) => match ron::from_str::<Radio>(&s) {
-                    Ok(mut radio) => {
-                        radio.init();
-                        radio
-                    }
-                    Err(_e) => {
-                        Self::new(device, spectrum_width)
+            match File::open(&path) {
+                Ok(mut file) => {
+                    let mut s = String::new();
+                    file.read_to_string(&mut s);
+                    match serde_json::from_str::<Radio>(&s) {
+                        Ok(mut radio) => {
+                            println!("Successfully loaded data from {:?}", path);
+                            radio.init();
+                            radio
+                        }
+                        Err(_e) => {
+                            Self::new(device, spectrum_width)
+                        }
                     }
                 },
-                Err(_e) => {
+                Err(err) => {
                     Self::new(device, spectrum_width)
                 }
             }
@@ -523,18 +601,28 @@ impl Radio {
         let path = Self::config_file_path(device);
         if let Some(parent) = path.parent() {
             if !parent.exists() {
-                if let Err(_e) = fs::create_dir_all(parent) {
+                if let Err(_e) = create_dir_all(parent) {
                     return;
                 }
             }
         }
 
-        match ron::to_string(self) {
+        match serde_json::to_string_pretty(self) {
             Ok(s) => {
-                if let Err(e) = fs::write(&path, s) {
-                    eprintln!("Error writing config file {:?}: {}", path, e);
-                } else {
-                    println!("Successfully saved data to {:?}", path);
+                match File::create(&path) {
+                    Ok(mut file) => {
+                        match file.write_all(s.as_bytes()) {
+                            Ok(file) => {
+                                println!("Successfully saved data to {:?}", path);
+                            },
+                            Err(e) => {
+                                eprintln!("Error writing config file {:?}: {}", path, e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error creatoing config file: {}", e);
+                    }
                 }
             }
             Err(e) => {
@@ -601,8 +689,8 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
             cr.set_line_cap(LineCap::Round);
             cr.set_line_join(LineJoin::Round);
 
-            let frequency_low = r.receiver[rx].frequency_a - (r.receiver[rx].sample_rate/2) as f32;
-            let frequency_high = r.receiver[rx].frequency_a + (r.receiver[rx].sample_rate/2) as f32;
+            let frequency_low = r.receiver[rx].frequency - (r.receiver[rx].sample_rate/2) as f32;
+            let frequency_high = r.receiver[rx].frequency + (r.receiver[rx].sample_rate/2) as f32;
             let frequency_range = frequency_high - frequency_low;
             //let hz_per_pixel = frequency_range as f32 / pixels.len() as f32;
     
@@ -722,7 +810,7 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
 */
             cr.stroke().unwrap();
 
-            let mut frequency = r.receiver[rx].frequency_a;
+            let mut frequency = r.receiver[rx].frequency;
             if r.receiver[rx].ctun {
                 frequency = r.receiver[rx].ctun_frequency;
             }
@@ -775,8 +863,8 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label,
     let mut r = radio.lock().unwrap();
     let rx = r.active_receiver;
         
-    let frequency_low = r.receiver[rx].frequency_a - (r.receiver[rx].sample_rate/2) as f32;
-    let frequency_high = r.receiver[rx].frequency_a + (r.receiver[rx].sample_rate/2) as f32;
+    let frequency_low = r.receiver[rx].frequency - (r.receiver[rx].sample_rate/2) as f32;
+    let frequency_high = r.receiver[rx].frequency + (r.receiver[rx].sample_rate/2) as f32;
     let frequency_range = frequency_high - frequency_low;
                 
     let display_frequency_range = frequency_range / r.receiver[rx].zoom as f32;
@@ -794,8 +882,8 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label,
         let formatted_value = format_u32_with_separators(r.receiver[rx].ctun_frequency as u32);
         fa.set_label(&formatted_value);
     } else {
-        r.receiver[rx].frequency_a = f1;
-        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency_a as u32);
+        r.receiver[rx].frequency = f1;
+        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency as u32);
         fa.set_label(&formatted_value);
     }
 }
@@ -803,8 +891,8 @@ fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label,
 fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64) {
     let mut r = radio.lock().unwrap();
     let rx = r.active_receiver;
-    let frequency_low = r.receiver[rx].frequency_a - (r.receiver[rx].sample_rate/2) as f32;
-    let frequency_high = r.receiver[rx].frequency_a + (r.receiver[rx].sample_rate/2) as f32;
+    let frequency_low = r.receiver[rx].frequency - (r.receiver[rx].sample_rate/2) as f32;
+    let frequency_high = r.receiver[rx].frequency + (r.receiver[rx].sample_rate/2) as f32;
     if r.receiver[rx].ctun {
         r.receiver[rx].ctun_frequency = r.receiver[rx].ctun_frequency - (r.receiver[rx].step * dy as f32);
         if r.receiver[rx].ctun_frequency < frequency_low {
@@ -816,8 +904,8 @@ fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64) {
         f.set_label(&formatted_value);
         r.receiver[rx].set_ctun_frequency();
     } else {
-        r.receiver[rx].frequency_a = r.receiver[rx].frequency_a - (r.receiver[rx].step * dy as f32);
-        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency_a as u32);
+        r.receiver[rx].frequency = r.receiver[rx].frequency - (r.receiver[rx].step * dy as f32);
+        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency as u32);
         f.set_label(&formatted_value);
     }
 }
@@ -876,75 +964,4 @@ fn draw_waterfall(cr: &Context, width: i32, height: i32, pixbuf: &Rc<RefCell<Opt
         cr.rectangle(0.0, 0.0, width as f64, height as f64);
         cr.fill().unwrap();
     }
-}
-
-fn update_waterfall(width: i32, height: i32, radio: &Arc<Mutex<Radio>>, pixbuf: &RefCell<Option<Pixbuf>>, new_pixels: &Vec<f32>) {
-    let mut r = radio.lock().unwrap();
-    let rx = r.active_receiver;
-    let mut average = 0.0;
-    let new_pixbuf = match pixbuf.borrow_mut().as_ref() {
-        Some(old_pixbuf) => {
-            let new_pixbuf = old_pixbuf.clone();
-            unsafe {
-                let pixels = new_pixbuf.pixels();
-                let row_size = width * 3;
-
-                // copy the current waterfall down one line
-                for y in (0..height - 1).rev() { // Iterate in reverse order
-                    let src_offset = (y * row_size) as usize;
-                    let dest_offset = ((y + 1) * row_size) as usize;
-                    pixels.copy_within(src_offset..src_offset + row_size as usize, dest_offset);
-                }
-
-                // fill in the top line with the latest spectrum data
-                let spectrum_width = r.receiver[rx].spectrum_width;
-                let pan = ((new_pixels.len() as f32 - spectrum_width as f32) / 100.0) * r.receiver[rx].pan as f32;
-
-                let b = r.receiver[rx].band.to_usize();
-                for x in 0..spectrum_width {
-                    let mut value: f32 = new_pixels[x as usize + pan as usize] as f32;
-                    average += value;
-                    if value < r.band_info[b].waterfall_low {
-                        value = r.band_info[b].waterfall_low;
-                    } else if value > r.band_info[b].waterfall_high {
-                        value = r.band_info[b].waterfall_high;
-                    }
-                    let percent = 100.0 / ((r.band_info[b].waterfall_high - r.band_info[b].waterfall_low) / (value-r.band_info[b].waterfall_low));
-                    let mut r = 0.0;
-                    let mut g = 0.0;
-                    let mut b = 0.0;
-                    if percent < 5.0 { r = 0.0; g = 0.0; b = 0.0;
-                    } else if percent < 20.0 { r = 255.0; g = 255.0; b = 0.0;
-                    } else if value < 50.0 { r = 255.0; g = 125.0; b = 0.0;
-                    } else { r = 255.0; g = 0.0; b = 0.0; }
-
-                    let ix = (x * 3) as usize;
-                    pixels[ix] = r as u8;
-                    pixels[ix + 1] = g as u8;
-                    pixels[ix + 2] = b as u8;
-                }
-                if r.waterfall_auto {
-                    r.band_info[b].waterfall_low = (average / spectrum_width as f32) + r.waterfall_calibrate; 
-                }
-            } // unsafe
-            new_pixbuf
-        }
-        None => {
-            let new_pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, width, height).unwrap();
-            unsafe {
-                let pixels = new_pixbuf.pixels();
-                for x in 0..width {
-                    let value = 0.0;
-                    let color = (value * 255.0) as u8;
-                    let offset = (((height - 1) * width + x) * 3) as usize;
-                    pixels[offset] = color;
-                    pixels[offset + 1] = color;
-                    pixels[offset + 2] = color;
-                }
-            }
-            new_pixbuf
-        }
-    };
-
-    *pixbuf.borrow_mut() = Some(new_pixbuf);
 }

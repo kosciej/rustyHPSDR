@@ -46,8 +46,7 @@ pub struct Receiver {
     pub band: Bands,
     pub filters_manual: bool,
     pub filters: u32,
-    pub frequency_a: f32,
-    pub frequency_b: f32,
+    pub frequency: f32,
     pub step_index: usize,
     pub step: f32,
     pub ctun:  bool,
@@ -132,8 +131,7 @@ impl Receiver {
         let band: Bands = Bands::Band20;
         let filters_manual: bool = false;
         let filters: u32 = 0x01100002; // for Band20
-        let frequency_a: f32 = 14175000.0;
-        let frequency_b: f32 = 14250000.0;
+        let frequency: f32 = 14175000.0;
         let step_index: usize = 7; // 1KHz
         let step: f32 = 1000.0; // 1KHz
         let ctun: bool = false;
@@ -207,8 +205,7 @@ impl Receiver {
                            band,
                            filters_manual,
                            filters,
-                           frequency_a,
-                           frequency_b,
+                           frequency,
                            step_index,
                            step,
                            ctun,
@@ -358,7 +355,7 @@ impl Receiver {
             }
 
             if self.ctun {
-                let mut offset = self.ctun_frequency - self.frequency_a;
+                let mut offset = self.ctun_frequency - self.frequency;
                 if self.mode == Modes::CWL.to_usize() {
                      offset = offset + self.cw_pitch;
                 } else if self.mode == Modes::CWU.to_usize() {
@@ -453,7 +450,7 @@ impl Receiver {
     }
 
     pub fn set_ctun_frequency(&self) {
-        let mut offset = self.ctun_frequency - self.frequency_a;
+        let mut offset = self.ctun_frequency - self.frequency;
         if self.mode == Modes::CWL.to_usize() {
              offset = offset + self.cw_pitch;
         } else if self.mode == Modes::CWU.to_usize() {

@@ -332,13 +332,13 @@ impl Protocol1 {
 
         //let r = radio.lock().unwrap();
         let r = radio_mutex.radio.lock().unwrap();
-        let mut frequency_a = r.receiver[0].frequency_a;
+        let mut frequency = r.receiver[0].frequency;
         if r.receiver[0].mode == Modes::CWL.to_usize() {
-             frequency_a = frequency_a + r.receiver[0].cw_pitch;
+             frequency = frequency + r.receiver[0].cw_pitch;
         } else if r.receiver[0].mode == Modes::CWU.to_usize() {
-             frequency_a = frequency_a - r.receiver[0].cw_pitch;
+             frequency = frequency - r.receiver[0].cw_pitch;
         }
-        let mut frequency_b = r.receiver[0].frequency_b;
+        let mut frequency_b = r.receiver[1].frequency;
         if r.receiver[0].mode == Modes::CWL.to_usize() {
              frequency_b = frequency_b + r.receiver[0].cw_pitch;
         } else if r.receiver[0].mode == Modes::CWU.to_usize() {
@@ -371,7 +371,7 @@ impl Protocol1 {
                 1 => {
                     c0 = 0x02; // C0
                     // TX frequency
-                    let mut f: i32 = frequency_a as i32;
+                    let mut f: i32 = frequency as i32;
                     if r.split {
                         f = frequency_b as i32;
                     }
@@ -383,7 +383,7 @@ impl Protocol1 {
                 2 => {
                     c0 = 0x04 + (self.current_receiver * 2); // C0
                     // RX frequency
-                    let f = r.receiver[self.current_receiver as usize].frequency_a as i32;
+                    let f = r.receiver[self.current_receiver as usize].frequency as i32;
                     c1 = (f >> 24) as u8; // C1
                     c2 = (f>>16) as u8; // C2
                     c3 = (f>>8) as u8; // C3

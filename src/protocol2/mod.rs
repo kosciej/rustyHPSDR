@@ -92,7 +92,6 @@ impl Protocol2 {
         self.send_transmit_specific(radio_mutex);
         self.send_receive_specific(radio_mutex);
 
-
         loop {
             match self.socket.recv_from(&mut buffer) {
                 Ok((size, src)) => {
@@ -132,7 +131,6 @@ impl Protocol2 {
                                 let data_size = MIC_SAMPLES * MIC_SAMPLE_SIZE;
                                 let mut r = radio_mutex.radio.lock().unwrap();
                                 if r.transmitter.local_microphone {
-                                //if r.audio.local_input {
                                     let mic_buffer = r.audio[0].read_input();
                                     println!("mic_buffer read {}", mic_buffer.len());
                                 } else {
@@ -299,20 +297,18 @@ impl Protocol2 {
                 }
             }
 
-
             let mut r = radio_mutex.radio.lock().unwrap();
             let updated = r.updated;
-            if updated {
-                r.updated = false;
-            }
-            //if r.audio.local_input {
-            //    let mic_buffer = r.audio.read_input();
-            //    println!("mic_buffer read {}", mic_buffer.len());
-            //}
+            let keepalive = r.keepalive;
+            r.updated = false;
+            r.keepalive = false;
             drop(r);
             if updated {
                 self.send_transmit_specific(radio_mutex);
                 self.send_receive_specific(radio_mutex);
+            }
+            if keepalive {
+                self.send_general();
             }
         }
     }
@@ -345,7 +341,6 @@ impl Protocol2 {
 
     pub fn send_high_priority(&mut self, radio_mutex: &RadioMutex) {
         // port 1027
-        //let r = radio.lock().unwrap();
         let r = radio_mutex.radio.lock().unwrap();
         let tx = &r.transmitter;
 
@@ -360,47 +355,48 @@ impl Protocol2 {
             buf[4] = buf[4] | 0x02;
         }
     
+        // receiver frequency
+        let mut phase: u32 = 0;
         for i in 0..r.receivers {
-            let rx: &Receiver = &r.receiver[i as usize];
             // convert frequency to phase
-            let mut f = rx.frequency_a;
-            if rx.mode == Modes::CWL.to_usize() {
-                 f = f + rx.cw_pitch;
-            } else if rx.mode == Modes::CWU.to_usize() {
-                 f = f - rx.cw_pitch;
+            let mut f = r.receiver[i as usize].frequency;
+            if r.receiver[i as usize].mode == Modes::CWL.to_usize() {
+                 f = f + r.receiver[i as usize].cw_pitch;
+            } else if r.receiver[i as usize].mode == Modes::CWU.to_usize() {
+                 f = f - r.receiver[i as usize].cw_pitch;
             }
 
-            let mut phase = ((4294967296.0*f)/122880000.0) as u32;
+            phase = ((4294967296.0*f)/122880000.0) as u32;
             buf[(9+(i*4)) as usize] = ((phase>>24) & 0xFF) as u8;
             buf[(10+(i*4)) as usize] = ((phase>>16) & 0xFF) as u8;
             buf[(11+(i*4)) as usize] = ((phase>>8) & 0xFF) as u8;
             buf[(12+(i*4)) as usize] = (phase & 0xFF) as u8;
 
-            if r.split {
-                f = rx.frequency_b;
-                if rx.mode == Modes::CWL.to_usize() {
-                     f = f + rx.cw_pitch;
-                } else if rx.mode == Modes::CWU.to_usize() {
-                     f = f - rx.cw_pitch;
-                }
-                phase = ((4294967296.0*f)/122880000.0) as u32;
-            }
-            if i==0 {
-                buf[329] = ((phase>>24) & 0xFF) as u8;
-                buf[330] = ((phase>>16) & 0xFF) as u8;
-                buf[331] = ((phase>>8) & 0xFF) as u8;
-                buf[332] = (phase & 0xFF) as u8;
-            }
         }
 
+        // transmit frequency
+        if r.split {
+            let mut f = r.receiver[1].frequency;
+            if r.receiver[1].mode == Modes::CWL.to_usize() {
+                 f = f + r.receiver[1].cw_pitch;
+            } else if r.receiver[1].mode == Modes::CWU.to_usize() {
+                 f = f - r.receiver[1].cw_pitch;
+            }
+            phase = ((4294967296.0*f)/122880000.0) as u32;
+        }
+        buf[329] = ((phase>>24) & 0xFF) as u8;
+        buf[330] = ((phase>>16) & 0xFF) as u8;
+        buf[331] = ((phase>>8) & 0xFF) as u8;
+        buf[332] = (phase & 0xFF) as u8;
 
 
         let mut filter: u32 = 0x00000000;
+        filter |= r.adc[r.receiver[0].adc].rx_antenna;
         if r.is_transmitting() {
             filter |= 0x08000000; // TX_ENABLE
         }
 
-        let mut f = r.receiver[0].frequency_a;
+        let mut f = r.receiver[0].frequency;
         if f < 1500000.0 {
             filter |= 0x1000;
         } else if f < 2100000.0 {
@@ -453,22 +449,61 @@ impl Protocol2 {
 
         }
 
-        filter |= ALEX_ANTENNA_1;
         
         buf[1432]=((filter >> 24) & 0xFF) as u8;
         buf[1433]=((filter >> 16) & 0xFF) as u8;
         buf[1434]=((filter >> 8) & 0xFF) as u8;
         buf[1435]=(filter & 0xFF) as u8;
  
-        buf[1430] = ((filter>>8)&0xFF) as u8;
-        buf[1431] = (filter&0xFF) as u8;
+        let mut filter1: u32 = 0x00000000;
+            filter1 |= r.adc[r.receiver[1].adc].rx_antenna;
+            f = r.receiver[1].frequency;
+            if self.device.device == 5 { // ORION 2
+                if f < 1500000.0 {
+                    filter1 |= 0x1000;
+                } else if f < 2100000.0 {
+                    filter1 |= 0x40;
+                } else if f < 5500000.0 {
+                    filter1 |= 0x20;
+                } else if f < 11000000.0 {
+                    filter1 |= 0x10;
+                } else if f < 22000000.0 {
+                    filter1 |= 0x02;
+                } else if f < 35000000.0 {
+                    filter1 |= 0x04;
+                } else {
+                    filter1 |= 0x08;
+                }
+            } else {
+                if f < 1500000.0 {
+                    filter1 |= 0x1000;
+                } else if f < 2100000.0 {
+                    filter1 |= 0x40;
+                } else if f < 5500000.0 {
+                    filter1 |= 0x20;
+                } else if f < 11000000.0 {
+                    filter1 |= 0x10;
+                } else if f < 22000000.0 {
+                    filter1 |= 0x02;
+                } else if f < 35000000.0 {
+                    filter1 |= 0x04;
+                } else {
+                    filter1 |= 0x08;
+                }
+            }
+
+        buf[1430] = ((filter1>>8)&0xFF) as u8;
+        buf[1431] = (filter1&0xFF) as u8;
 
         if r.is_transmitting() {
             buf[1443] = 0;
+            buf[1442] = 0;
         } else {
             buf[1443] = r.receiver[0].attenuation as u8;
             buf[1442] = r.receiver[1].attenuation as u8;
         }
+
+//println!("send_high_priority filter {:#010x} filter1 {:#010x}", filter, filter1);
 
         self.device.address.set_port(1027);
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
@@ -488,7 +523,6 @@ impl Protocol2 {
 
     pub fn send_receive_specific(&mut self, radio_mutex: &RadioMutex) {
         // port 1025
-        //let r = radio.lock().unwrap();
         let r = radio_mutex.radio.lock().unwrap();
 
         let mut buf = [0u8; 1444];
@@ -505,13 +539,13 @@ impl Protocol2 {
         buf[7] = 0x03; // 2 receivers -- DDC0 and DDC1
 
         for i in 0..r.receivers {
-          let mut rx = &r.receiver[i as usize];
-          buf[(17+(i*6)) as usize] = 0x00; // ADC to use for DDC0
-          buf[(18+(i*6)) as usize] = (((rx.sample_rate/1000)>>8)&0xFF) as u8; // sample_rate
-          buf[(19+(i*6)) as usize] = ((rx.sample_rate/1000)&0xFF) as u8; // sample_rate to use for DDC0
+          buf[(17+(i*6)) as usize] = r.receiver[i as usize].adc as u8;
+          buf[(18+(i*6)) as usize] = (((r.receiver[i as usize].sample_rate/1000)>>8)&0xFF) as u8; // sample_rate
+          buf[(19+(i*6)) as usize] = ((r.receiver[i as usize].sample_rate/1000)&0xFF) as u8; // sample_rate to use for DDC0
           buf[(22+(i*6)) as usize] = 24;  // 24 bits per sample
         }
 
+        println!("send_receive_specific {} {:#04x} {} {:#04x}", r.receiver[0].adc, buf[17], r.receiver[1].adc, buf[23]);
         self.device.address.set_port(1025);
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
         self.receive_specific_sequence += 1;
@@ -519,7 +553,6 @@ impl Protocol2 {
 
     pub fn send_transmit_specific(&mut self, radio_mutex: &RadioMutex) {
         // port 1026
-        //let r = radio.lock().unwrap();
         let r = radio_mutex.radio.lock().unwrap();
         let tx = &r.transmitter;
 

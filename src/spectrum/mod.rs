@@ -94,8 +94,8 @@ impl Spectrum {
             cr.set_line_cap(LineCap::Round);
             cr.set_line_join(LineJoin::Round);
 
-            let frequency_low = r.receiver[self.rx].frequency_a - (r.receiver[self.rx].sample_rate/2) as f32;
-            let frequency_high = r.receiver[self.rx].frequency_a + (r.receiver[self.rx].sample_rate/2) as f32;
+            let frequency_low = r.receiver[self.rx].frequency - (r.receiver[self.rx].sample_rate/2) as f32;
+            let frequency_high = r.receiver[self.rx].frequency + (r.receiver[self.rx].sample_rate/2) as f32;
             let frequency_range = frequency_high - frequency_low;
    
             let display_frequency_range = frequency_range / r.receiver[self.rx].zoom as f32;
@@ -169,7 +169,7 @@ impl Spectrum {
                 }
             }
 
-            let mut frequency = r.receiver[self.rx].frequency_a;
+            let mut frequency = r.receiver[self.rx].frequency;
             if r.receiver[self.rx].ctun {
                 frequency = r.receiver[self.rx].ctun_frequency;
             }

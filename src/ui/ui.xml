@@ -230,14 +230,14 @@
                 </object>
               </child>
               <child>
-                <object class="GtkFrame" id="meter_frame">
-                  <property name="label">Meter</property>
+                <object class="GtkFrame" id="tx_frame">
+                  <property name="label">TX</property>
                   <layout>
                     <property name="column">5</property>
                     <property name="row">0</property>
                   </layout>
                   <child>
-                    <object class="GtkDrawingArea" id="meter_display">
+                    <object class="GtkDrawingArea" id="tx_meter">
                       <property name="content-width">256</property>
                       <property name="content-height">72</property>
                     </object>

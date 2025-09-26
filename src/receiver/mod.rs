@@ -28,7 +28,8 @@ use crate::modes::Modes;
 use crate::wdsp::*;
 
 const DEFAULT_SAMPLE_RATE: i32 = 384000; // 1536000;// 768000; // 384000;
-const DEFAULT_DISPLAY_AVERAGE_TIME: f32 = 120.0; // 170.0;
+const DEFAULT_SPECTRUM_AVERAGE_TIME: f32 = 250.0;
+const DEFAULT_WATERFALL_AVERAGE_TIME: f32 = 10.0;
 const SUBRX_BASE_CHANNEL: i32 = 16;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -188,8 +189,8 @@ impl Receiver {
         let equalizer_mid: f32 = 0.0;
         let equalizer_high: f32 = 0.0;
 
-        let spectrum_average_time: f32 = DEFAULT_DISPLAY_AVERAGE_TIME;
-        let waterfall_average_time: f32 = DEFAULT_DISPLAY_AVERAGE_TIME;
+        let spectrum_average_time: f32 = DEFAULT_SPECTRUM_AVERAGE_TIME;
+        let waterfall_average_time: f32 = DEFAULT_WATERFALL_AVERAGE_TIME;
 
 
         let rx = Receiver{ protocol,

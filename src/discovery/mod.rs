@@ -225,7 +225,6 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                            },
                         3=>{ // ANGELIA
                             board = Boards::Angelia;
-                            adcs=1;
                             adcs=2;
                             supported_receivers=7;
                             supported_transmitters=1;
@@ -408,13 +407,11 @@ fn populate_list_box(list: &ListBox, discovery_data: Rc<RefCell<Vec<Device>>>) {
         let mac=format!("{:02X?}",val.mac);
         let protocol=format!("{}",val.protocol);
         let version=format!("{}.{}",val.version/10,val.version%10);
-        let mut status = "None";
+        let mut status = "Unknown";
         if val.status == 2 {
             status = "Available";
         } else if val.status == 3 {
             status = "In Use";
-        } else {
-            status = "Unknown";
         }
 
         let row = create_discovery_row(&[&radio, &iface, &ip, &mac, &protocol, &version, &status], false);

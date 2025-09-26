@@ -17,7 +17,7 @@
 
 use alsa::Direction;
 use gtk::prelude::*;
-use gtk::{Adjustment, Align, ApplicationWindow, Builder, Button, CheckButton, ComboBoxText, DropDown, Frame, Grid, Label, Notebook, Orientation, PositionType, Scale, SpinButton, ToggleButton, Window};
+use gtk::{Adjustment, ApplicationWindow, Builder, Button, CheckButton, ComboBoxText, DropDown, Frame, PositionType, Scale, ToggleButton, Window};
 
 use crate::radio::{Keyer, RadioModels, RadioMutex};
 use crate::audio::*;
@@ -35,9 +35,9 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     //window.set_transient_for(Some(parent));
     //window.set_modal(true);
 
-    let notebook: Notebook = builder
-            .object("notebook")
-            .expect("Could not get object `notebook` from builder.");
+    //let notebook: Notebook = builder
+    //        .object("notebook")
+    //        .expect("Could not get object `notebook` from builder.");
 
     // AUDIO
 

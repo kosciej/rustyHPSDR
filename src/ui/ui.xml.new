@@ -231,7 +231,7 @@
               </child>
               <child>
                 <object class="GtkFrame" id="meter_frame">
-                  <property name="label">Meter</property>
+                  <property name="label">TX Meter</property>
                   <layout>
                     <property name="column">5</property>
                     <property name="row">0</property>
@@ -354,276 +354,14 @@
               </child>
             </object>
           </child>
-          <child>
-            <object class="GtkBox" id="bottom_h_box">
-              <property name="orientation">horizontal</property>
-                  <style>
-                    <class name="basic-button"/>
-                  </style>
-              <child>
-                <object class="GtkGrid" id="bottom_button_grid">
-                  <property name="margin-start">0</property>
-                  <property name="margin-end">0</property>
-                  <property name="margin-top">0</property>
-                  <property name="margin-bottom">0</property>
-                  <property name="row-spacing">0</property>
-                  <property name="column-spacing">5</property>
-                  <property name="column-homogeneous">true</property>
-                  <property name="row-homogeneous">true</property>
-                  <child>
-                    <object class="GtkToggleButton" id="mox_button">
-                      <property name="label">Mox</property>
-                      <style>
-                        <class name="tx-button"/>
-                      </style>
-                      <layout>
-                        <property name="column">0</property>
-                        <property name="row">0</property>
-                      </layout>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkToggleButton" id="tun_button">
-                      <property name="label">Tun</property>
-                      <style>
-                        <class name="tx-button"/>
-                      </style>
-                      <layout>
-                        <property name="column">0</property>
-                        <property name="row">1</property>
-                      </layout>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkToggleButton" id="nr_button">
-                      <property name="label">NR</property>
-                      <layout>
-                        <property name="column">1</property>
-                        <property name="row">0</property>
-                      </layout>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkToggleButton" id="nb_button">
-                      <property name="label">NB</property>
-                      <layout>
-                        <property name="column">1</property>
-                        <property name="row">1</property>
-                      </layout>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkToggleButton" id="anf_button">
-                      <property name="label">ANF</property>
-                      <layout>
-                        <property name="column">2</property>
-                        <property name="row">0</property>
-                      </layout>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkToggleButton" id="snb_button">
-                      <property name="label">SNB</property>
-                      <layout>
-                        <property name="column">2</property>
-                        <property name="row">1</property>
-                      </layout>
-                    </object>
-                  </child>
-                </object>
-              </child>
-              <child>
-                <object class="GtkGrid" id="bottom_scale_grid">
-                  <property name="margin-start">0</property>
-                  <property name="margin-end">0</property>
-                  <property name="margin-top">0</property>
-                  <property name="margin-bottom">0</property>
-                  <property name="row-spacing">0</property>
-                  <property name="column-spacing">5</property>
-                  <property name="column-homogeneous">true</property>
-                   <child>
-                    <object class="GtkFrame" id="afgain_frame">
-                      <property name="label">AF Gain</property>
-                      <layout>
-                        <property name="column">3</property>
-                        <property name="row">0</property>
-                        <property name="row-span">2</property>
-                      </layout>
-                      <child>
-                        <object class="GtkScale" id="afgain_scale">
-                          <property name="orientation">horizontal</property>
-                          <property name="value-pos">left</property>
-                          <property name="digits">0</property>
-                          <property name="has-origin">False</property>
-                          <property name="draw-value">True</property>
-                          <property name="adjustment">
-                            <object class="GtkAdjustment" id="afgain_adjustment">
-                              <property name="lower">0.0</property>
-                              <property name="upper">100.0</property>
-                              <property name="step-increment">1.0</property>
-                              <property name="page-increment">1.0</property>
-                              <property name="value">0.0</property>
-                            </object>
-                          </property>
-                          <property name="hexpand">true</property>
-                        </object>
-                      </child>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkFrame" id="agc_frame">
-                      <property name="label">AGC</property>
-                      <layout>
-                        <property name="column">4</property>
-                        <property name="row">0</property>
-                        <property name="row-span">2</property>
-                      </layout>
-                      <child>
-                        <object class="GtkDropDown" id="agc_dropdown">
-                          <property name="model">
-                          <object class="GtkStringList">
-                          <items>
-                            <item>Off</item>
-                            <item>Long</item>
-                            <item>Slow</item>
-                            <item>Med</item>
-                            <item>Fast</item>
-                          </items>
-                          </object>
-                          </property>
-                          <property name="selected">0</property>
-                        </object>
-                      </child>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkFrame" id="agcgain_frame">
-                      <property name="label">AGC Gain</property>
-                      <layout>
-                        <property name="column">5</property>
-                        <property name="row">0</property>
-                        <property name="row-span">2</property>
-                      </layout>
-                      <child>
-                        <object class="GtkScale" id="agcgain_scale">
-                          <property name="orientation">horizontal</property>
-                          <property name="value-pos">left</property>
-                          <property name="digits">0</property>
-                          <property name="has-origin">False</property>
-                          <property name="draw-value">True</property>
-                          <property name="adjustment">
-                            <object class="GtkAdjustment" id="agcgain_adjustment">
-                              <property name="lower">-20.0</property>
-                              <property name="upper">120.0</property>
-                              <property name="step-increment">1.0</property>
-                              <property name="page-increment">1.0</property>
-                              <property name="value">0.0</property>
-                            </object>
-                          </property>
-                          <property name="hexpand">true</property>
-                        </object>
-                      </child>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkFrame" id="attenuation_frame">
-                      <property name="label">Attenaution</property>
-                      <layout>
-                        <property name="column">6</property>
-                        <property name="row">0</property>
-                        <property name="row-span">2</property>
-                      </layout>
-                      <child>
-                        <object class="GtkScale" id="attenuation_scale">
-                          <property name="orientation">horizontal</property>
-                          <property name="value-pos">left</property>
-                          <property name="digits">0</property>
-                          <property name="has-origin">False</property>
-                          <property name="draw-value">True</property>
-                          <property name="adjustment">
-                            <object class="GtkAdjustment" id="attenuation_adjustment">
-                              <property name="lower">0.0</property>
-                              <property name="upper">31.0</property>
-                              <property name="step-increment">1.0</property>
-                              <property name="page-increment">1.0</property>
-                              <property name="value">0.0</property>
-                            </object>
-                          </property>
-                          <property name="hexpand">true</property>
-                        </object>
-                      </child>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkFrame" id="micgain_frame">
-                      <property name="label">Mic Gain</property>
-                      <layout>
-                        <property name="column">7</property>
-                        <property name="row">0</property>
-                        <property name="row-span">2</property>
-                      </layout>
-                      <child>
-                        <object class="GtkScale" id="micgain_scale">
-                          <property name="orientation">horizontal</property>
-                          <property name="value-pos">left</property>
-                          <property name="digits">0</property>
-                          <property name="has-origin">False</property>
-                          <property name="draw-value">True</property>
-                          <property name="adjustment">
-                            <object class="GtkAdjustment" id="micgain_adjustment">
-                              <property name="lower">-10.0</property>
-                              <property name="upper">50.0</property>
-                              <property name="step-increment">1.0</property>
-                              <property name="page-increment">1.0</property>
-                              <property name="value">0.0</property>
-                            </object>
-                          </property>
-                          <property name="hexpand">true</property>
-                        </object>
-                      </child>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkFrame" id="drive_frame">
-                      <property name="label">Drive</property>
-                      <layout>
-                        <property name="column">8</property>
-                        <property name="row">0</property>
-                        <property name="row-span">2</property>
-                      </layout>
-                      <child>
-                        <object class="GtkScale" id="drive_scale">
-                          <property name="orientation">horizontal</property>
-                          <property name="value-pos">left</property>
-                          <property name="digits">0</property>
-                          <property name="has-origin">False</property>
-                          <property name="draw-value">True</property>
-                          <property name="adjustment">
-                            <object class="GtkAdjustment" id="drive_adjustment">
-                              <property name="lower">0.0</property>
-                              <property name="upper">100.0</property>
-                              <property name="step-increment">1.0</property>
-                              <property name="page-increment">1.0</property>
-                              <property name="value">0.0</property>
-                            </object>
-                          </property>
-                          <property name="hexpand">true</property>
-                        </object>
-                      </child>
-                    </object>
-                  </child>
-                </object>
-              </child>
-            </object>
-          </child>
         </object>
         </child>
         <child>
           <object class="GtkBox" id="rx1_v_box">
             <property name="orientation">vertical</property>
-                  <style>
-                    <class name="basic-button"/>
-                  </style>
+            <style>
+              <class name="basic-button"/>
+            </style>
             <child>
               <object class="GtkFrame" id="band_frame">
                 <property name="label">Band</property>
@@ -1082,6 +820,270 @@
                 </child>
               </object>
             </child>
+
+
+
+              <child>
+                <object class="GtkGrid" id="bottom_button_grid">
+                  <property name="margin-start">0</property>
+                  <property name="margin-end">0</property>
+                  <property name="margin-top">0</property>
+                  <property name="margin-bottom">0</property>
+                  <property name="row-spacing">0</property>
+                  <property name="column-spacing">5</property>
+                  <property name="column-homogeneous">true</property>
+                  <property name="row-homogeneous">true</property>
+                  <child>
+                    <object class="GtkToggleButton" id="mox_button">
+                      <property name="label">Mox</property>
+                      <style>
+                        <class name="tx-button"/>
+                      </style>
+                      <layout>
+                        <property name="column">0</property>
+                        <property name="row">0</property>
+                      </layout>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkToggleButton" id="tun_button">
+                      <property name="label">Tun</property>
+                      <style>
+                        <class name="tx-button"/>
+                      </style>
+                      <layout>
+                        <property name="column">0</property>
+                        <property name="row">1</property>
+                      </layout>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkToggleButton" id="nr_button">
+                      <property name="label">NR</property>
+                      <layout>
+                        <property name="column">1</property>
+                        <property name="row">0</property>
+                      </layout>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkToggleButton" id="nb_button">
+                      <property name="label">NB</property>
+                      <layout>
+                        <property name="column">1</property>
+                        <property name="row">1</property>
+                      </layout>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkToggleButton" id="anf_button">
+                      <property name="label">ANF</property>
+                      <layout>
+                        <property name="column">2</property>
+                        <property name="row">0</property>
+                      </layout>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkToggleButton" id="snb_button">
+                      <property name="label">SNB</property>
+                      <layout>
+                        <property name="column">2</property>
+                        <property name="row">1</property>
+                      </layout>
+                    </object>
+                  </child>
+                </object>
+              </child>
+
+
+
+              <child>
+                <object class="GtkGrid" id="bottom_scale_grid">
+                  <property name="margin-start">0</property>
+                  <property name="margin-end">0</property>
+                  <property name="margin-top">0</property>
+                  <property name="margin-bottom">0</property>
+                  <property name="row-spacing">0</property>
+                  <property name="column-spacing">5</property>
+                  <property name="column-homogeneous">true</property>
+                  <child>
+                    <object class="GtkFrame" id="afgain_frame">
+                      <property name="label">AF Gain</property>
+                      <layout>
+                        <property name="column">0</property>
+                        <property name="row">0</property>
+                        <property name="row-span">2</property>
+                      </layout>
+                      <child>
+                        <object class="GtkScale" id="afgain_scale">
+                          <property name="orientation">horizontal</property>
+                          <property name="value-pos">left</property>
+                          <property name="digits">0</property>
+                          <property name="has-origin">False</property>
+                          <property name="draw-value">True</property>
+                          <property name="adjustment">
+                            <object class="GtkAdjustment" id="afgain_adjustment">
+                              <property name="lower">0.0</property>
+                              <property name="upper">100.0</property>
+                              <property name="step-increment">1.0</property>
+                              <property name="page-increment">1.0</property>
+                              <property name="value">0.0</property>
+                            </object>
+                          </property>
+                          <property name="hexpand">true</property>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkFrame" id="attenuation_frame">
+                      <property name="label">Attenaution</property>
+                      <layout>
+                        <property name="column">1</property>
+                        <property name="row">0</property>
+                        <property name="row-span">2</property>
+                      </layout>
+                      <child>
+                        <object class="GtkScale" id="attenuation_scale">
+                          <property name="orientation">horizontal</property>
+                          <property name="value-pos">left</property>
+                          <property name="digits">0</property>
+                          <property name="has-origin">False</property>
+                          <property name="draw-value">True</property>
+                          <property name="adjustment">
+                            <object class="GtkAdjustment" id="attenuation_adjustment">
+                              <property name="lower">0.0</property>
+                              <property name="upper">31.0</property>
+                              <property name="step-increment">1.0</property>
+                              <property name="page-increment">1.0</property>
+                              <property name="value">0.0</property>
+                            </object>
+                          </property>
+                          <property name="hexpand">true</property>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkFrame" id="agc_frame">
+                      <property name="label">AGC</property>
+                      <layout>
+                        <property name="column">0</property>
+                        <property name="row">2</property>
+                        <property name="row-span">2</property>
+                      </layout>
+                      <child>
+                        <object class="GtkDropDown" id="agc_dropdown">
+                          <property name="model">
+                          <object class="GtkStringList">
+                          <items>
+                            <item>Off</item>
+                            <item>Long</item>
+                            <item>Slow</item>
+                            <item>Med</item>
+                            <item>Fast</item>
+                          </items>
+                          </object>
+                          </property>
+                          <property name="selected">0</property>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkFrame" id="agcgain_frame">
+                      <property name="label">AGC Gain</property>
+                      <layout>
+                        <property name="column">1</property>
+                        <property name="row">2</property>
+                        <property name="row-span">2</property>
+                      </layout>
+                      <child>
+                        <object class="GtkScale" id="agcgain_scale">
+                          <property name="orientation">horizontal</property>
+                          <property name="value-pos">left</property>
+                          <property name="digits">0</property>
+                          <property name="has-origin">False</property>
+                          <property name="draw-value">True</property>
+                          <property name="adjustment">
+                            <object class="GtkAdjustment" id="agcgain_adjustment">
+                              <property name="lower">-20.0</property>
+                              <property name="upper">120.0</property>
+                              <property name="step-increment">1.0</property>
+                              <property name="page-increment">1.0</property>
+                              <property name="value">0.0</property>
+                            </object>
+                          </property>
+                          <property name="hexpand">true</property>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkFrame" id="micgain_frame">
+                      <property name="label">Mic Gain</property>
+                      <layout>
+                        <property name="column">0</property>
+                        <property name="row">4</property>
+                        <property name="row-span">2</property>
+                      </layout>
+                      <child>
+                        <object class="GtkScale" id="micgain_scale">
+                          <property name="orientation">horizontal</property>
+                          <property name="value-pos">left</property>
+                          <property name="digits">0</property>
+                          <property name="has-origin">False</property>
+                          <property name="draw-value">True</property>
+                          <property name="adjustment">
+                            <object class="GtkAdjustment" id="micgain_adjustment">
+                              <property name="lower">-10.0</property>
+                              <property name="upper">50.0</property>
+                              <property name="step-increment">1.0</property>
+                              <property name="page-increment">1.0</property>
+                              <property name="value">0.0</property>
+                            </object>
+                          </property>
+                          <property name="hexpand">true</property>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkFrame" id="drive_frame">
+                      <property name="label">Drive</property>
+                      <layout>
+                        <property name="column">1</property>
+                        <property name="row">4</property>
+                        <property name="row-span">2</property>
+                      </layout>
+                      <child>
+                        <object class="GtkScale" id="drive_scale">
+                          <property name="orientation">horizontal</property>
+                          <property name="value-pos">left</property>
+                          <property name="digits">0</property>
+                          <property name="has-origin">False</property>
+                          <property name="draw-value">True</property>
+                          <property name="adjustment">
+                            <object class="GtkAdjustment" id="drive_adjustment">
+                              <property name="lower">0.0</property>
+                              <property name="upper">100.0</property>
+                              <property name="step-increment">1.0</property>
+                              <property name="page-increment">1.0</property>
+                              <property name="value">0.0</property>
+                            </object>
+                          </property>
+                          <property name="hexpand">true</property>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                </object>
+              </child>
+
+
+
+
             <child>
               <object class="GtkFrame" id="cw_frame">
                 <property name="label">CW</property>

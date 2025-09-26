@@ -379,17 +379,6 @@ impl FilterGrid {
                 button.add_css_class("active-button");
             }
         }
-/*
-        let callback_clone = self.callback.clone();
-        self.low_adjustment.connect_value_changed(move |adjustment| {
-           (callback_clone.borrow())(10);
-        });
-
-        let callback_clone = self.callback.clone();
-        self.high_adjustment.connect_value_changed(move |adjustment| {
-           (callback_clone.borrow())(11);
-        });
-*/
     }
 
     pub fn get_widget(&self) -> &Grid {
@@ -467,6 +456,12 @@ impl FilterGrid {
     pub fn set_active_values(&self, low: f32, high: f32) {
         self.low_adjustment.set_value(low.into());
         self.high_adjustment.set_value(high.into());
+    }
+
+    pub fn set_filter_low(&self, low: f32) {
+    }
+
+    pub fn set_filter_high(&self, high: f32) {
     }
 
 }

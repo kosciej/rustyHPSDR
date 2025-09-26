@@ -92,6 +92,8 @@ struct AppWidgets {
     pub mode_grid: ModeGrid,
     pub filter_grid: FilterGrid,
     pub cwpitch_adjustment: Adjustment,
+    pub low_adjustment: Adjustment,
+    pub high_adjustment: Adjustment,
 }
 
 impl AppWidgets {
@@ -236,6 +238,14 @@ impl AppWidgets {
             .object("cwpitch_adjustment")
             .expect("Could not get cwpitch_adjustment from builder");
 
+        let low_adjustment: Adjustment = builder
+            .object("low_adjustment")
+            .expect("Could not get low_adjustment from builder");
+
+        let high_adjustment: Adjustment = builder
+            .object("high_adjustment")
+            .expect("Could not get high_adjustment from builder");
+
         let band_frame: Frame = builder
             .object("band_frame")
             .expect("Could not get band_frame from builder");
@@ -285,6 +295,8 @@ impl AppWidgets {
             micgain_adjustment,
             drive_adjustment,
             cwpitch_adjustment,
+            low_adjustment,
+            high_adjustment,
             band_frame,
             mode_frame,
             filter_frame,
@@ -409,6 +421,7 @@ fn build_ui(app: &Application) {
                     let mut rc_spectrum_clone2 = rc_spectrum_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.spectrum_display.connect_resize(move |_, width, height| { 
+//println!("spectrum_display_resize lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[0].spectrum_width = width;
                         r.receiver[0].init_analyzer(r.receiver[0].channel);
@@ -419,6 +432,7 @@ fn build_ui(app: &Application) {
                     let mut rc_waterfall_clone2 = rc_waterfall_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.waterfall_display.connect_resize(move |_, width, height| {
+//println!("waterfall_display_resize lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[0].waterfall_width = width;
                         let mut waterfall = rc_waterfall_clone2.borrow_mut();
@@ -428,6 +442,7 @@ fn build_ui(app: &Application) {
                     let mut rc_spectrum_2_clone2 = rc_spectrum_2_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.spectrum_2_display.connect_resize(move |_, width, height| { 
+//println!("spectrum2_display_resize lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[1].spectrum_width = width;
                         r.receiver[1].init_analyzer(r.receiver[1].channel);
@@ -438,6 +453,7 @@ fn build_ui(app: &Application) {
                     let mut rc_waterfall_2_clone2 = rc_waterfall_2_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.waterfall_2_display.connect_resize(move |_, width, height| {
+//println!("waterfall2_display_resize lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[1].waterfall_width = width;
                         let mut waterfall = rc_waterfall_2_clone2.borrow_mut();
@@ -447,6 +463,7 @@ fn build_ui(app: &Application) {
                     // setup the ui state
                     {
                         let mut r = radio_mutex.radio.lock().unwrap();
+//println!("setup ui state lock");
                         let mut rx = 0;
                         if r.receiver[1].active {
                             rx = 1;
@@ -628,6 +645,7 @@ fn build_ui(app: &Application) {
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.a_to_b_button.connect_clicked(move |_| {
+//println!("a to b lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
                         if r.receiver[0].ctun {
@@ -643,6 +661,7 @@ fn build_ui(app: &Application) {
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.b_to_a_button.connect_clicked(move |_| {
+//println!("b to a lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
                         if r.receiver[1].ctun {
@@ -659,6 +678,7 @@ fn build_ui(app: &Application) {
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.a_swap_b_button.connect_clicked(move |_| {
+//println!("swap lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let temp_frequency = r.receiver[1].frequency;
                         let temp_band = r.receiver[1].band;
@@ -684,6 +704,7 @@ fn build_ui(app: &Application) {
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.ctun_button.connect_clicked(move |button| {
+//println!("ctun lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -709,6 +730,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.split_button.connect_clicked(move |button| {
+//println!("split lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.split = button.is_active();
                     });
@@ -716,6 +738,7 @@ fn build_ui(app: &Application) {
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.rx2_button.connect_clicked(move |button| {
+//println!("rx2 lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
                         r.rx2_enabled = button.is_active();
@@ -742,6 +765,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.step_dropdown.connect_selected_notify(move |step_dropdown| {
+//println!("step lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let index = step_dropdown.selected();
                         let mut step = 1000.0;
@@ -763,10 +787,13 @@ fn build_ui(app: &Application) {
                             14 => step = 1000000.0,
                             _ => step = 1000.0,
                         }
-                        r.receiver[0].step_index = index as usize;
-                        r.receiver[0].step = step;
-                        r.receiver[1].step_index = index as usize;
-                        r.receiver[1].step = step;
+                        if r.receiver[0].active {
+                            r.receiver[0].step_index = index as usize;
+                            r.receiver[0].step = step;
+                        } else {
+                            r.receiver[1].step_index = index as usize;
+                            r.receiver[1].step = step;
+                        }
                     });
 
                     let middle_button_pressed = Rc::new(RefCell::new(false));
@@ -905,6 +932,7 @@ fn build_ui(app: &Application) {
                         let bottom = height - top;
 
                         if last_spectrum_x_clone.get() < 40.0 {
+//println!("spectrum scroll lock");
                             let mut r = radio_mutex_clone.radio.lock().unwrap();
                             if r.is_transmitting() {
                                 if last_spectrum_y_clone.get() < top.into() {
@@ -952,6 +980,7 @@ fn build_ui(app: &Application) {
                         let bottom = height - top;
 
                         if last_spectrum_x_clone.get() < 40.0 {
+//println!("spectrum2 scroll lock");
                             let mut r = radio_mutex_clone.radio.lock().unwrap();
                             if r.is_transmitting() {
                                 if last_spectrum_y_clone.get() < top.into() {
@@ -1036,6 +1065,7 @@ fn build_ui(app: &Application) {
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.zoom_adjustment.connect_value_changed(move |adjustment| {
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
+//println!("zoom lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1067,6 +1097,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.pan_adjustment.connect_value_changed(move |adjustment| {
+//println!("pan lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1080,6 +1111,7 @@ fn build_ui(app: &Application) {
                         }
                     });
 
+//println!("setup lock");
                     let mut r = radio_mutex.radio.lock().unwrap();
                     let mut rx = 0;
                     if r.receiver[1].active {
@@ -1099,6 +1131,7 @@ fn build_ui(app: &Application) {
                     app_widgets.band_grid.set_callback(move|index| {
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
                         // save current band info
+//println!("band grid lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1161,6 +1194,7 @@ fn build_ui(app: &Application) {
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.mode_grid.set_callback(move|index| {
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
+//println!("mode grid lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1193,6 +1227,7 @@ fn build_ui(app: &Application) {
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.filter_grid.set_callback(move|index| {
+//println!("filter grid lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1221,6 +1256,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.nr_button.clone().connect_clicked(move |button| {
+//println!("nr lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1252,6 +1288,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.nb_button.clone().connect_clicked(move |button| {
+//println!("nb lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1283,6 +1320,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.anf_button.clone().connect_clicked(move |button| {
+//println!("anf lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1294,6 +1332,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.snb_button.clone().connect_clicked(move |button| {
+//println!("snb lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1306,6 +1345,7 @@ fn build_ui(app: &Application) {
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.mox_button.clone().connect_clicked(move |button| {
+//println!("mox lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
                         r.mox = button.is_active();
@@ -1340,6 +1380,7 @@ fn build_ui(app: &Application) {
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
                     app_widgets.tun_button.clone().connect_clicked(move |button| {
+//println!("tun lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
                         r.tune = button.is_active();
@@ -1373,6 +1414,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.afgain_adjustment.connect_value_changed(move |adjustment| {
+//println!("afgain lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1384,6 +1426,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.agc_dropdown.connect_selected_notify(move |dropdown| {
+//println!("agc lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1396,6 +1439,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.agcgain_adjustment.connect_value_changed(move |adjustment| {
+//println!("agc gain lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1407,6 +1451,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.micgain_adjustment.connect_value_changed(move |adjustment| {
+//println!("mic gain lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.transmitter.micgain = adjustment.value() as f32;
                         r.transmitter.set_micgain();
@@ -1414,12 +1459,14 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.drive_adjustment.connect_value_changed(move |adjustment| {
+//println!("drive lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.transmitter.drive = adjustment.value() as f32;
                     });
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.cwpitch_adjustment.connect_value_changed(move |adjustment| {
+//println!("cwpitch lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1428,8 +1475,42 @@ fn build_ui(app: &Application) {
                         r.receiver[rx].cw_pitch = adjustment.value() as f32;
                     });
 
+                    let radio_mutex_clone = radio_mutex.clone();
+                    let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
+                    app_widgets.low_adjustment.connect_value_changed(move |adjustment| {
+//println!("low lock");
+                        //let mut r = radio_mutex_clone.radio.lock().unwrap();
+                        let mut lock = radio_mutex_clone.radio.try_lock();
+                        if let Ok(ref mut mutex) = lock {
+                            // update the filter low setting
+                            let app_widgets = rc_app_widgets_clone_clone.borrow();
+                            app_widgets.filter_grid.set_filter_low(adjustment.value() as f32);
+
+                            // update the receiver low setting
+                        } else {
+                            // already locked - must be updating the filters
+                        }
+                    });
+
+                    let radio_mutex_clone = radio_mutex.clone();
+                    let rc_app_widgets_clone_clone = rc_app_widgets_clone.clone();
+                    app_widgets.high_adjustment.connect_value_changed(move |adjustment| {
+//println!("high lock");
+                        //let mut r = radio_mutex_clone.radio.lock().unwrap();
+                        let mut lock = radio_mutex_clone.radio.try_lock();
+                        if let Ok(ref mut mutex) = lock {
+                            // update the filter high setting
+                            let app_widgets = rc_app_widgets_clone_clone.borrow();
+                            app_widgets.filter_grid.set_filter_high(adjustment.value() as f32);
+                            // update the receiver high setting
+                        } else {
+                            // already locked - must be updating the filters
+                        }
+                    });
+
                     // initialize ui
                     {
+//println!("initialize ui lock");
                         let mut r = radio_mutex.radio.lock().unwrap();
                         let mut rx = 0;
                         if r.receiver[1].active {
@@ -1540,6 +1621,7 @@ fn build_ui(app: &Application) {
 
                     let radio_mutex_clone = radio_mutex.clone();
                     app_widgets.main_window.connect_close_request(move |_| {
+//println!("close lock");
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.save(device);
                         Propagation::Proceed
@@ -1547,6 +1629,7 @@ fn build_ui(app: &Application) {
 
                     let mut update_interval = 100.0;
                     let r = radio_mutex.radio.lock().unwrap();
+//println!("update interval lock");
                     update_interval = 1000.0 / r.receiver[0].spectrum_fps;
                     drop(r);
 
@@ -1558,6 +1641,7 @@ fn build_ui(app: &Application) {
                     let spectrum_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
                         let mut rx2 = false;
                         let r = radio_mutex_clone.radio.lock().unwrap();
+//println!("spectrum_timeout lock");
                         rx2 = r.rx2_enabled;
                         drop(r);
                         spectrum_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_spectrum_clone2);
@@ -1569,6 +1653,7 @@ fn build_ui(app: &Application) {
 
                     {
                         let r = radio_mutex.radio.lock().unwrap();
+//println!("update interval lock");
                         update_interval = 1000.0 / r.receiver[0].waterfall_fps;
                     }
                     let radio_mutex_clone = radio_mutex.clone();
@@ -1577,6 +1662,7 @@ fn build_ui(app: &Application) {
                     let mut rc_waterfall_2_clone2 = rc_waterfall_2_clone.clone();
                     let waterfall_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
                         let mut rx2 = false;
+//println!("waterfall timeout lock");
                         let r = radio_mutex_clone.radio.lock().unwrap();
                         rx2 = r.rx2_enabled;
                         drop(r);
@@ -1605,6 +1691,7 @@ fn build_ui(app: &Application) {
 
 
                     let mut r = radio_mutex.radio.lock().unwrap();
+//println!("timeout ids lock");
                     r.spectrum_timeout_id = Some(spectrum_timeout_id);
                     r.waterfall_timeout_id = Some(waterfall_timeout_id);
                     r.meter_1_timeout_id = Some(meter_1_timeout_id);
@@ -1614,6 +1701,7 @@ fn build_ui(app: &Application) {
                     if device.protocol == 2 {
                         let radio_mutex_clone = radio_mutex.clone();
                         let keepalive_timeout_id = timeout_add_local(Duration::from_millis(500), move || {
+//println!("keepalive lock");
                             let mut r = radio_mutex_clone.radio.lock().unwrap();
                             r.keepalive = true;
                             Continue
@@ -1637,6 +1725,7 @@ fn build_ui(app: &Application) {
 }
 
 fn spectrum_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_spectrum: &Rc<RefCell<Spectrum>>) {
+//println!("spectrum update lock");
     let mut r = radio_mutex.radio.lock().unwrap();
     let is_transmitting = r.is_transmitting();
     drop(r);
@@ -1653,6 +1742,7 @@ fn spectrum_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWid
 }
 
 fn spectrum_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_spectrum: &Rc<RefCell<Spectrum>>) {
+//println!("spectrum2 update lock");
     let mut r = radio_mutex.radio.lock().unwrap();
     let is_transmitting = r.is_transmitting();
     drop(r);
@@ -1670,6 +1760,7 @@ fn spectrum_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppW
 
 fn waterfall_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_waterfall: &Rc<RefCell<Waterfall>>) {
     let mut r = radio_mutex.radio.lock().unwrap();
+//println!("waterfall update lock");
     let is_transmitting = r.is_transmitting();
     drop(r);
 
@@ -1685,6 +1776,7 @@ fn waterfall_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWi
 }
 
 fn waterfall_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_waterfall: &Rc<RefCell<Waterfall>>) {
+//println!("waterfall2 update lock");
     let mut r = radio_mutex.radio.lock().unwrap();
     let is_transmitting = r.is_transmitting();
     drop(r);
@@ -1703,6 +1795,7 @@ fn waterfall_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<App
 fn meter_1_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_meter: &Rc<RefCell<Meter>>) {
     let app_widgets = rc_app_widgets.borrow();
     let mut meter = rc_meter.borrow_mut();
+//println!("meter update lock");
     let mut r = radio_mutex.radio.lock().unwrap();
     if r.is_transmitting() {
     } else {
@@ -1717,6 +1810,7 @@ fn meter_1_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidg
 fn meter_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_meter: &Rc<RefCell<Meter>>) {
     let app_widgets = rc_app_widgets.borrow();
     let mut meter = rc_meter.borrow_mut();
+//println!("meter2 update lock");
     let mut r = radio_mutex.radio.lock().unwrap();
     if r.is_transmitting() {
     } else {
@@ -1729,6 +1823,7 @@ fn meter_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidg
 }
 
 fn spectrum_waterfall_clicked(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCell<AppWidgets>>, rx: usize, x: f64, width: i32, button: u32) -> bool {
+//println!("spectru waterfall clicked lock");
     let mut r = radio_mutex.radio.lock().unwrap();
     if rx == 0 {
         if !r.receiver[0].active {
@@ -1783,6 +1878,7 @@ fn spectrum_waterfall_clicked(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefC
 }
 
 fn spectrum_waterfall_scroll(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCell<AppWidgets>>, rx: usize, dy: f64) {
+//println!("spectru waterfall scroll lock");
     let mut r = radio_mutex.radio.lock().unwrap();
     let app_widgets = rc_app_widgets.borrow();
 
@@ -1814,11 +1910,13 @@ fn spectrum_waterfall_scroll(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCe
 }
 
 fn update_ui(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCell<AppWidgets>>) {
+//println!("update ui lock");
     let mut r = radio_mutex.radio.lock().unwrap();
     let mut rx = 0;
     if r.receiver[1].active {
         rx = 1;
     }
+    let step_index = r.receiver[rx].step_index;
     let band = r.receiver[rx].band;
     let mode = r.receiver[rx].mode;
     let filter = r.receiver[rx].filter;
@@ -1838,6 +1936,9 @@ fn update_ui(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCell<AppWidgets>>)
     drop(r);
 
     let app_widgets = rc_app_widgets.borrow();
+
+    // update step index
+    app_widgets.step_dropdown.set_selected(step_index as u32);
 
     // update band
     if rx==0 {

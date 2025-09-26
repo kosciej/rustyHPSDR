@@ -20,7 +20,6 @@ use nix::sys::socket::sockopt::{ReuseAddr, ReusePort};
 use std::net::{UdpSocket};
 use std::os::raw::c_int;
 
-use crate::alex::*;
 use crate::discovery::Device;
 use crate::modes::Modes;
 use crate::receiver::Receiver;
@@ -194,6 +193,9 @@ impl Protocol2 {
                         1042 => { // RX IQ samples
                             let ddc = (src.port()-1035) as usize;
                             let mut r = radio_mutex.radio.lock().unwrap();
+
+                            if ddc ==0 || (ddc == 1 && r.rx2_enabled) {
+
                             let iq_sample_count = u16::from_be_bytes([buffer[14], buffer[15]]) as usize;
                             let data_size = iq_sample_count * SAMPLE_SIZE * INTERLEAVE_FACTOR;
                             let mut i_sample: i32 = 0;
@@ -288,6 +290,7 @@ impl Protocol2 {
                                     }
                                 }
                             }
+                        }
                         },
                         _ => println!("Unknown port {}", src.port()),
                     }

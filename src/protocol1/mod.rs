@@ -206,7 +206,6 @@ impl Protocol1 {
                     }
                     r.receiver[rx as usize].samples = 0;
                     if rx==0 || (rx==1 && r.rx2_enabled) {
-                    //if r.receiver[rx as usize].active {
                         for i in 0..r.receiver[rx as usize].output_samples {
                             let ix = i * 2 ;
                             let left_sample: i32 = (audio_buffer[ix] * 16777215.0) as i32;

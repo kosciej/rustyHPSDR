@@ -23,7 +23,6 @@ use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
-use crate::radio::RadioMutex;
 use crate::modes::Modes;
 use crate::filters::Filters;
 
@@ -142,7 +141,7 @@ impl BandGrid {
                 .object(id)
                 .expect("Could not get object band_button from builder.");
             // Set initial button style class
-            button.add_css_class("inactive-band-button");
+            button.add_css_class("inactive-button");
             buttons.push(button.clone());
         }
 
@@ -171,21 +170,21 @@ impl BandGrid {
                 let mut active_idx = active_index_clone.borrow_mut();
                 if let Some(prev_idx) = *active_idx {
                     let prev_button = &buttons_clone[prev_idx];
-                    prev_button.remove_css_class("active-band-button");
-                    prev_button.add_css_class("inactive-band-button");
+                    prev_button.remove_css_class("active-button");
+                    prev_button.add_css_class("inactive-button");
                 }
 
                 // Set the style of the newly active button
-                clicked_button.remove_css_class("inactive-band-button");
-                clicked_button.add_css_class("active-band-button");
+                clicked_button.remove_css_class("inactive-button");
+                clicked_button.add_css_class("active-button");
 
                 // Update the active index
                 *active_idx = Some(button_index);
                 (callback_clone.borrow())(button_index);
             });
             if i == initial_button {
-                button.remove_css_class("inactive-band-button");
-                button.add_css_class("active-band-button");
+                button.remove_css_class("inactive-button");
+                button.add_css_class("active-button");
             }
         }
     }

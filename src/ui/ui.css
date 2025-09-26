@@ -29,16 +29,6 @@
   background-color: black;
   background-image: none;
 }
-.active-band-button {
-  color: black;
-  background-color: orange;
-  background-image: none;
-}
-.inactive-band-button {
-  color: white;
-  background-color: black;
-  background-image: none;
-}
 .toggle {
   color: white;
   background-color: black;

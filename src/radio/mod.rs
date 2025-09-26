@@ -16,11 +16,10 @@
 */
 
 use gtk::prelude::*;
-use gtk::{Label, ToggleButton};
+use gtk::Label;
 use gtk::cairo::{Context, LineCap, LineJoin}; 
 use glib::source::SourceId;
 use gdk_pixbuf::Pixbuf;
-use gdk_pixbuf::Colorspace;
 use pangocairo;
 
 use std::cell::RefCell;
@@ -49,36 +48,36 @@ use crate::adc::*;
 
 #[derive(PartialEq, Serialize, Deserialize, Copy, Clone)]
 pub enum RadioModels {
-    ANAN_10,
-    ANAN_10E,
-    ANAN_100,
-    ANAN_100B,
-    ANAN_100D,
-    ANAN_200D,
-    ANAN_7000DLE,
-    ANAN_8000DLE,
-    ANAN_G1,
-    ANAN_G2,
-    HERMES_LITE,
-    HERMES_LITE2,
+    Anan10,
+    Anan10e,
+    Anan100,
+    Anan100b,
+    Anan100d,
+    Anan200d,
+    Anan7000dle,
+    Anan8000dle,
+    AnanG1,
+    AnanG2,
+    HermesLite,
+    HermesLite2,
     Undefined,
 }
 
 impl RadioModels {
     pub fn from_u32(value: u32) -> Option<Self> {
         match value {
-            0 => Some(RadioModels::ANAN_10),
-            1 => Some(RadioModels::ANAN_10E),
-            2 => Some(RadioModels::ANAN_100),
-            3 => Some(RadioModels::ANAN_100B),
-            4 => Some(RadioModels::ANAN_100D),
-            5 => Some(RadioModels::ANAN_200D),
-            6 => Some(RadioModels::ANAN_7000DLE),
-            7 => Some(RadioModels::ANAN_8000DLE),
-            8 => Some(RadioModels::ANAN_G1),
-            9 => Some(RadioModels::ANAN_G2),
-            10 => Some(RadioModels::HERMES_LITE),
-            11 => Some(RadioModels::HERMES_LITE2),
+            0 => Some(RadioModels::Anan10),
+            1 => Some(RadioModels::Anan10e),
+            2 => Some(RadioModels::Anan100),
+            3 => Some(RadioModels::Anan100b),
+            4 => Some(RadioModels::Anan100d),
+            5 => Some(RadioModels::Anan200d),
+            6 => Some(RadioModels::Anan7000dle),
+            7 => Some(RadioModels::Anan8000dle),
+            8 => Some(RadioModels::AnanG1),
+            9 => Some(RadioModels::AnanG2),
+            10 => Some(RadioModels::HermesLite),
+            11 => Some(RadioModels::HermesLite2),
             12 => Some(RadioModels::Undefined),
             _ => None,
         }
@@ -274,13 +273,13 @@ impl Radio {
         // take a guess on the model based on the device
         let mut model = RadioModels::Undefined;
         match device.board {
-            Boards::Hermes => model = RadioModels::ANAN_100,
-            Boards::Angelia => model = RadioModels::ANAN_100D,
-            Boards::Orion => model = RadioModels::ANAN_200D,
-            Boards::Orion2 => model = RadioModels::ANAN_8000DLE,
-            Boards::Saturn => model = RadioModels::ANAN_G1,
-            Boards::HermesLite => model = RadioModels::HERMES_LITE,
-            Boards::HermesLite2 => model = RadioModels::HERMES_LITE2,
+            Boards::Hermes => model = RadioModels::Anan100,
+            Boards::Angelia => model = RadioModels::Anan100d,
+            Boards::Orion => model = RadioModels::Anan200d,
+            Boards::Orion2 => model = RadioModels::Anan8000dle,
+            Boards::Saturn => model = RadioModels::AnanG1,
+            Boards::HermesLite => model = RadioModels::HermesLite,
+            Boards::HermesLite2 => model = RadioModels::HermesLite2,
             _ => model = RadioModels::Undefined,
         }
         let protocol = device.protocol;
@@ -302,7 +301,7 @@ impl Radio {
         let dot = false;
         let dash = false;
         let mut audio: Vec<Audio> = Vec::new();
-        for i in 0..receivers {
+        for _i in 0..receivers {
             audio.push(Audio::new());
         }
         let transmitter = Transmitter::new(8, device.protocol);
@@ -328,7 +327,7 @@ impl Radio {
         let local_microphone_name = "".to_string();
 
         let mut adc: Vec<Adc> = Vec::new();
-        for i in 0..device.adcs {
+        for _i in 0..device.adcs {
             adc.push(Adc::new());
         }
         let alex = ALEX_ANTENNA_1;
@@ -475,16 +474,9 @@ impl Radio {
     }
     
     pub fn update_spectrum_2(&mut self, width: i32) -> (c_int, Vec<f32>) {
-        let mut zoom = self.receiver[1].zoom;
-        let mut channel = self.receiver[1].channel;
-        //if self.is_transmitting() {
-        //    zoom = 1;
-        //    channel = self.transmitter.channel;
-        //}
-        let mut pixels_len = width * zoom;
-        //if self.is_transmitting() {
-        //    pixels_len = width * 12;
-        //} 
+        let zoom = self.receiver[0].zoom;
+        let channel = self.receiver[1].channel;
+        let pixels_len = width * zoom;
         let mut pixels = vec![0.0; pixels_len as usize];
         let mut flag: c_int = 0;
         if pixels.len() != 0 { // may happen at start of application before spectrum is setup
@@ -588,7 +580,7 @@ impl Radio {
                         }
                     }
                 },
-                Err(err) => {
+                Err(_err) => {
                     Self::new(device, spectrum_width)
                 }
             }
@@ -612,7 +604,7 @@ impl Radio {
                 match File::create(&path) {
                     Ok(mut file) => {
                         match file.write_all(s.as_bytes()) {
-                            Ok(file) => {
+                            Ok(_file) => {
                                 println!("Successfully saved data to {:?}", path);
                             },
                             Err(e) => {
@@ -859,60 +851,9 @@ fn format_u32_with_separators(value: u32) -> String {
     result
 }
 
-fn spectrum_waterfall_clicked(radio: &Arc<Mutex<Radio>>, fa: &Label, fb: &Label, x: f64, width: i32, button: u32) {
-    let mut r = radio.lock().unwrap();
-    let rx = r.active_receiver;
-        
-    let frequency_low = r.receiver[rx].frequency - (r.receiver[rx].sample_rate/2) as f32;
-    let frequency_high = r.receiver[rx].frequency + (r.receiver[rx].sample_rate/2) as f32;
-    let frequency_range = frequency_high - frequency_low;
-                
-    let display_frequency_range = frequency_range / r.receiver[rx].zoom as f32;
-    let display_frequency_offset = ((frequency_range - display_frequency_range) / 100.0) * r.receiver[rx].pan as f32;  
-    let display_frequency_low = frequency_low + display_frequency_offset;
-    let display_hz_per_pixel = display_frequency_range as f32 / width as f32;
-
-
-    let f1 = display_frequency_low + (x as f32 * display_hz_per_pixel);
-    let f1 = (f1 as u32 / r.receiver[rx].step as u32 * r.receiver[rx].step as u32) as f32;
- 
-    if r.receiver[rx].ctun {
-        r.receiver[rx].ctun_frequency = f1;
-        r.receiver[rx].set_ctun_frequency();
-        let formatted_value = format_u32_with_separators(r.receiver[rx].ctun_frequency as u32);
-        fa.set_label(&formatted_value);
-    } else {
-        r.receiver[rx].frequency = f1;
-        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency as u32);
-        fa.set_label(&formatted_value);
-    }
-}
-
-fn spectrum_waterfall_scroll(radio: &Arc<Mutex<Radio>>, f: &Label, dy: f64) {
-    let mut r = radio.lock().unwrap();
-    let rx = r.active_receiver;
-    let frequency_low = r.receiver[rx].frequency - (r.receiver[rx].sample_rate/2) as f32;
-    let frequency_high = r.receiver[rx].frequency + (r.receiver[rx].sample_rate/2) as f32;
-    if r.receiver[rx].ctun {
-        r.receiver[rx].ctun_frequency = r.receiver[rx].ctun_frequency - (r.receiver[rx].step * dy as f32);
-        if r.receiver[rx].ctun_frequency < frequency_low {
-            r.receiver[rx].ctun_frequency = frequency_low;
-        } else if r.receiver[rx].ctun_frequency > frequency_high {
-            r.receiver[rx].ctun_frequency = frequency_high;
-        }
-        let formatted_value = format_u32_with_separators(r.receiver[rx].ctun_frequency as u32);
-        f.set_label(&formatted_value);
-        r.receiver[rx].set_ctun_frequency();
-    } else {
-        r.receiver[rx].frequency = r.receiver[rx].frequency - (r.receiver[rx].step * dy as f32);
-        let formatted_value = format_u32_with_separators(r.receiver[rx].frequency as u32);
-        f.set_label(&formatted_value);
-    }
-}
-
 fn draw_meter(cr: &Context, dbm: f64) {
     let x_offset = 5.0;
-    let mut y_offset = 0.0;
+    let y_offset = 0.0;
     let db = 1.0; // size in pixels of each dbm
 
     cr.set_source_rgb(0.0, 1.0, 0.0);

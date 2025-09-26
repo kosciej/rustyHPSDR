@@ -2,8 +2,6 @@ use gtk::prelude::*;
 use gtk::cairo::Context;
 use gdk_pixbuf::{Colorspace, Pixbuf};
 
-use crate::bands::BandInfo;
-use crate::radio::Radio;
 use crate::radio::RadioMutex;
 
 #[derive(Clone)]

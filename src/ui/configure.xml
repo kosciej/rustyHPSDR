@@ -548,16 +548,17 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkDropDown" id="adc0_hpf_dropdown">
+                      <object class="GtkDropDown" id="adc0_bpf_dropdown">
                         <property name="model">
                         <object class="GtkStringList">
                         <items>
-                          <item>Bypass HPF</item>
-                          <item>1.5 MHz BPF</item>
-                          <item>6.5 MHz BPF</item>
-                          <item>9.5 MHz BPF</item>
-                          <item>13 Mhz BPF</item>
-                          <item>20 MHz BPF</item>
+                          <item>Bypass BPF</item>
+                          <item>1.5-2.099 MHz BPF</item>
+                          <item>2.1-5.49 MHz BPF</item>
+                          <item>5.5-10.99 MHz BPF</item>
+                          <item>11.0-20.99 Mhz BPF</item>
+                          <item>21.0-26.99 MHz BPF</item>
+                          <item>27.0-61.4 MHz BPF</item>
                         </items>
                         </object>
                         </property>
@@ -607,12 +608,7 @@
                         <property name="model">
                         <object class="GtkStringList">
                         <items>
-                          <item>ANT 1</item>
-                          <item>ANT 2</item>
-                          <item>ANT 3</item>
-                          <item>XVTR</item>
-                          <item>EXT 1</item>
-                          <item>EXT 2</item>
+                          <item>RX2 ANT</item>
                         </items>
                         </object>
                         </property>
@@ -637,12 +633,13 @@
                         <property name="model">
                         <object class="GtkStringList">
                         <items>
-                          <item>Bypass HPF</item>
-                          <item>1.5 MHz BPF</item>
-                          <item>6.5 MHz BPF</item>
-                          <item>9.5 MHz BPF</item>
-                          <item>13 Mhz BPF</item>
-                          <item>20 MHz BPF</item>
+                          <item>Bypass BPF</item>
+                          <item>1.5-2.099 MHz BPF</item>
+                          <item>2.1-5.49 MHz BPF</item>
+                          <item>5.5-10.99 MHz BPF</item>
+                          <item>11.0-20.99 Mhz BPF</item>
+                          <item>21.0-26.99 MHz BPF</item>
+                          <item>27.0-61.4 MHz BPF</item>
                         </items>
                         </object>
                         </property>

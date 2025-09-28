@@ -34,6 +34,39 @@ const MIC_SAMPLE_SIZE: usize = 2;    // 2 byte (16 bit) samples
 const MIC_SAMPLES: usize = 64;       // 64 samples per buffer
 const IQ_BUFFER_SIZE: usize = 240;   // 240 IQ samples
 
+const RX_YELLOW_LED: u32 = 0x00000001;
+const HPF_13MHZ: u32 =     0x00000002;
+const HPF_20MHZ: u32 =     0x00000004;
+const PREAMP_6M: u32 =     0x00000008;
+const HPF_9_5MHZ: u32 =    0x00000010;
+const HPF_6_5MHZ: u32 =    0x00000020;
+const HPF_1_5MHZ: u32 =    0x00000040;
+const UNUSED_1: u32 =      0x00000080;
+const XVTR_RX_IN: u32 =    0x00000100;
+const RX_2_IN: u32 =       0x00000200;
+const RX_1_IN: u32 =       0x00000400;
+const RX_1_OUT: u32 =      0x00000800;
+const BYPASS: u32 =        0x00001000;
+const ATTEN_20_dB: u32 =   0x00002000;
+const ATTEN_10_dB: u32 =   0x00004000;
+const RX_RED_LED: u32 =    0x00008000;
+const UNUSED_2: u32 =      0x00010000;
+const UNUSED_3: u32 =      0x00020000;
+const TRX_STATUS: u32 =    0x00040000;
+const TX_YELLOW_LED: u32 = 0x00080000;
+const LPF_30_20: u32 =     0x00100000;
+const LPF_60_40: u32 =     0x00200000;
+const LPF_80: u32 =        0x00400000;
+const LPF_160: u32 =       0x00800000;
+const ANT_1: u32 =         0x01000000;
+const ANT_2: u32 =         0x02000000;
+const ANT_3: u32 =         0x04000000;
+const TR_RELAY: u32 =      0x08000000;
+const TX_RED_LED: u32 =    0x10000000;
+const LPF_6: u32 =         0x20000000;
+const LPF_12_10: u32 =     0x40000000;
+const LPF_17_15: u32 =     0x80000000;
+
 #[derive(Debug)]
 pub struct Protocol2 {
     device: Device, 
@@ -44,6 +77,8 @@ pub struct Protocol2 {
     transmit_specific_sequence: u32,
     audio_sequence: u32,
     tx_iq_sequence: u32,
+    previous_filter: u32,
+    previous_filter1: u32,
 }   
 
 impl Protocol2 {
@@ -59,6 +94,8 @@ impl Protocol2 {
         let transmit_specific_sequence: u32 = 0; 
         let audio_sequence: u32 = 0; 
         let tx_iq_sequence: u32 = 0; 
+        let previous_filter: u32 = 0;
+        let previous_filter1: u32 = 0;
 
         let p2 = Protocol2{device,
                            socket,
@@ -68,6 +105,8 @@ impl Protocol2 {
                            transmit_specific_sequence,
                            audio_sequence,
                            tx_iq_sequence,
+                           previous_filter,
+                           previous_filter1,
         };
 
         p2
@@ -342,6 +381,7 @@ impl Protocol2 {
         self.general_sequence += 1;
     }
 
+
     pub fn send_high_priority(&mut self, radio_mutex: &RadioMutex) {
         // port 1027
         let r = radio_mutex.radio.lock().unwrap();
@@ -399,39 +439,41 @@ impl Protocol2 {
             filter |= 0x08000000; // TX_ENABLE
         }
 
+        // set BPF
         let mut f = r.receiver[0].frequency;
         if f < 1500000.0 {
-            filter |= 0x1000;
+            filter |= BYPASS; // BYPASS
         } else if f < 2100000.0 {
-            filter |= 0x40;
+            filter |= HPF_1_5MHZ;
         } else if f < 5500000.0 {
-            filter |= 0x20;
+            filter |= HPF_6_5MHZ;
         } else if f < 11000000.0 {
-            filter |= 0x10;
+            filter |= HPF_9_5MHZ;
         } else if f < 22000000.0 {
-            filter |= 0x02;
+            filter |= HPF_13MHZ;
         } else if f < 35000000.0 {
-            filter |= 0x04;
+            filter |= HPF_20MHZ;
         } else {
-            filter |= 0x08;
+            filter |= PREAMP_6M;
         }
 
 
+        // set LPF
         if self.device.device == 5 { // ORION 2
             if f > 32000000.0 {
-                filter |= 0x20000000;
+                filter |= LPF_6; // 6M/Bypass
             } else if f > 22000000.0 {
-                filter |= 0x40000000;
-            } else if f > 11000000.0 {
-                filter |= 0x20000000;
-            } else if f > 5500000.0 {
-                filter |= 0x100000;
-            } else if f > 2100000.0 {
-                filter |= 0x200000;
-            } else if f > 1500000.0 {
-                filter |= 0x400000;
+                filter |= LPF_12_10; // 12M/10M
+            } else if f > 15000000.0 {
+                filter |= LPF_17_15; // 17M/15M
+            } else if f > 8000000.0 {
+                filter |= LPF_30_20; // 30M/20M
+            } else if f > 4500000.0 {
+                filter |= LPF_60_40; // 60M/40M
+            } else if f > 2400000.0 {
+                filter |= LPF_80; // 80M
             } else {
-                filter |= 0x800000;
+                filter |= LPF_160; // 160M
             }
         } else {
             if f > 35600000.0 {
@@ -459,41 +501,40 @@ impl Protocol2 {
         buf[1435]=(filter & 0xFF) as u8;
  
         let mut filter1: u32 = 0x00000000;
-            filter1 |= r.adc[r.receiver[1].adc].rx_antenna;
-            f = r.receiver[1].frequency;
-            if self.device.device == 5 { // ORION 2
-                if f < 1500000.0 {
-                    filter1 |= 0x1000;
-                } else if f < 2100000.0 {
-                    filter1 |= 0x40;
-                } else if f < 5500000.0 {
-                    filter1 |= 0x20;
-                } else if f < 11000000.0 {
-                    filter1 |= 0x10;
-                } else if f < 22000000.0 {
-                    filter1 |= 0x02;
-                } else if f < 35000000.0 {
-                    filter1 |= 0x04;
-                } else {
-                    filter1 |= 0x08;
-                }
+        f = r.receiver[1].frequency;
+        if self.device.device == 5 { // ORION 2
+            if f < 1500000.0 {
+                filter1 |= BYPASS; // BYPASS
+            } else if f < 2100000.0 {
+                filter1 |= HPF_1_5MHZ;
+            } else if f < 5500000.0 {
+                filter1 |= HPF_6_5MHZ;
+            } else if f < 11000000.0 {
+                filter1 |= HPF_9_5MHZ;
+            } else if f < 22000000.0 {
+                filter1 |= HPF_13MHZ;
+            } else if f < 35000000.0 {
+                filter1 |= HPF_20MHZ;
             } else {
-                if f < 1500000.0 {
-                    filter1 |= 0x1000;
-                } else if f < 2100000.0 {
-                    filter1 |= 0x40;
-                } else if f < 5500000.0 {
-                    filter1 |= 0x20;
-                } else if f < 11000000.0 {
-                    filter1 |= 0x10;
-                } else if f < 22000000.0 {
-                    filter1 |= 0x02;
-                } else if f < 35000000.0 {
-                    filter1 |= 0x04;
-                } else {
-                    filter1 |= 0x08;
-                }
+                filter1 |= PREAMP_6M;
             }
+        } else {
+            if f < 1500000.0 {
+                filter1 |= 0x1000;
+            } else if f < 2100000.0 {
+                filter1 |= 0x40;
+            } else if f < 5500000.0 {
+                filter1 |= 0x20;
+            } else if f < 11000000.0 {
+                filter1 |= 0x10;
+            } else if f < 22000000.0 {
+                filter1 |= 0x02;
+            } else if f < 35000000.0 {
+                filter1 |= 0x04;
+            } else {
+                filter1 |= 0x08;
+            }
+        }
 
         buf[1430] = ((filter1>>8)&0xFF) as u8;
         buf[1431] = (filter1&0xFF) as u8;
@@ -506,7 +547,11 @@ impl Protocol2 {
             buf[1442] = r.receiver[1].attenuation as u8;
         }
 
-//println!("send_high_priority filter {:#010x} filter1 {:#010x}", filter, filter1);
+if self.previous_filter != filter || self.previous_filter1 != filter1 {
+    println!("send_high_priority filter {:#010x} filter1 {:#010x}", filter, filter1);
+    self.previous_filter = filter;
+    self.previous_filter1 = filter1;
+}
 
         self.device.address.set_port(1027);
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
@@ -534,6 +579,7 @@ impl Protocol2 {
         buf[2] = ((self.receive_specific_sequence >> 8) & 0xFF) as u8;
         buf[3] = ((self.receive_specific_sequence) & 0xFF) as u8;
 
+        println!("send_receive_specific adcs {} receivers {}", r.adc.len(), r.receivers);
         buf[4] = r.adc.len() as u8;
         for i in 0..r.adc.len() {
             buf[5] |= (r.adc[i].dither as u8) << i;

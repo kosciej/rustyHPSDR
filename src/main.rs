@@ -946,12 +946,12 @@ fn build_ui(app: &Application) {
                             } else {
                                 let b = r.receiver[0].band.to_usize();
                                 if last_spectrum_y_clone.get() < top.into() {
-                                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high + increment;
+                                    r.receiver[0].band_info[b].spectrum_high = r.receiver[0].band_info[b].spectrum_high + increment;
                                 } else if last_spectrum_y_clone.get() > bottom.into() {
-                                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low + increment;
+                                    r.receiver[0].band_info[b].spectrum_low = r.receiver[0].band_info[b].spectrum_low + increment;
                                 } else {
-                                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low + increment;
-                                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high + increment;
+                                    r.receiver[0].band_info[b].spectrum_low = r.receiver[0].band_info[b].spectrum_low + increment;
+                                    r.receiver[0].band_info[b].spectrum_high = r.receiver[0].band_info[b].spectrum_high + increment;
                                 }
                             }
                         } else {
@@ -994,12 +994,12 @@ fn build_ui(app: &Application) {
                             } else {
                                 let b = r.receiver[1].band.to_usize();
                                 if last_spectrum_y_clone.get() < top.into() {
-                                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high + increment;
+                                    r.receiver[1].band_info[b].spectrum_high = r.receiver[1].band_info[b].spectrum_high + increment;
                                 } else if last_spectrum_y_clone.get() > bottom.into() {
-                                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low + increment;
+                                    r.receiver[1].band_info[b].spectrum_low = r.receiver[1].band_info[b].spectrum_low + increment;
                                 } else {
-                                    r.band_info[b].spectrum_low = r.band_info[b].spectrum_low + increment;
-                                    r.band_info[b].spectrum_high = r.band_info[b].spectrum_high + increment;
+                                    r.receiver[1].band_info[b].spectrum_low = r.receiver[1].band_info[b].spectrum_low + increment;
+                                    r.receiver[1].band_info[b].spectrum_high = r.receiver[1].band_info[b].spectrum_high + increment;
                                 }
                             }
                         } else {
@@ -1140,27 +1140,27 @@ fn build_ui(app: &Application) {
 
                         let b = r.receiver[rx].band.to_usize();
                         if b != index { // band has changed
-                            r.band_info[b].current = r.receiver[rx].frequency;
+                            r.receiver[rx].band_info[b].current = r.receiver[rx].frequency;
 
                             // get new band info
                             r.receiver[rx].band = Bands::from_usize(index).expect("invalid band index");
-                            r.receiver[rx].frequency = r.band_info[index].current;
+                            r.receiver[rx].frequency = r.receiver[rx].band_info[index].current;
                             if r.receiver[rx].ctun {
                                 r.receiver[rx].ctun_frequency = r.receiver[rx].frequency;
                                 r.receiver[rx].set_ctun_frequency();
                             }
 
                             if !r.receiver[rx].filters_manual {
-                                r.receiver[rx].filters = r.band_info[index].filters;
+                                r.receiver[rx].filters = r.receiver[rx].band_info[index].filters;
                             }
                         }
-                        app_widgets.filter_grid.update_filter_buttons(r.band_info[index].mode.to_usize());
-                        app_widgets.filter_grid.set_active_index(r.band_info[index].filter.to_usize());
+                        app_widgets.filter_grid.update_filter_buttons(r.receiver[rx].band_info[index].mode.to_usize());
+                        app_widgets.filter_grid.set_active_index(r.receiver[rx].band_info[index].filter.to_usize());
 
                         if b != index { // band has changed
-                            r.receiver[rx].mode = r.band_info[index].mode.to_usize();
+                            r.receiver[rx].mode = r.receiver[rx].band_info[index].mode.to_usize();
                             app_widgets.mode_grid.set_active_index(r.receiver[rx].mode);
-                            let (low, high) = app_widgets.filter_grid.get_filter_values(r.band_info[index].mode.to_usize(), r.band_info[index].filter.to_usize());
+                            let (low, high) = app_widgets.filter_grid.get_filter_values(r.receiver[rx].band_info[index].mode.to_usize(), r.receiver[rx].band_info[index].filter.to_usize());
                             app_widgets.filter_grid.set_active_values(low, high);
                             r.receiver[rx].filter_low = low;
                             r.receiver[rx].filter_high = high;
@@ -1175,7 +1175,7 @@ fn build_ui(app: &Application) {
 
                             r.transmitter.filter_low = low;
                             r.transmitter.filter_high = high;
-                            r.transmitter.mode = r.band_info[index].mode.to_usize();
+                            r.transmitter.mode = r.receiver[rx].band_info[index].mode.to_usize();
                             r.transmitter.set_mode();
                             r.transmitter.set_filter();
 

@@ -148,7 +148,7 @@ pub struct Radio {
     pub rx2_enabled: bool,
     pub split: bool,
     pub receiver: Vec<Receiver>,
-    pub band_info: Vec<BandInfo>,
+    //pub band_info: Vec<BandInfo>,
 #[serde(skip_serializing, skip_deserializing)]
     pub s_meter_dbm: f64,
 #[serde(skip_serializing, skip_deserializing)]
@@ -289,7 +289,7 @@ impl Radio {
         let rx2_enabled: bool = true;
         let split: bool = false;
         let mut receiver: Vec<Receiver> = Vec::new();
-        let band_info = BandInfo::new();
+        //let band_info = BandInfo::new();
         for i in 0..receivers {
             receiver.push(Receiver::new(i, device.protocol, spectrum_width));
         }
@@ -369,7 +369,7 @@ impl Radio {
             rx2_enabled,
             split,
             receiver,
-            band_info,
+            //band_info,
             s_meter_dbm,
             ptt,
             mox,
@@ -674,7 +674,7 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
 
     } else {
             let b = r.receiver[rx].band.to_usize();
-            let dbm_per_line: f32 = height as f32/(r.band_info[b].spectrum_high-r.band_info[b].spectrum_low);
+            let dbm_per_line: f32 = height as f32/(r.receiver[rx].band_info[b].spectrum_high-r.receiver[rx].band_info[b].spectrum_low);
 
             cr.set_source_rgb(1.0, 1.0, 0.0);                   
             cr.set_line_width(1.0);
@@ -742,14 +742,14 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
 
             // draw the band limits
             cr.set_source_rgb(1.0, 0.0, 0.0);
-            if display_frequency_low < r.band_info[b].low && display_frequency_high > r.band_info[b].low {
-                let x = (r.band_info[b].low - display_frequency_low) / display_hz_per_pixel;
+            if display_frequency_low < r.receiver[rx].band_info[b].low && display_frequency_high > r.receiver[rx].band_info[b].low {
+                let x = (r.receiver[rx].band_info[b].low - display_frequency_low) / display_hz_per_pixel;
                 cr.move_to( x.into(), 0.0);
                 cr.line_to( x.into(), height.into());
             }
 
-            if display_frequency_low < r.band_info[b].high && display_frequency_high > r.band_info[b].high {
-                let x = (r.band_info[b].high - display_frequency_low) / display_hz_per_pixel;
+            if display_frequency_low < r.receiver[rx].band_info[b].high && display_frequency_high > r.receiver[rx].band_info[b].high {
+                let x = (r.receiver[rx].band_info[b].high - display_frequency_low) / display_hz_per_pixel;
                 cr.move_to( x.into(), 0.0);
                 cr.line_to( x.into(), height.into());
             }
@@ -757,9 +757,9 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
 
 
             // draw signal levels
-            for i in r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32 {
+            for i in r.receiver[rx].band_info[b].spectrum_low as i32 .. r.receiver[rx].band_info[b].spectrum_high as i32 {
                 if i % r.receiver[rx].spectrum_step as i32 == 0 {
-                    let y = (r.band_info[b].spectrum_high - i as f32) * dbm_per_line;
+                    let y = (r.receiver[rx].band_info[b].spectrum_high - i as f32) * dbm_per_line;
                     cr.set_source_rgb(0.5, 0.5, 0.5);
                     cr.move_to(0.0, y.into());
                     cr.line_to(width as f64, y.into());
@@ -772,7 +772,7 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
             }
 
             // draw the spectrum
-            let spectrum_high = r.band_info[b].spectrum_high;
+            let spectrum_high = r.receiver[rx].band_info[b].spectrum_high;
             let spectrum_width = r.receiver[rx].spectrum_width;
             let pan = ((pixels.len() as f32 - spectrum_width as f32) / 100.0) * r.receiver[rx].pan as f32;
             cr.set_source_rgb(1.0, 1.0, 0.0);
@@ -788,9 +788,9 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
             // fill the spectrum
             let pattern = LinearGradient::new(0.0, (height-20) as f64, 0.0, 0.0);
             let mut s9: f32 = -73.0;
-            s9 = ((r.band_info[b].spectrum_high - s9)
+            s9 = ((r.receiver[rx].band_info[b].spectrum_high - s9)
                           * (height-20) as f32
-                        / (r.band_info[b].spectrum_high - r.band_info[b].spectrum_low)).floor();
+                        / (r.receiver[rx].band_info[b].spectrum_high - r.receiver[rx].band_info[b].spectrum_low)).floor();
             s9 = 1.0-(s9/(height-20) as f32);
             pattern.add_color_stop_rgb(0.0,0.0,1.0,0.0); // Green
             pattern.add_color_stop_rgb((s9/3.0).into(),1.0,0.65,0.0); // Orange

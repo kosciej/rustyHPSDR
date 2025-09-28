@@ -68,17 +68,17 @@ impl Waterfall {
             for x in 0..waterfall_width {
                 let mut value: f32 = new_pixels[x as usize + pan as usize] as f32;
                 average += value;
-                if value <= r.band_info[b].waterfall_low {
+                if value <= r.receiver[self.rx].band_info[b].waterfall_low {
                     R = 0.0;
                     G = 0.0;
                     B = 0.0;
-                } else if value >= r.band_info[b].waterfall_high {
+                } else if value >= r.receiver[self.rx].band_info[b].waterfall_high {
                     R = 240.0;
                     G = 240.0;
                     B = 240.0;
                 } else {
-                    let range = r.band_info[b].waterfall_high - r.band_info[b].waterfall_low;
-                    let offset = value - r.band_info[b].waterfall_low;
+                    let range = r.receiver[self.rx].band_info[b].waterfall_high - r.receiver[self.rx].band_info[b].waterfall_low;
+                    let offset = value - r.receiver[self.rx].band_info[b].waterfall_low;
                     let mut percent = 100.0 * offset / range;
                     if percent > max_percent {
                         max_percent = percent;
@@ -121,7 +121,7 @@ impl Waterfall {
             }
             //println!("average {} max_percent {}", average / width as f32, max_percent);
             if r.waterfall_auto {
-                r.band_info[b].waterfall_low = (r.band_info[b].waterfall_low + (average / width as f32)) / 2.0;
+                r.receiver[self.rx].band_info[b].waterfall_low = (r.receiver[self.rx].band_info[b].waterfall_low + (average / width as f32)) / 2.0;
             }
         } // unsafe
     }

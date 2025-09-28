@@ -87,7 +87,7 @@ impl Spectrum {
         } else {
 
             let b = r.receiver[self.rx].band.to_usize();
-            let dbm_per_line: f32 = spectrum_height as f32/(r.band_info[b].spectrum_high-r.band_info[b].spectrum_low);
+            let dbm_per_line: f32 = spectrum_height as f32/(r.receiver[self.rx].band_info[b].spectrum_high-r.receiver[self.rx].band_info[b].spectrum_low);
 
             cr.set_source_rgb(1.0, 1.0, 0.0);
             cr.set_line_width(1.0);
@@ -139,14 +139,14 @@ impl Spectrum {
             let offset = 0.0;
             cr.set_dash(&dashes, offset);
             cr.set_line_width(2.0);
-            if display_frequency_low < r.band_info[b].low && display_frequency_high > r.band_info[b].low {
-                let x = (r.band_info[b].low - display_frequency_low) / display_hz_per_pixel;
+            if display_frequency_low < r.receiver[self.rx].band_info[b].low && display_frequency_high > r.receiver[self.rx].band_info[b].low {
+                let x = (r.receiver[self.rx].band_info[b].low - display_frequency_low) / display_hz_per_pixel;
                 cr.move_to( x.into(), 0.0);
                 cr.line_to( x.into(), spectrum_height.into());
             }
 
-            if display_frequency_low < r.band_info[b].high && display_frequency_high > r.band_info[b].high {
-                let x = (r.band_info[b].high - display_frequency_low) / display_hz_per_pixel;
+            if display_frequency_low < r.receiver[self.rx].band_info[b].high && display_frequency_high > r.receiver[self.rx].band_info[b].high {
+                let x = (r.receiver[self.rx].band_info[b].high - display_frequency_low) / display_hz_per_pixel;
                 cr.move_to( x.into(), 0.0);
                 cr.line_to( x.into(), spectrum_height.into());
             }
@@ -155,9 +155,9 @@ impl Spectrum {
             cr.set_line_width(2.0);
 
             // draw signal levels
-            for i in r.band_info[b].spectrum_low as i32 .. r.band_info[b].spectrum_high as i32 {
+            for i in r.receiver[self.rx].band_info[b].spectrum_low as i32 .. r.receiver[self.rx].band_info[b].spectrum_high as i32 {
                 if i % r.receiver[self.rx].spectrum_step as i32 == 0 {
-                    let y = (r.band_info[b].spectrum_high - i as f32) * dbm_per_line;
+                    let y = (r.receiver[self.rx].band_info[b].spectrum_high - i as f32) * dbm_per_line;
                     cr.set_source_rgb(0.5, 0.5, 0.5);
                     cr.move_to(0.0, y.into());
                     cr.line_to(width as f64, y.into());
@@ -198,7 +198,7 @@ impl Spectrum {
             }
 
             // draw the spectrum
-            let spectrum_high = r.band_info[b].spectrum_high;
+            let spectrum_high = r.receiver[self.rx].band_info[b].spectrum_high;
             let spectrum_width = r.receiver[self.rx].spectrum_width;
             let pan = ((pixels.len() as f32 - spectrum_width as f32) / 100.0) * r.receiver[self.rx].pan as f32;
                 cr.set_source_rgb(1.0, 1.0, 0.0);
@@ -215,9 +215,9 @@ impl Spectrum {
             // fill the spectrum
             let pattern = LinearGradient::new(0.0, (spectrum_height-20) as f64, 0.0, 0.0);
             let mut s9: f32 = -73.0;
-            s9 = ((r.band_info[b].spectrum_high - s9)
+            s9 = ((r.receiver[self.rx].band_info[b].spectrum_high - s9)
                           * (spectrum_height-20) as f32
-                        / (r.band_info[b].spectrum_high - r.band_info[b].spectrum_low)).floor();
+                        / (r.receiver[self.rx].band_info[b].spectrum_high - r.receiver[self.rx].band_info[b].spectrum_low)).floor();
             s9 = 1.0-(s9/(spectrum_height-20) as f32);
                 pattern.add_color_stop_rgb(0.0,0.0,1.0,0.0); // Green
                 pattern.add_color_stop_rgb((s9/3.0).into(),1.0,0.65,0.0); // Orange

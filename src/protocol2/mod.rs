@@ -170,7 +170,7 @@ impl Protocol2 {
                                 let mut r = radio_mutex.radio.lock().unwrap();
                                 if r.transmitter.local_microphone {
                                     let mic_buffer = r.audio[0].read_input();
-                                    println!("mic_buffer read {}", mic_buffer.len());
+                                    eprintln!("mic_buffer read {}", mic_buffer.len());
                                 } else {
                                 if !r.transmitter.local_microphone {
                                     let mut sample:i32 = 0;
@@ -331,7 +331,7 @@ impl Protocol2 {
                             }
                         }
                         },
-                        _ => println!("Unknown port {}", src.port()),
+                        _ => eprintln!("Unknown port {}", src.port()),
                     }
                 }
                 Err(e) => {
@@ -547,12 +547,6 @@ impl Protocol2 {
             buf[1442] = r.receiver[1].attenuation as u8;
         }
 
-if self.previous_filter != filter || self.previous_filter1 != filter1 {
-    println!("send_high_priority filter {:#010x} filter1 {:#010x}", filter, filter1);
-    self.previous_filter = filter;
-    self.previous_filter1 = filter1;
-}
-
         self.device.address.set_port(1027);
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
         self.high_priority_sequence += 1;
@@ -579,7 +573,6 @@ if self.previous_filter != filter || self.previous_filter1 != filter1 {
         buf[2] = ((self.receive_specific_sequence >> 8) & 0xFF) as u8;
         buf[3] = ((self.receive_specific_sequence) & 0xFF) as u8;
 
-        println!("send_receive_specific adcs {} receivers {}", r.adc.len(), r.receivers);
         buf[4] = r.adc.len() as u8;
         for i in 0..r.adc.len() {
             buf[5] |= (r.adc[i].dither as u8) << i;
@@ -594,7 +587,6 @@ if self.previous_filter != filter || self.previous_filter1 != filter1 {
           buf[(22+(i*6)) as usize] = 24;  // 24 bits per sample
         }
 
-        println!("send_receive_specific {} {:#04x} {} {:#04x}", r.receiver[0].adc, buf[17], r.receiver[1].adc, buf[23]);
         self.device.address.set_port(1025);
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
         self.receive_specific_sequence += 1;

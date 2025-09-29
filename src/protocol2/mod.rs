@@ -19,6 +19,7 @@ use nix::sys::socket::setsockopt;
 use nix::sys::socket::sockopt::{ReuseAddr, ReusePort};
 use std::net::{UdpSocket};
 use std::os::raw::c_int;
+use std::sync::{Arc, Mutex};
 
 use crate::discovery::Device;
 use crate::modes::Modes;
@@ -160,6 +161,8 @@ impl Protocol2 {
                                         r.set_state();
                                     }
 
+                                    r.received = true;
+
                                 drop(r);
                                 
                                 self.send_high_priority(radio_mutex);
@@ -220,6 +223,7 @@ impl Protocol2 {
                                     }
                                 }
                                 }
+                                r.received = true;
                                 },
                         1027 => {}, // Wide Band IQ samples
                         1035 |
@@ -330,6 +334,7 @@ impl Protocol2 {
                                 }
                             }
                         }
+                        r.received = true;
                         },
                         _ => eprintln!("Unknown port {}", src.port()),
                     }
@@ -345,12 +350,11 @@ impl Protocol2 {
             r.updated = false;
             r.keepalive = false;
             drop(r);
-            if updated {
+            if keepalive || updated {
+//println!("keepalive = {} updated = {}", keepalive, updated);
+                self.send_general();
                 self.send_transmit_specific(radio_mutex);
                 self.send_receive_specific(radio_mutex);
-            }
-            if keepalive {
-                self.send_general();
             }
         }
     }
@@ -376,6 +380,7 @@ impl Protocol2 {
         }
 
         self.device.address.set_port(1024);
+        //println!("send_general: 1024");
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
 
         self.general_sequence += 1;
@@ -548,6 +553,7 @@ impl Protocol2 {
         }
 
         self.device.address.set_port(1027);
+        //println!("send_high_priority: 1027");
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
         self.high_priority_sequence += 1;
     }
@@ -588,6 +594,8 @@ impl Protocol2 {
         }
 
         self.device.address.set_port(1025);
+        //println!("send_receive_specific: 1025");
+        self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
         self.receive_specific_sequence += 1;
     }
@@ -658,6 +666,7 @@ impl Protocol2 {
         }
 
         self.device.address.set_port(1026);
+        //println!("send_transmit_specific: 1026");
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
         self.transmit_specific_sequence += 1;
     }

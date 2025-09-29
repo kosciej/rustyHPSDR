@@ -1659,9 +1659,14 @@ fn build_ui(app: &Application) {
 
                     if device.protocol == 2 {
                         let radio_mutex_clone = radio_mutex.clone();
-                        let keepalive_timeout_id = timeout_add_local(Duration::from_millis(500), move || {
+                        let keepalive_timeout_id = timeout_add_local(Duration::from_millis(250), move || {
                             let mut r = radio_mutex_clone.radio.lock().unwrap();
                             r.keepalive = true;
+                            if !r.received {
+                                eprintln!("no data received from radio!");
+                            } else {
+                                r.received = false;
+                            }
                             Continue
                         });
                     }

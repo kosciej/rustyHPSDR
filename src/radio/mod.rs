@@ -148,7 +148,6 @@ pub struct Radio {
     pub rx2_enabled: bool,
     pub split: bool,
     pub receiver: Vec<Receiver>,
-    //pub band_info: Vec<BandInfo>,
 #[serde(skip_serializing, skip_deserializing)]
     pub s_meter_dbm: f64,
 #[serde(skip_serializing, skip_deserializing)]
@@ -190,7 +189,8 @@ pub struct Radio {
     pub updated: bool,
 #[serde(skip_serializing, skip_deserializing)]
     pub keepalive: bool,
-
+#[serde(skip_serializing, skip_deserializing)]
+    pub received: bool,
 #[serde(skip_serializing, skip_deserializing)]
     pub pll_locked: bool,
 #[serde(skip_serializing, skip_deserializing)]
@@ -289,7 +289,6 @@ impl Radio {
         let rx2_enabled: bool = true;
         let split: bool = false;
         let mut receiver: Vec<Receiver> = Vec::new();
-        //let band_info = BandInfo::new();
         for i in 0..receivers {
             receiver.push(Receiver::new(i, device.protocol, spectrum_width));
         }
@@ -334,6 +333,7 @@ impl Radio {
 
         let updated = false;
         let keepalive = false;
+        let received = false;
 
         let pll_locked = false;
         let adc_overload = false;
@@ -369,7 +369,6 @@ impl Radio {
             rx2_enabled,
             split,
             receiver,
-            //band_info,
             s_meter_dbm,
             ptt,
             mox,
@@ -400,6 +399,7 @@ impl Radio {
 
             updated,
             keepalive,
+            received,
 
             pll_locked,
             adc_overload,

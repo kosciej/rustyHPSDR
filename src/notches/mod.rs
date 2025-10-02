@@ -10,29 +10,24 @@
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
+    
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+*/  
 
 use serde::{Deserialize, Serialize};
 
-use crate::alex::*;
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Adc {
-    pub rx_antenna: u32,
-    pub random: bool,
-    pub dither: bool,
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub struct Notch {
+    pub rx: i32,
+    pub frequency: f64,
+    pub width: f64,
+    pub active: i32,
 }
 
-impl Adc {
-
-    pub fn new() -> Adc {
-        let rx_antenna = ALEX_ANTENNA_1;
-        let random = false;
-        let dither = false;
-
-        Adc {rx_antenna, random, dither}
+impl Notch {
+    pub fn new(rx: i32, frequency: f64, width: f64, active: i32) -> Notch {
+        Notch { rx, frequency, width, active }
     }
 }
+

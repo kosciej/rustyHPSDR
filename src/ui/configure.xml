@@ -453,6 +453,22 @@
             <property name="label">Noise</property>
           </object>
         </child>
+
+        <!-- Notch Filters -->
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkListBox" id="notch_list">
+              </object>
+            </child>
+          </object>
+        </child>
+        <child type="tab">
+          <object class="GtkLabel" id="notch_label">
+            <property name="label">Notch Filters</property>
+          </object>
+        </child>
         
         <!-- Radio -->
         <child>

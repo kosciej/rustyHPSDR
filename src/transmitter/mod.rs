@@ -22,6 +22,7 @@ use std::os::raw::{c_char, c_int};
 
 use serde::{Deserialize, Serialize};
 
+use crate::alex::*;
 use crate::modes::Modes;
 use crate::wdsp::*;
 
@@ -65,6 +66,7 @@ pub struct Transmitter {
     pub spectrum_high: f32,
     pub spectrum_low: f32,
     pub micgain: f32,
+    pub tx_antenna: u32,
 }
 
 impl Transmitter {
@@ -130,7 +132,9 @@ impl Transmitter {
 
         let micgain = 0.0;
 
-        let tx = Transmitter{ protocol, channel, sample_rate, dsp_rate, output_rate, buffer_size, output_samples, p1_packet_size, packet_counter, is_transmitting, local_microphone, local_microphone_buffer_size, local_microphone_buffer, microphone_buffer_size, microphone_buffer, microphone_samples, iq_buffer_size, iq_buffer, iq_samples, fft_size, microphone_sample_rate, microphone_dsp_rate, iq_output_rate, low_latency, use_rx_filter, mode, filter_low, filter_high, drive, spectrum_width, fps, display_average_time, spectrum_high, spectrum_low, micgain };
+        let tx_antenna = ALEX_ANTENNA_1;
+
+        let tx = Transmitter{ protocol, channel, sample_rate, dsp_rate, output_rate, buffer_size, output_samples, p1_packet_size, packet_counter, is_transmitting, local_microphone, local_microphone_buffer_size, local_microphone_buffer, microphone_buffer_size, microphone_buffer, microphone_samples, iq_buffer_size, iq_buffer, iq_samples, fft_size, microphone_sample_rate, microphone_dsp_rate, iq_output_rate, low_latency, use_rx_filter, mode, filter_low, filter_high, drive, spectrum_width, fps, display_average_time, spectrum_high, spectrum_low, micgain, tx_antenna };
 
         tx
     }
@@ -244,18 +248,20 @@ impl Transmitter {
 
     pub fn set_tuning(&self, state: bool, cw_keyer_sidetone_frequency: i32) {
         unsafe {
+            eprintln!("set_tuning: state = {} channel = {}", state, self.channel);
             if state {
+                let mut frequency = (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64;
                 if self.mode == Modes::CWL.to_usize() {
-                    SetTXAPostGenToneFreq(self.channel, -cw_keyer_sidetone_frequency as f64);
+                    let frequency = -cw_keyer_sidetone_frequency as f64;
                 } else if self.mode == Modes::CWU.to_usize() {
-                    SetTXAPostGenToneFreq(self.channel, cw_keyer_sidetone_frequency as f64);
+                    let frequency = cw_keyer_sidetone_frequency as f64;
                 } else if self.mode == Modes::LSB.to_usize() {
-                    SetTXAPostGenToneFreq(self.channel, (-self.filter_low - ((self.filter_high - self.filter_low) / 2.0)) as f64);
+                    let frequency = (-self.filter_low - ((self.filter_high - self.filter_low) / 2.0)) as f64;
                 } else if self.mode == Modes::USB.to_usize() {
-                    SetTXAPostGenToneFreq(self.channel, (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64);
-                } else {
-                    SetTXAPostGenToneFreq(self.channel, (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64);
+                    let frequency = (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64;
                 }
+                eprintln!("set_tuning: frequency: {}", frequency);
+                SetTXAPostGenToneFreq(self.channel, frequency);
                 SetTXAPostGenToneMag(self.channel, 0.99999);
                 SetTXAPostGenMode(self.channel, 0); // Tone
                 SetTXAPostGenRun(self.channel, 1);

@@ -32,10 +32,10 @@ impl Waterfall {
         let low_R = 0.0; // low is black
         let low_G = 0.0;
         let low_B = 0.0;
-        let mid_R = 1.0; // low is red
+        let mid_R = 1.0; // mid is red
         let mid_G = 0.0;
         let mid_B = 0.0;
-        let high_R = 1.0; // low is yellow
+        let high_R = 1.0; // high is yellow
         let high_G = 1.0;
         let high_B = 0.0;
 
@@ -67,12 +67,17 @@ impl Waterfall {
             let mut max_percent = 0.0;
             for x in 0..waterfall_width {
                 let mut value: f32 = new_pixels[x as usize + pan as usize] as f32;
-                average += value;
-                if value <= r.receiver[self.rx].band_info[b].waterfall_low {
+                if value < r.receiver[self.rx].band_info[b].spectrum_low {
+                    average += r.receiver[self.rx].band_info[b].spectrum_low;
+                } else {
+                    average += value;
+                }
+
+                if value < (r.receiver[self.rx].band_info[b].waterfall_low + 5.0) {
                     R = 0.0;
                     G = 0.0;
                     B = 0.0;
-                } else if value >= r.receiver[self.rx].band_info[b].waterfall_high {
+                } else if value > r.receiver[self.rx].band_info[b].waterfall_high {
                     R = 240.0;
                     G = 240.0;
                     B = 240.0;
@@ -114,6 +119,7 @@ impl Waterfall {
                         B = 0.0;
                     }
                 }
+
                 let ix = (x * 3) as usize;
                 pixels[ix] = R as u8;
                 pixels[ix + 1] = G as u8;
@@ -122,6 +128,8 @@ impl Waterfall {
             //println!("average {} max_percent {}", average / width as f32, max_percent);
             if r.waterfall_auto {
                 r.receiver[self.rx].band_info[b].waterfall_low = (r.receiver[self.rx].band_info[b].waterfall_low + (average / width as f32)) / 2.0;
+                //r.receiver[self.rx].band_info[b].waterfall_low = (average / width as f32) - 14.0;
+                //r.receiver[self.rx].band_info[b].waterfall_high = r.receiver[self.rx].band_info[b].waterfall_low + 80.0;
             }
         } // unsafe
     }

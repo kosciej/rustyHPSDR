@@ -268,6 +268,18 @@ unsafe extern "C" {
     pub fn RXANBPSetFreqs(channel: ::std::os::raw::c_int, low: f64, high: f64);
 }
 unsafe extern "C" {
+    pub fn RXANBPAddNotch(channel: ::std::os::raw::c_int, notch: ::std::os::raw::c_int, fcenter: f64, fwidth: f64, active: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    pub fn RXANBPSetNotchesRun(channel: ::std::os::raw::c_int, run: ::std::os::raw::c_int);
+}
+unsafe extern "C" {
+    pub fn RXANBPSetTuneFrequency(channel: ::std::os::raw::c_int, tunefreq: f64);
+}
+unsafe extern "C" {
+    pub fn RXANBPSetShiftFrequency(channel: ::std::os::raw::c_int, shift: f64);
+}
+unsafe extern "C" {
     pub fn SetRXASNBAOutputBandwidth(channel: ::std::os::raw::c_int, low: f64, high: f64);
 }
 unsafe extern "C" {
@@ -368,9 +380,6 @@ unsafe extern "C" {
 }
 unsafe extern "C" {
     pub fn SetRXAGrphEQ(channel: ::std::os::raw::c_int, rxeq: *mut ::std::os::raw::c_int);
-}
-unsafe extern "C" {
-    pub fn RXANBPSetShiftFrequency(channel: ::std::os::raw::c_int, shift: f64);
 }
 unsafe extern "C" {
     pub fn create_divEXT(

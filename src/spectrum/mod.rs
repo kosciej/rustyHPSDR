@@ -246,6 +246,18 @@ impl Spectrum {
                 f = f + step as f32;
             }
 
+            // draw any active notches
+            for i in 0..r.notch {
+                let notch = r.notches[i as usize];
+                if notch.frequency > display_frequency_low as f64 && notch.frequency < display_frequency_high as f64 {
+                    let x = (notch.frequency - display_frequency_low as f64) / display_hz_per_pixel as f64;
+                    cr.set_source_rgb(1.0, 1.0, 1.0);
+                    cr.move_to( x.into(), 0.0);
+                    cr.line_to( x.into(), spectrum_height.into());
+                    cr.stroke().unwrap();
+                }
+            }
+
         }
     }
 

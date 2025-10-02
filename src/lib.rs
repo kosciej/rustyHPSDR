@@ -34,4 +34,5 @@ pub mod spectrum;
 pub mod waterfall;
 pub mod meter;
 pub mod util;
+pub mod notches;
 

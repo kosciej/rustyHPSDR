@@ -17,7 +17,7 @@
 
 use alsa::Direction;
 use gtk::prelude::*;
-use gtk::{Adjustment, ApplicationWindow, Builder, Button, CheckButton, ComboBoxText, DropDown, Frame, PositionType, Scale, ToggleButton, Window};
+use gtk::{Adjustment, ApplicationWindow, Box, Builder, Button, CheckButton, ComboBoxText, DropDown, Frame, Label, ListBox, ListBoxRow, Orientation, PositionType, Scale, ToggleButton, Window};
 
 use crate::radio::{Keyer, RadioModels, RadioMutex};
 use crate::audio::*;
@@ -509,6 +509,40 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
             r.receiver[rx].agc_position = 1;
         }
     });
+
+    // Notch
+    let r = radio_mutex.radio.lock().unwrap();
+    //let notch = r.notch;
+    //let notches = &r.notches;
+    //drop(r);
+    let notch_list: ListBox = builder
+            .object("notch_list")
+            .expect("Could not get object `notch_list` from builder.");
+
+    for i in 0..r.notches.len() {
+        let row = ListBoxRow::new();
+        let hbox = gtk::Box::new(Orientation::Horizontal, 10);
+        let id = format!("{:?}", i);
+        let label_id = Label::new(Some(&id));
+        label_id.set_xalign(0.0); // Align text to the left
+        hbox.append(&label_id);
+        let frequency = format!("{:?}", r.notches[i].frequency);
+        let label_frequency = Label::new(Some(&frequency));
+        label_frequency.set_xalign(0.0); // Align text to the left
+        hbox.append(&label_frequency);
+        let width = format!("{:?}", r.notches[i].width);
+        let label_width = Label::new(Some(&width));
+        label_width.set_xalign(0.0); // Align text to the left
+        hbox.append(&label_width);
+        let active = format!("{:?}", r.notches[i].active);
+        let label_active = Label::new(Some(&active));
+        label_active.set_xalign(0.0); // Align text to the left
+        hbox.append(&label_active);
+        row.set_child(Some(&hbox));
+
+        notch_list.append(&row);
+    }
+    drop(r);
 
     // Receiver
     let r = radio_mutex.radio.lock().unwrap();

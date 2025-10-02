@@ -45,6 +45,7 @@ use crate::wdsp::*;
 use crate::audio::*;
 use crate::alex::*;
 use crate::adc::*;
+use crate::notches::*;
 
 #[derive(PartialEq, Serialize, Deserialize, Copy, Clone)]
 pub enum RadioModels {
@@ -225,6 +226,9 @@ pub struct Radio {
     pub meter_1_timeout_id: Option<SourceId>,
 #[serde(skip_serializing, skip_deserializing)]
     pub meter_2_timeout_id: Option<SourceId>,
+
+    pub notch: i32,
+    pub notches: Vec<Notch>,
 }
 
 #[derive(Clone)]
@@ -358,6 +362,9 @@ impl Radio {
         let meter_1_timeout_id = None;
         let meter_2_timeout_id = None;
 
+        let notch = 0;
+        let notches = vec![];
+
         Radio {
             name,
             dev,
@@ -422,6 +429,8 @@ impl Radio {
             waterfall_timeout_id,
             meter_1_timeout_id,
             meter_2_timeout_id,
+            notch,
+            notches,
         }
     }
 
@@ -833,6 +842,19 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
 
         }
     }
+
+    pub fn add_notch_to_vector(&mut self, notch: Notch) {
+        self.notches.push(notch);
+    }
+
+    pub fn add_notch(&mut self, notch: Notch) {
+        unsafe {
+            let res = RXANBPAddNotch (notch.rx, self.notch, notch.frequency, notch.width, notch.active);
+        }
+        eprintln!("add notch {} at {} for {} active={}", self.notch, notch.frequency, notch.width, notch.active);
+        self.notch = self.notch + 1;
+    }
+
 }
 
 fn format_u32_with_separators(value: u32) -> String {
@@ -893,7 +915,6 @@ fn draw_meter(cr: &Context, dbm: f64) {
     let _ = cr.show_text("+60");
 
 }
-
 
 fn draw_waterfall(cr: &Context, width: i32, height: i32, pixbuf: &Rc<RefCell<Option<Pixbuf>>>) {
     let pixbuf_ref = pixbuf.borrow();

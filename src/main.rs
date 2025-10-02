@@ -52,6 +52,7 @@ use rustyHPSDR::waterfall::*;
 use rustyHPSDR::meter::*;
 use rustyHPSDR::util::*;
 use rustyHPSDR::wdsp::*;
+use rustyHPSDR::notches::*;
 
 struct AppWidgets {
     pub main_window: ApplicationWindow,
@@ -650,6 +651,9 @@ fn build_ui(app: &Application) {
                         r.receiver[1].band = r.receiver[0].band; 
                         let formatted_value = format_u32_with_separators(r.receiver[1].frequency as u32);
                         app_widgets.vfo_b_frequency.set_label(&formatted_value);
+                        unsafe {
+                            RXANBPSetTuneFrequency(1, r.receiver[1].frequency as f64);
+                        }
                     });                         
                     
                     let radio_mutex_clone = radio_mutex.clone();
@@ -666,6 +670,9 @@ fn build_ui(app: &Application) {
                         r.receiver[0].band = r.receiver[1].band; 
                         let formatted_value = format_u32_with_separators(r.receiver[0].frequency as u32);
                         app_widgets.vfo_a_frequency.set_label(&formatted_value);
+                        unsafe {
+                            RXANBPSetTuneFrequency(0, r.receiver[0].frequency as f64);
+                        }
                     });
 
                     let radio_mutex_clone = radio_mutex.clone();
@@ -691,6 +698,10 @@ fn build_ui(app: &Application) {
                         r.receiver[0].band = temp_band;
                         let formatted_value = format_u32_with_separators(r.receiver[1].frequency as u32);
                         app_widgets.vfo_b_frequency.set_label(&formatted_value);
+                        unsafe {
+                            RXANBPSetTuneFrequency(0, r.receiver[0].frequency as f64);
+                            RXANBPSetTuneFrequency(1, r.receiver[1].frequency as f64);
+                        }
                     });
 
                     let radio_mutex_clone = radio_mutex.clone();
@@ -796,10 +807,20 @@ fn build_ui(app: &Application) {
                         let width = da.allocated_width();
                         if gesture.current_button() == 2 { // middle button
                             *press_state.borrow_mut() = true;
-                        } else {
+                        } else if gesture.current_button() == 1 { // left button
                             if !spectrum_waterfall_clicked(&radio_mutex_clone, &rc_app_widgets_clone_clone, 0, x, width, gesture.current_button()) {
                                 update_ui(&radio_mutex_clone.clone(), &rc_app_widgets_clone_clone.clone());
                             }
+                        } else if gesture.current_button() == 3 { // right button
+                            // add a notch?
+                            let mut r = radio_mutex_clone.radio.lock().unwrap();
+                            let mut rx: usize = 0;
+                            if r.receiver[1].active {
+                                rx = 1;
+                            }
+                            let notch = Notch::new(rx as i32, r.receiver[rx].frequency as f64, 500.0, 1);
+                            r.add_notch_to_vector(notch);
+                            r.add_notch(notch);
                         }
                     });
                     let press_state = middle_button_pressed.clone();
@@ -1168,6 +1189,10 @@ fn build_ui(app: &Application) {
                                 app_widgets.vfo_b_frequency.set_label(&formatted_value);
                             }
                         }
+                        unsafe {
+                            RXANBPSetTuneFrequency(rx as i32, r.receiver[rx].frequency as f64);
+                        }
+
 
                     }, band);
 
@@ -1431,6 +1456,7 @@ fn build_ui(app: &Application) {
                     app_widgets.drive_adjustment.connect_value_changed(move |adjustment| {
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.transmitter.drive = adjustment.value() as f32;
+                        r.updated = true;
                     });
 
                     let radio_mutex_clone = radio_mutex.clone();
@@ -1527,6 +1553,21 @@ fn build_ui(app: &Application) {
                         app_widgets.anf_button.set_active(r.receiver[rx].anf);
 
                         app_widgets.snb_button.set_active(r.receiver[rx].snb);
+
+                        //initialize the notch vector
+                        r.notch = 0;
+                        for i in 0..r.notches.len() {
+                            let notch = r.notches[i as usize];
+                            r.add_notch(notch);
+                        }
+
+                        // enable the notches
+                        unsafe {
+                            RXANBPSetTuneFrequency(0, r.receiver[0].frequency as f64);
+                            RXANBPSetTuneFrequency(1, r.receiver[1].frequency as f64);
+                            RXANBPSetNotchesRun(0, 1);
+                            RXANBPSetNotchesRun(1, 1);
+                        }
 
                     }   
 
@@ -1830,6 +1871,10 @@ fn spectrum_waterfall_clicked(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefC
         }
     }
 
+    unsafe {
+        RXANBPSetTuneFrequency(rx as i32, r.receiver[rx].frequency as f64);
+    }
+
     true
 }
 
@@ -1861,6 +1906,10 @@ fn spectrum_waterfall_scroll(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCe
         } else {
             app_widgets.vfo_b_frequency.set_label(&formatted_value);
         }
+    }
+
+    unsafe {
+        RXANBPSetTuneFrequency(rx as i32, r.receiver[rx].frequency as f64);
     }
 }
 

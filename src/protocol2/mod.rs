@@ -26,6 +26,7 @@ use crate::modes::Modes;
 use crate::receiver::Receiver;
 use crate::radio::{Keyer, RadioMutex};
 use crate::wdsp::*;
+use crate::alex::*;
 
 const HEADER_SIZE: usize  = 16;  // 16 byte header
 const SAMPLE_SIZE: usize = 3;    // 3 byte (24 bit) samples
@@ -167,7 +168,7 @@ impl Protocol2 {
                                 
                                 self.send_high_priority(radio_mutex);
                                 },
-                        1026 => { // Mic/Line In
+                        1026 => { // Mic/Line In Samples
 
                                 let data_size = MIC_SAMPLES * MIC_SAMPLE_SIZE;
                                 let mut r = radio_mutex.radio.lock().unwrap();
@@ -181,7 +182,7 @@ impl Protocol2 {
                                     if size >= MIC_HEADER_SIZE + data_size {
                                         for _i in 0..MIC_SAMPLES {
                                             if buffer[b] & 0x80 != 0 {
-                                                sample = u32::from_be_bytes([0xFF, 0, buffer[b], buffer[b+1]]) as i32;
+                                                sample = u32::from_be_bytes([0xFF, 0xFF, buffer[b], buffer[b+1]]) as i32;
                                             } else {
                                                 sample = u32::from_be_bytes([0, 0, buffer[b], buffer[b+1]]) as i32;
                                             }
@@ -355,6 +356,7 @@ impl Protocol2 {
                 self.send_general();
                 self.send_transmit_specific(radio_mutex);
                 self.send_receive_specific(radio_mutex);
+                self.send_high_priority(radio_mutex);
             }
         }
     }
@@ -437,11 +439,40 @@ impl Protocol2 {
         buf[331] = ((phase>>8) & 0xFF) as u8;
         buf[332] = (phase & 0xFF) as u8;
 
+        // transmit power
+        let mut power = 0.0;
+        if r.is_transmitting() {
+            power = r.transmitter.drive * 255.0 / 100.0;
+            if power > 255.0 {
+                power = 255.0;
+            }
+        }
+        buf[345] = power as u8;
 
         let mut filter: u32 = 0x00000000;
-        filter |= r.adc[r.receiver[0].adc].rx_antenna;
+        //filter |= r.adc[r.receiver[0].adc].rx_antenna;
         if r.is_transmitting() {
             filter |= 0x08000000; // TX_ENABLE
+            match r.transmitter.tx_antenna {
+                0 => filter |= ALEX_ANTENNA_1,
+                1 => filter |= ALEX_ANTENNA_2,
+                2 => filter |= ALEX_ANTENNA_3,
+                3 => filter |= ALEX_RX_ANTENNA_XVTR,
+                4 => filter |= ALEX_RX_ANTENNA_EXT1,
+                5 => filter |= ALEX_RX_ANTENNA_EXT2,
+                _ => filter |= ALEX_ANTENNA_1,
+            }
+        } else {
+            // set the rx antenna
+            match r.adc[r.receiver[0].adc].rx_antenna {
+                0 => filter |= ALEX_ANTENNA_1,
+                1 => filter |= ALEX_ANTENNA_2,
+                2 => filter |= ALEX_ANTENNA_3,
+                3 => filter |= ALEX_RX_ANTENNA_XVTR,
+                4 => filter |= ALEX_RX_ANTENNA_EXT1,
+                5 => filter |= ALEX_RX_ANTENNA_EXT2,
+                _ => filter |= ALEX_ANTENNA_1,
+            }
         }
 
         // set BPF
@@ -553,7 +584,6 @@ impl Protocol2 {
         }
 
         self.device.address.set_port(1027);
-        //println!("send_high_priority: 1027");
         self.socket.send_to(&buf, self.device.address).expect("couldn't send data");
         self.high_priority_sequence += 1;
     }

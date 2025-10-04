@@ -43,6 +43,7 @@ use rustyHPSDR::filters::*;
 use rustyHPSDR::discovery::create_discovery_dialog;
 use rustyHPSDR::discovery::device_name;
 use rustyHPSDR::radio::Radio;
+use rustyHPSDR::radio::RadioModels;
 use rustyHPSDR::radio::RadioMutex;
 use rustyHPSDR::configure::*;
 use rustyHPSDR::protocol1::Protocol1;
@@ -414,10 +415,14 @@ fn build_ui(app: &Application) {
                 if i >= 0 {
                     let device = discovery_data_clone.borrow()[(i-1) as usize];
 
-                    let title = format!("rustyHPSDR: {} {:?} Protocol {}", device_name(device), device.address.ip(), device.protocol);
-                    app_widgets.main_window.set_title(Some(&title));
-
                     let radio_mutex = RadioMutex::new(Arc::new(Mutex::new(Radio::load(device, app_widgets.spectrum_display.width()))));
+
+                    {
+                    let mut r = radio_mutex.radio.lock().unwrap();
+                    let title = format!("rustyHPSDR: {:?} ({}) {:?} Protocol {}", r.model, device_name(device), device.address.ip(), device.protocol);
+                    app_widgets.main_window.set_title(Some(&title));
+                    }
+
 
                     let mut rc_spectrum_clone2 = rc_spectrum_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();

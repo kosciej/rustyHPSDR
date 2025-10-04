@@ -47,7 +47,7 @@ use crate::alex::*;
 use crate::adc::*;
 use crate::notches::*;
 
-#[derive(PartialEq, Serialize, Deserialize, Copy, Clone)]
+#[derive(PartialEq, Serialize, Deserialize, Copy, Clone, Debug)]
 pub enum RadioModels {
     Anan10,
     Anan10e,
@@ -144,6 +144,7 @@ pub struct Radio {
     pub model: RadioModels,
     pub protocol: u8,
     pub supported_receivers: u8,
+    pub sample_rate: i32,
     pub active_receiver: usize,
     pub receivers: u8,
     pub rx2_enabled: bool,
@@ -185,6 +186,7 @@ pub struct Radio {
     pub adc: Vec<Adc>,
 
     pub alex: u32,
+    pub mk2bpf: bool,
 
 #[serde(skip_serializing, skip_deserializing)]
     pub updated: bool,
@@ -288,6 +290,7 @@ impl Radio {
         }
         let protocol = device.protocol;
         let supported_receivers = device.supported_receivers;
+        let sample_rate = 384000;
         let active_receiver = 0;
         let receivers: u8 = 2;
         let rx2_enabled: bool = true;
@@ -334,6 +337,12 @@ impl Radio {
             adc.push(Adc::new());
         }
         let alex = ALEX_ANTENNA_1;
+        let mut mk2bpf = false;
+        match device.board {
+            Boards::Orion2 => mk2bpf = true,
+            Boards::Saturn => mk2bpf = true,
+            _ => mk2bpf = false,
+        }
 
         let updated = false;
         let keepalive = false;
@@ -371,6 +380,7 @@ impl Radio {
             model,
             protocol,
             supported_receivers,
+            sample_rate,
             active_receiver,
             receivers,
             rx2_enabled,
@@ -403,6 +413,7 @@ impl Radio {
 
             adc,
             alex,
+            mk2bpf,
 
             updated,
             keepalive,
@@ -853,6 +864,9 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
         }
         eprintln!("add notch {} at {} for {} active={}", self.notch, notch.frequency, notch.width, notch.active);
         self.notch = self.notch + 1;
+    }
+
+    pub fn sample_rate_changed(&mut self, rate: i32) {
     }
 
 }

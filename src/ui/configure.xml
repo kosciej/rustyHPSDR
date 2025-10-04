@@ -495,7 +495,7 @@
                           <item>ANAN 100B</item>
                           <item>ANAN 100D</item>
                           <item>ANAN 200D</item>
-                          <item>ANAN 7000D</item>
+                          <item>ANAN 7000DLE</item>
                           <item>ANAN 8000DLE</item>
                           <item>ANAN G1</item>
                           <item>ANAN G2</item>
@@ -541,13 +541,29 @@
                           <item>ANT 1</item>
                           <item>ANT 2</item>
                           <item>ANT 3</item>
-                          <item>XVTR</item>
+                        </items>
+                        </object>
+                        </property>
+                        <property name="selected">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkDropDown" id="adc0_ext_dropdown">
+                        <property name="model">
+                        <object class="GtkStringList">
+                        <items>
+                          <item>None</item>
                           <item>EXT 1</item>
                           <item>EXT 2</item>
                         </items>
                         </object>
                         </property>
                         <property name="selected">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="adc_xvtr_check_button">
+                        <property name="label">XVTR</property>
                       </object>
                     </child>
                     <child>

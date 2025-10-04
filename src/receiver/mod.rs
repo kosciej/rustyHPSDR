@@ -580,4 +580,8 @@ impl Receiver {
             Spectrum0(1, self.channel, 0, 0, raw_ptr);
         }
     }
+
+    pub fn sample_rate_changed(&mut self, rate: i32) {
+    }
+
 }

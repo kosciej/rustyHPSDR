@@ -457,9 +457,9 @@ impl Protocol2 {
                 0 => filter |= ALEX_ANTENNA_1,
                 1 => filter |= ALEX_ANTENNA_2,
                 2 => filter |= ALEX_ANTENNA_3,
-                3 => filter |= ALEX_RX_ANTENNA_XVTR,
-                4 => filter |= ALEX_RX_ANTENNA_EXT1,
-                5 => filter |= ALEX_RX_ANTENNA_EXT2,
+                3 => filter |= ALEX_RX_ANTENNA_EXT1,
+                4 => filter |= ALEX_RX_ANTENNA_EXT2,
+                5 => filter |= ALEX_RX_ANTENNA_XVTR,
                 _ => filter |= ALEX_ANTENNA_1,
             }
         } else {
@@ -468,9 +468,9 @@ impl Protocol2 {
                 0 => filter |= ALEX_ANTENNA_1,
                 1 => filter |= ALEX_ANTENNA_2,
                 2 => filter |= ALEX_ANTENNA_3,
-                3 => filter |= ALEX_RX_ANTENNA_XVTR,
-                4 => filter |= ALEX_RX_ANTENNA_EXT1,
-                5 => filter |= ALEX_RX_ANTENNA_EXT2,
+                3 => filter |= ALEX_RX_ANTENNA_EXT1,
+                4 => filter |= ALEX_RX_ANTENNA_EXT2,
+                5 => filter |= ALEX_RX_ANTENNA_XVTR,
                 _ => filter |= ALEX_ANTENNA_1,
             }
         }

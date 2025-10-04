@@ -32,15 +32,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
             .object("configure_window")
             .expect("Could not get object `configure_window` from builder.");
     
-    //window.set_transient_for(Some(parent));
-    //window.set_modal(true);
-
-    //let notebook: Notebook = builder
-    //        .object("notebook")
-    //        .expect("Could not get object `notebook` from builder.");
-
     // AUDIO
-
     let r = radio_mutex.radio.lock().unwrap();
         let remote_input = r.audio[0].remote_input;
         let local_input = r.audio[0].local_input;
@@ -316,9 +308,38 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     model_dropdown.connect_selected_notify(move |dropdown| {
         let model = dropdown.selected();
         let mut r = radio_mutex_clone.radio.lock().unwrap();
-        r.model = RadioModels::from_u32(model).expect("Invalid RadioModel");
+        //r.set_title();
         r.updated = true;
     });
+
+    let radio_sample_rate: DropDown = builder
+            .object("sample_rate_dropdown")
+            .expect("Could not get object `sample_rate_dropdown` from builder.");
+    let r = radio_mutex.radio.lock().unwrap();
+        let protocol = r.protocol;
+    drop(r);
+    if protocol == 2 {
+        radio_sample_rate.set_visible(false);
+    } else {
+        let radio_mutex_clone = radio_mutex.clone();
+        radio_sample_rate.connect_selected_notify(move |dropdown| {
+            let rate = dropdown.selected();
+            let mut sample_rate: i32 = 48000;
+            match rate {
+                0 =>  sample_rate = 48000,
+            1 =>  sample_rate = 96000,
+                2 =>  sample_rate = 192000,
+                3 =>  sample_rate = 384000,
+                4 =>  sample_rate = 768000,
+                5 =>  sample_rate = 1536000,
+                _ => sample_rate = 48000,
+            }
+            let mut r = radio_mutex_clone.radio.lock().unwrap();
+            r.sample_rate_changed(sample_rate);
+        });
+
+    }
+
 
     let r = radio_mutex.radio.lock().unwrap();
         let cw_keyer_mode = r.cw_keyer_mode;
@@ -560,6 +581,33 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         r.updated = true;
     });
 
+    let rx0_sample_rate: DropDown = builder
+            .object("rx0_sample_rate_dropdown")
+            .expect("Could not get object `rx0_sample_rate_dropdown` from builder.");
+    let r = radio_mutex.radio.lock().unwrap();
+        let protocol = r.protocol;
+    drop(r);
+    if protocol == 1 {
+        rx0_sample_rate.set_visible(false);
+    } else {
+        let radio_mutex_clone = radio_mutex.clone();
+        rx0_sample_rate.connect_selected_notify(move |dropdown| {
+            let rate = dropdown.selected();
+            let mut sample_rate: i32 = 48000;
+            match rate {
+                0 =>  sample_rate = 48000,
+            1 =>  sample_rate = 96000,
+                2 =>  sample_rate = 192000,
+                3 =>  sample_rate = 384000,
+                4 =>  sample_rate = 768000,
+                5 =>  sample_rate = 1536000,
+                _ => sample_rate = 48000,
+            }
+            let mut r = radio_mutex_clone.radio.lock().unwrap();
+            r.receiver[0].sample_rate_changed(sample_rate);
+        });
+    }
+
     let r = radio_mutex.radio.lock().unwrap();
     let adcs = r.adc.len();
     drop(r);
@@ -580,6 +628,36 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
                 .expect("Could not get object `rx1-adc` from builder.");
         rx1_adc.set_visible(false);
     }
+
+    let rx1_sample_rate: DropDown = builder
+            .object("rx1_sample_rate_dropdown")
+            .expect("Could not get object `rx1_sample_rate_dropdown` from builder.");
+    let r = radio_mutex.radio.lock().unwrap();
+        let protocol = r.protocol;
+    drop(r);
+    if protocol == 1 {
+        rx1_sample_rate.set_visible(false);
+    } else {
+        let radio_mutex_clone = radio_mutex.clone();
+        rx1_sample_rate.connect_selected_notify(move |dropdown| {
+            let rate = dropdown.selected();
+            let mut sample_rate: i32 = 48000;
+            match rate {
+                0 =>  sample_rate = 48000,
+            1 =>  sample_rate = 96000,
+                2 =>  sample_rate = 192000,
+                3 =>  sample_rate = 384000,
+                4 =>  sample_rate = 768000,
+                5 =>  sample_rate = 1536000,
+                _ => sample_rate = 48000,
+            }
+            let mut r = radio_mutex_clone.radio.lock().unwrap();
+            r.receiver[1].sample_rate_changed(sample_rate);
+        });
+    }
+
+  
+
 
     // Equalizer
     let r = radio_mutex.radio.lock().unwrap();

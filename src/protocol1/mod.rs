@@ -171,6 +171,19 @@ impl Protocol1 {
             b = b + 3;
         } else {
             eprintln!("SYNC error");
+            drop(r);
+            self.metis_stop();
+            loop {
+                if self.device.device == 6 {
+                    self.send_ozy_buffer(radio_mutex, 0);
+                } else {
+                    self.send_ozy_buffer(radio_mutex, 0);
+                }
+                if self.ozy_command == 1 {
+                    break;
+                }
+            }
+            self.metis_start();
             return;
         }
         // collect the control bytes
@@ -362,8 +375,23 @@ impl Protocol1 {
             }
             c2 = 0x00; // TODO Class E and OC
             c3 = 0x00; // TODO adc random, dither, gain, antenna
-            c4 = 0x00; // TODO tx antenna (and PS)
-            c4 = ((self.receivers - 1) as u8) << 3;
+            match r.adc[r.receiver[0].adc].rx_antenna {
+                0 => c3 |= 0x00, // ANT 1
+                1 => c3 |= 0x01, // ANT 2
+                2 => c3 |= 0x02, // ANT 3
+                3 => c3 |= 0x00, // EXT 1
+                4 => c3 |= 0x00, // EXT 2
+                5 => c3 |= 0x00, // XVTR
+                _ => c3 |= 0x00, // None
+            }
+            c4 = 0x00; // TODO assume using rx antenna for now
+            match r.adc[r.receiver[0].adc].rx_antenna {
+                0 => c4 |= 0x00,
+                1 => c4 |= 0x01,
+                2 => c4 |= 0x02,
+                _ => c4 |= 0x00,
+            }
+            c4 |= ((self.receivers - 1) as u8) << 3;
 
         } else {
             match self.ozy_command {
@@ -404,7 +432,7 @@ impl Protocol1 {
                      },
                 4 => {
                     c0 = 0x14; // C0
-                    c1 = 0x01; // C1 // preamp adc 0
+                    c1 = 0x00; // C1 // preamp adc 0
                     if r.mic_ptt {
                         c1 |= 0x40;
                     }

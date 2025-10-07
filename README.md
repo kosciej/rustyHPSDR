@@ -70,7 +70,7 @@ sudo make install
 
 # pre-requisites for rustyHPSDR
 <pre>
-sudo apt install -y libgtk-4-dev
+sudo apt install -y libgtk-4-dev libasound2-dev
 </pre>
 
 # Download and compile rustyHPSDR

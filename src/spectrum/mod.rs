@@ -13,7 +13,6 @@ pub struct Spectrum {
 impl Spectrum {
 
     pub fn new(id: usize, width: i32, height: i32) -> Self {
-eprintln!("Spectrum::new id={} width={} height={}", id, width, height);
         let rx = id;
         let surface = ImageSurface::create(Format::ARgb32, width, height).expect("Failed to create surface");
         Self {
@@ -23,7 +22,6 @@ eprintln!("Spectrum::new id={} width={} height={}", id, width, height);
     }
 
     pub fn resize(&mut self, width: i32, height: i32) {
-eprintln!("Spectrum::resize id={} width={} height={}", self.rx, width, height);
         let surface = ImageSurface::create(Format::ARgb32, width, height).expect("Failed to create surface");
         self.surface = surface;
         let cr = Context::new(&self.surface).expect("Couldn't create cairo context from surface");
@@ -33,23 +31,18 @@ eprintln!("Spectrum::resize id={} width={} height={}", self.rx, width, height);
 
     pub fn update(&mut self, width: i32, height: i32, radio_mutex: &RadioMutex, pixels: &Vec<f32>) {
 
-eprintln!("Spectrum::update id={} width={} height={}", self.rx, width, height);
         let r = radio_mutex.radio.lock().unwrap();
 
         let spectrum_height = height - 10; // leave space for the frequency
-eprintln!("Spectrum::update Context::new");
         let cr = Context::new(self.surface.clone()).expect("Couldn't create cairo context from surface");
-eprintln!("Spectrum::update set_SOURCE_RGB");
         if r.receiver[self.rx].active {
             cr.set_source_rgb(0.0, 0.0, 1.0); // dark blue
         } else {
             cr.set_source_rgb(0.0, 0.0, 0.5); // blue
         }
-eprintln!("Spectrum::update paint");
         cr.paint().expect("Failed to paint background on surface");
 
         if r.is_transmitting() && self.rx==0 {
-eprintln!("Spectrum::update is_transmitting && rx==0");
             // draw the spectrum
             let dbm_per_line: f32 = spectrum_height as f32/(r.transmitter.spectrum_high-r.transmitter.spectrum_low);     
             let spectrum_high = r.transmitter.spectrum_high;
@@ -92,7 +85,6 @@ eprintln!("Spectrum::update is_transmitting && rx==0");
             cr.stroke().unwrap();
 
         } else {
-eprintln!("Spectrum::update rx={}", self.rx);
             let b = r.receiver[self.rx].band.to_usize();
             let dbm_per_line: f32 = spectrum_height as f32/(r.receiver[self.rx].band_info[b].spectrum_high-r.receiver[self.rx].band_info[b].spectrum_low);
 
@@ -139,9 +131,7 @@ eprintln!("Spectrum::update rx={}", self.rx);
                1536000 => step = 100000.0,
                      _ => step = 25000.0,
             }
-eprintln!("Spectrum::update step={}", step);
 
-eprintln!("Spectrum::update draw band limits");
             // draw the band limits
             cr.set_source_rgb(1.0, 0.0, 0.0);
             let dashes = [4.0, 4.0];
@@ -163,7 +153,6 @@ eprintln!("Spectrum::update draw band limits");
             cr.set_dash(&[], 0.0);
             cr.set_line_width(2.0);
 
-eprintln!("Spectrum::update draw signal levels");
             // draw signal levels
             for i in r.receiver[self.rx].band_info[b].spectrum_low as i32 .. r.receiver[self.rx].band_info[b].spectrum_high as i32 {
                 if i % r.receiver[self.rx].spectrum_step as i32 == 0 {
@@ -189,7 +178,6 @@ eprintln!("Spectrum::update draw signal levels");
                 frequency = frequency - r.receiver[self.rx].cw_pitch;
             }
 
-eprintln!("Spectrum::update draw cursor and filter");
             // see if cursor and filter visible
             if display_frequency_low < frequency && display_frequency_high > frequency {
                 // draw the center line frequency marker
@@ -208,7 +196,6 @@ eprintln!("Spectrum::update draw cursor and filter");
                 let _ = cr.fill();
             }
 
-eprintln!("Spectrum::update draw spectrum");
             // draw the spectrum
             let spectrum_high = r.receiver[self.rx].band_info[b].spectrum_high;
             let spectrum_width = r.receiver[self.rx].spectrum_width;
@@ -240,7 +227,6 @@ eprintln!("Spectrum::update draw spectrum");
             let _ = cr.fill_preserve();
             cr.stroke().unwrap();
 
-eprintln!("Spectrum::update draw frequency markers");
             // draw the frequency markers
             let mut f: f32 = (((display_frequency_low as i32 + step as i32) / step as i32) * step as i32) as f32;
             while f < display_frequency_high {
@@ -259,7 +245,6 @@ eprintln!("Spectrum::update draw frequency markers");
                 f = f + step as f32;
             }
 
-eprintln!("Spectrum::update draw active notches");
             // draw any active notches
             for i in 0..r.notch {
                 let notch = r.notches[i as usize];

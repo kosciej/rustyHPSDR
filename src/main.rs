@@ -1740,7 +1740,7 @@ fn spectrum_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWid
 
     if !is_transmitting {
         let app_widgets = rc_app_widgets.borrow();
-        let (flag, pixels) = radio_mutex.update_spectrum(app_widgets.waterfall_display.width());
+        let (flag, pixels) = radio_mutex.update_spectrum(app_widgets.spectrum_display.width());
         if flag != 0 {
             let mut spectrum = rc_spectrum.borrow_mut();
             spectrum.update(app_widgets.spectrum_display.width(), app_widgets.spectrum_display.height(), &radio_mutex, &pixels);
@@ -1756,7 +1756,7 @@ fn spectrum_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppW
 
     if !is_transmitting {
         let app_widgets = rc_app_widgets.borrow();
-        let (flag, pixels) = radio_mutex.update_spectrum_2(app_widgets.waterfall_display.width());
+        let (flag, pixels) = radio_mutex.update_spectrum_2(app_widgets.spectrum_2_display.width());
         if flag != 0 {
             let mut spectrum = rc_spectrum.borrow_mut();
             spectrum.update(app_widgets.spectrum_2_display.width(), app_widgets.spectrum_2_display.height(), &radio_mutex, &pixels);

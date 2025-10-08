@@ -150,6 +150,17 @@ impl Protocol1 {
                     eprintln!("Error receiving UDP packet: {}", e);
                 }
             }
+            let mut r = radio_mutex.radio.lock().unwrap();
+            let sample_rate_changed = r.sample_rate_changed;
+            r.sample_rate_changed = false;
+            drop(r);
+            if sample_rate_changed {
+                self.metis_stop();
+                // receiver change sample rate
+                // transmitter change mic sample rate
+                self.metis_start();
+                // PS set sample rate
+            }
         }
     }
 

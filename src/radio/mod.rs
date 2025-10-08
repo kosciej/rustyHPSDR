@@ -145,6 +145,7 @@ pub struct Radio {
     pub protocol: u8,
     pub supported_receivers: u8,
     pub sample_rate: i32,
+    pub sample_rate_changed: bool,
     pub active_receiver: usize,
     pub receivers: u8,
     pub rx2_enabled: bool,
@@ -291,6 +292,7 @@ impl Radio {
         let protocol = device.protocol;
         let supported_receivers = device.supported_receivers;
         let sample_rate = 384000;
+        let sample_rate_changed = false;
         let active_receiver = 0;
         let receivers: u8 = 2;
         let rx2_enabled: bool = true;
@@ -381,6 +383,7 @@ impl Radio {
             protocol,
             supported_receivers,
             sample_rate,
+            sample_rate_changed,
             active_receiver,
             receivers,
             rx2_enabled,
@@ -866,7 +869,13 @@ pub fn draw_spectrum(radio_mutex: &RadioMutex, cr: &Context, width: i32, height:
         self.notch = self.notch + 1;
     }
 
+    // only called when radio is running protocol 1
     pub fn sample_rate_changed(&mut self, rate: i32) {
+        self.sample_rate = rate;
+        for i in 0..self.receivers {
+            self.receiver[i as usize].sample_rate_changed(rate);
+        }
+        self.sample_rate_changed = true;
     }
 
 }

@@ -152,14 +152,16 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
 
 
     let r = radio_mutex.radio.lock().unwrap();
+    let model = r.model;
     let adc_0_rx_antenna = r.adc[0].rx_antenna;
     let adc_0_dither = r.adc[0].dither;
     let adc_0_random = r.adc[0].random;
     drop(r);
 
+    if model != RadioModels::HermesLite || model != RadioModels::HermesLite2 {
     let adc_0_antenna_dropdown: DropDown = builder
-            .object("adc0_antenna_dropdown")
-            .expect("Could not get object `adc0_antenna_dropdown` from builder.");
+        .object("adc0_antenna_dropdown")
+        .expect("Could not get object `adc0_antenna_dropdown` from builder.");
     adc_0_antenna_dropdown.set_selected(adc_0_rx_antenna);
     let radio_mutex_clone = radio_mutex.clone();
     adc_0_antenna_dropdown.connect_selected_notify(move |dropdown| {
@@ -168,6 +170,31 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         r.adc[0].rx_antenna = antenna;
         r.updated = true;
     });
+
+    let adc0_dither_check_button: CheckButton = builder
+        .object("adc0_dither_check_button")
+        .expect("Could not get object `adc0_dither_check_button` from builder.");
+    adc0_dither_check_button.set_active(adc_0_dither);
+    let radio_mutex_clone = radio_mutex.clone();
+    adc0_dither_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.adc[0].dither = is_active;
+        r.updated = true;
+    });
+
+    let adc0_random_check_button: CheckButton = builder
+        .object("adc0_random_check_button")
+        .expect("Could not get object `adc0_random_check_button` from builder.");
+    adc0_random_check_button.set_active(adc_0_random);
+    let radio_mutex_clone = radio_mutex.clone();
+    adc0_random_check_button.connect_toggled(move |button| {
+        let is_active = button.is_active();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.adc[0].random = is_active;
+        r.updated = true;
+    });
+
 
     let r = radio_mutex.radio.lock().unwrap();
     let adcs = r.adc.len();
@@ -179,8 +206,8 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         let adc_1_random = r.adc[1].random;
         drop(r);
         let adc_1_antenna_dropdown: DropDown = builder
-                .object("adc1_antenna_dropdown")
-                .expect("Could not get object `adc1_antenna_dropdown` from builder.");
+            .object("adc1_antenna_dropdown")
+            .expect("Could not get object `adc1_antenna_dropdown` from builder.");
         adc_1_antenna_dropdown.set_selected(adc_1_rx_antenna);
         let radio_mutex_clone = radio_mutex.clone();
         adc_1_antenna_dropdown.connect_selected_notify(move |dropdown| {
@@ -189,11 +216,37 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
             r.adc[1].rx_antenna = antenna;
             r.updated = true;
         });
+
+        let adc1_dither_check_button: CheckButton = builder
+            .object("adc1_dither_check_button")
+            .expect("Could not get object `adc1_dither_check_button` from builder.");
+        adc1_dither_check_button.set_active(adc_1_dither);
+        let radio_mutex_clone = radio_mutex.clone();
+        adc1_dither_check_button.connect_toggled(move |button| {
+            let is_active = button.is_active();
+            let mut r = radio_mutex_clone.radio.lock().unwrap();
+            r.adc[1].dither = is_active;
+            r.updated = true;
+        });
+
+        let adc1_random_check_button: CheckButton = builder
+            .object("adc1_random_check_button")
+            .expect("Could not get object `adc1_random_check_button` from builder.");
+        adc1_random_check_button.set_active(adc_1_random);
+        let radio_mutex_clone = radio_mutex.clone();
+        adc1_random_check_button.connect_toggled(move |button| {
+            let is_active = button.is_active();
+            let mut r = radio_mutex_clone.radio.lock().unwrap();
+            r.adc[1].random = is_active;
+            r.updated = true;
+        });
+
     } else {
         let adc1_frame: Frame = builder
                 .object("adc-1-frame")
                 .expect("Could not get object `adc-1-frame` from builder.");
         adc1_frame.set_visible(false);
+    }
     }
 
 
@@ -317,17 +370,27 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
             .expect("Could not get object `sample_rate_dropdown` from builder.");
     let r = radio_mutex.radio.lock().unwrap();
         let protocol = r.protocol;
+        let sample_rate = r.sample_rate;
     drop(r);
     if protocol == 2 {
-        radio_sample_rate.set_visible(false);
+        radio_sample_rate.set_visible(false); // Only used if Protocol 1
     } else {
         let radio_mutex_clone = radio_mutex.clone();
+        let mut rate = 0;
+        match sample_rate {
+            48000 => rate = 0,
+            96000 => rate = 1,
+            192000 => rate = 2,
+            384000 => rate = 3,
+            _ => rate = 0,
+        }
+        radio_sample_rate.set_selected(rate);
         radio_sample_rate.connect_selected_notify(move |dropdown| {
             let rate = dropdown.selected();
             let mut sample_rate: i32 = 48000;
             match rate {
                 0 =>  sample_rate = 48000,
-            1 =>  sample_rate = 96000,
+                1 =>  sample_rate = 96000,
                 2 =>  sample_rate = 192000,
                 3 =>  sample_rate = 384000,
                 4 =>  sample_rate = 768000,
@@ -586,17 +649,29 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
             .expect("Could not get object `rx0_sample_rate_dropdown` from builder.");
     let r = radio_mutex.radio.lock().unwrap();
         let protocol = r.protocol;
+        let sample_rate = r.receiver[0].sample_rate;
     drop(r);
     if protocol == 1 {
         rx0_sample_rate.set_visible(false);
     } else {
         let radio_mutex_clone = radio_mutex.clone();
+        let mut rate = 0;
+        match sample_rate {
+                48000 =>  rate = 0,
+                96000 =>  rate = 1,
+                192000 =>  rate = 2,
+                384000 =>  rate = 3,
+                768000 =>  rate = 4,
+                1536000 =>  rate = 5,
+                _ => rate = 0,
+        }
+        rx0_sample_rate.set_selected(rate);
         rx0_sample_rate.connect_selected_notify(move |dropdown| {
             let rate = dropdown.selected();
             let mut sample_rate: i32 = 48000;
             match rate {
                 0 =>  sample_rate = 48000,
-            1 =>  sample_rate = 96000,
+                1 =>  sample_rate = 96000,
                 2 =>  sample_rate = 192000,
                 3 =>  sample_rate = 384000,
                 4 =>  sample_rate = 768000,
@@ -634,11 +709,23 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
             .expect("Could not get object `rx1_sample_rate_dropdown` from builder.");
     let r = radio_mutex.radio.lock().unwrap();
         let protocol = r.protocol;
+        let sample_rate = r.receiver[1].sample_rate;
     drop(r);
     if protocol == 1 {
         rx1_sample_rate.set_visible(false);
     } else {
         let radio_mutex_clone = radio_mutex.clone();
+        let mut rate = 0;
+        match sample_rate {
+                48000 =>  rate = 0,
+                96000 =>  rate = 1,
+                192000 =>  rate = 2,
+                384000 =>  rate = 3,
+                768000 =>  rate = 4,
+                1536000 =>  rate = 5,
+                _ => rate = 0,
+        }
+        rx1_sample_rate.set_selected(rate);
         rx1_sample_rate.connect_selected_notify(move |dropdown| {
             let rate = dropdown.selected();
             let mut sample_rate: i32 = 48000;

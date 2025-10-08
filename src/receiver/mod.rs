@@ -41,6 +41,7 @@ pub struct Receiver {
     pub buffer_size: usize,
     pub fft_size: i32,
     pub sample_rate: i32,
+    pub sample_rate_changed: bool,
     pub dsp_rate: i32,
     pub output_rate: i32,
     pub output_samples: usize,
@@ -89,6 +90,8 @@ pub struct Receiver {
 #[serde(skip_serializing, skip_deserializing)]
     pub iq_input_buffer: Vec<f64>,
     pub samples: usize,
+#[serde(skip_serializing, skip_deserializing)]
+    pub audio_buffer: Vec<f64>,
     pub local_audio_buffer_size: usize,
 #[serde(skip_serializing, skip_deserializing)]
     pub local_audio_buffer: Vec<i16>,
@@ -127,6 +130,7 @@ impl Receiver {
         let buffer_size: usize = 1024;
         let fft_size: i32 = 2048;
         let sample_rate: i32 = DEFAULT_SAMPLE_RATE;
+        let sample_rate_changed: bool = false;
         let dsp_rate: i32 = 48000;
         let output_rate: i32 = 48000;
         let output_samples: usize = buffer_size/(sample_rate/48000) as usize;
@@ -170,8 +174,9 @@ impl Receiver {
         let filter_high: f32 = 2700.0;
         let mode = Modes::USB.to_usize();
         let filter = Filters::F6.to_usize(); // 2.4k
-        let iq_input_buffer = vec![0.0; (2*buffer_size) as usize];
+        let iq_input_buffer = vec![0.0; (buffer_size * 2) as usize];
         let samples: usize = 0;
+        let audio_buffer = vec![0.0; (output_samples * 2) as usize];
         let local_audio_buffer_size: usize = 2048;
         let local_audio_buffer = vec![0i16; local_audio_buffer_size*2];
         let local_audio_buffer_offset: usize = 0;
@@ -202,6 +207,7 @@ impl Receiver {
                             buffer_size,
                             fft_size,
                             sample_rate,
+                            sample_rate_changed,
                             dsp_rate,
                             output_rate,
                             output_samples,
@@ -247,6 +253,7 @@ impl Receiver {
                             filter,
                             iq_input_buffer,
                             samples,
+                            audio_buffer,
                             local_audio_buffer_size,
                             local_audio_buffer,
                             local_audio_buffer_offset,
@@ -273,8 +280,9 @@ impl Receiver {
     }
 
     pub fn init(&mut self) {
-        self.iq_input_buffer = vec![0.0; (2*self.buffer_size) as usize];
+        self.iq_input_buffer = vec![0.0; (self.buffer_size * 2) as usize];
         self.samples = 0;
+        self.audio_buffer = vec![0.0; (self.output_samples * 2) as usize];
         self.local_audio_buffer = vec![0i16; self.local_audio_buffer_size*2];
         self.local_audio_buffer_offset = 0;
         self.remote_audio_buffer = vec![0u8; self.remote_audio_buffer_size];
@@ -582,6 +590,20 @@ impl Receiver {
     }
 
     pub fn sample_rate_changed(&mut self, rate: i32) {
+        self.sample_rate = rate;
+        self.output_samples = self.buffer_size/(self.sample_rate/48000) as usize;
+        self.audio_buffer = vec![0.0; (self.output_samples * 2) as usize];
+        unsafe {
+            SetChannelState(self.channel, 0, 1);
+        }
+        self.init_analyzer(self.channel);
+        unsafe {
+            SetInputSamplerate(self.channel, rate);
+            SetEXTANBSamplerate(self.channel, rate);
+            SetEXTNOBSamplerate(self.channel, rate);
+            SetChannelState(self.channel, 1, 0);
+        }
+        self.sample_rate_changed = false;
     }
 
 }

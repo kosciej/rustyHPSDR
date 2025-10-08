@@ -118,7 +118,6 @@ impl Protocol2 {
     pub fn run(&mut self, radio_mutex: &RadioMutex) {
         let r = radio_mutex.radio.lock().unwrap();
         let mut buffer = vec![0; 65536];
-        let mut audio_buffer: Vec<f64> = vec![0.0; (r.receiver[0].output_samples*2) as usize];
         let mut microphone_buffer: Vec<f64> = vec![0.0; (r.transmitter.microphone_buffer_size * 2) as usize];
         let mut microphone_buffer_offset: usize = 0;
         let mut microphone_iq_buffer: Vec<f64> = vec![0.0; (r.transmitter.iq_buffer_size * 2) as usize];
@@ -267,7 +266,7 @@ impl Protocol2 {
                                     r.receiver[ddc].samples = r.receiver[ddc].samples+1;
                                     if r.receiver[ddc].samples >= r.receiver[ddc].buffer_size {
                                         let raw_ptr: *mut f64 = r.receiver[ddc].iq_input_buffer.as_mut_ptr() as *mut f64;
-                                        let audio_ptr: *mut f64 =  audio_buffer.as_mut_ptr() as *mut f64;
+                                        let audio_ptr: *mut f64 =  r.receiver[ddc].audio_buffer.as_mut_ptr() as *mut f64;
 
                                         if r.receiver[ddc].nb {
                                             unsafe {
@@ -288,48 +287,48 @@ impl Protocol2 {
                                             Spectrum0(1, r.receiver[ddc].channel, 0, 0, raw_ptr);
                                         }
                                         r.receiver[ddc].samples = 0;
-                                            for i in 0..r.receiver[ddc].output_samples {
-                                                let ix = i * 2;
-                                                let left_sample: i32 = (audio_buffer[ix] * 32767.0) as i32;
-                                                let mut right_sample: i32 = (audio_buffer[ix+1] * 32767.0) as i32;
-                                                let rox = r.receiver[ddc].remote_audio_buffer_offset;
-                                                if r.audio[ddc].remote_output {
-                                                    r.receiver[ddc].remote_audio_buffer[rox] = (left_sample >> 8) as u8;
-                                                    r.receiver[ddc].remote_audio_buffer[rox+1] = left_sample as u8;
-                                                    r.receiver[ddc].remote_audio_buffer[rox+2] = (right_sample >> 8) as u8;
-                                                    r.receiver[ddc].remote_audio_buffer[rox+3] = right_sample as u8;
-                                                } else {
-                                                    r.receiver[ddc].remote_audio_buffer[rox] = 0;
-                                                    r.receiver[ddc].remote_audio_buffer[rox+1] = 0;
-                                                    r.receiver[ddc].remote_audio_buffer[rox+2] = 0;
-                                                    r.receiver[ddc].remote_audio_buffer[rox+3] = 0;
-                                                }
-                                                r.receiver[ddc].remote_audio_buffer_offset = r.receiver[ddc].remote_audio_buffer_offset + 4;
-                                                if r.receiver[ddc].remote_audio_buffer_offset >= r.receiver[ddc].remote_audio_buffer_size {
-                                                    self.send_audio(r.receiver[ddc].clone());
-                                                    r.receiver[ddc].remote_audio_buffer_offset = 4;
-                                                }
+                                        for i in 0..r.receiver[ddc].output_samples {
+                                            let ix = i * 2;
+                                            let left_sample: i32 = (r.receiver[ddc].audio_buffer[ix] * 32767.0) as i32;
+                                            let mut right_sample: i32 = (r.receiver[ddc].audio_buffer[ix+1] * 32767.0) as i32;
+                                            let rox = r.receiver[ddc].remote_audio_buffer_offset;
+                                            if r.audio[ddc].remote_output {
+                                                r.receiver[ddc].remote_audio_buffer[rox] = (left_sample >> 8) as u8;
+                                                r.receiver[ddc].remote_audio_buffer[rox+1] = left_sample as u8;
+                                                r.receiver[ddc].remote_audio_buffer[rox+2] = (right_sample >> 8) as u8;
+                                                r.receiver[ddc].remote_audio_buffer[rox+3] = right_sample as u8;
+                                            } else {
+                                                r.receiver[ddc].remote_audio_buffer[rox] = 0;
+                                                r.receiver[ddc].remote_audio_buffer[rox+1] = 0;
+                                                r.receiver[ddc].remote_audio_buffer[rox+2] = 0;
+                                                r.receiver[ddc].remote_audio_buffer[rox+3] = 0;
+                                            }
+                                            r.receiver[ddc].remote_audio_buffer_offset = r.receiver[ddc].remote_audio_buffer_offset + 4;
+                                            if r.receiver[ddc].remote_audio_buffer_offset >= r.receiver[ddc].remote_audio_buffer_size {
+                                                self.send_audio(r.receiver[ddc].clone());
+                                                r.receiver[ddc].remote_audio_buffer_offset = 4;
+                                            }
 
-                                                if r.audio[ddc].local_output {
-                                                    let lox=r.receiver[ddc].local_audio_buffer_offset * 2;
-                                                    if ddc == 0 {
-                                                        r.receiver[ddc].local_audio_buffer[lox]=(audio_buffer[ix] * 32767.0) as i16;
-                                                        if r.rx2_enabled {
-                                                            r.receiver[ddc].local_audio_buffer[lox+1]=0;
-                                                        } else {
-                                                            r.receiver[ddc].local_audio_buffer[lox+1]=(audio_buffer[ix+1] * 32767.0) as i16;
-                                                        }
-                                                    } else if ddc == 1 {
-                                                        r.receiver[ddc].local_audio_buffer[lox]=0;
-                                                        r.receiver[ddc].local_audio_buffer[lox+1]=(audio_buffer[ix+1] * 32767.0) as i16;
+                                            if r.audio[ddc].local_output {
+                                                let lox=r.receiver[ddc].local_audio_buffer_offset * 2;
+                                                if ddc == 0 {
+                                                    r.receiver[ddc].local_audio_buffer[lox]=(r.receiver[ddc].audio_buffer[ix] * 32767.0) as i16;
+                                                    if r.rx2_enabled {
+                                                        r.receiver[ddc].local_audio_buffer[lox+1]=0;
+                                                    } else {
+                                                        r.receiver[ddc].local_audio_buffer[lox+1]=(r.receiver[ddc].audio_buffer[ix+1] * 32767.0) as i16;
                                                     }
-                                                    r.receiver[ddc].local_audio_buffer_offset = r.receiver[ddc].local_audio_buffer_offset + 1;
-                                                    if r.receiver[ddc].local_audio_buffer_offset == r.receiver[ddc].local_audio_buffer_size {
-                                                        r.receiver[ddc].local_audio_buffer_offset = 0;
-                                                        let buffer_clone = r.receiver[ddc].local_audio_buffer.clone();
-                                                        r.audio[ddc].write_output(&buffer_clone);
-                                                    }
+                                                } else if ddc == 1 {
+                                                    r.receiver[ddc].local_audio_buffer[lox]=0;
+                                                    r.receiver[ddc].local_audio_buffer[lox+1]=(r.receiver[ddc].audio_buffer[ix+1] * 32767.0) as i16;
                                                 }
+                                                r.receiver[ddc].local_audio_buffer_offset = r.receiver[ddc].local_audio_buffer_offset + 1;
+                                                if r.receiver[ddc].local_audio_buffer_offset == r.receiver[ddc].local_audio_buffer_size {
+                                                    r.receiver[ddc].local_audio_buffer_offset = 0;
+                                                    let buffer_clone = r.receiver[ddc].local_audio_buffer.clone();
+                                                    r.audio[ddc].write_output(&buffer_clone);
+                                                }
+                                            }
                                         }
                                     }
                                 }

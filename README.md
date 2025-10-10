@@ -22,25 +22,21 @@ Please note that not all images or the current UI. My antenna came down in a rec
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/discovery.png">
 
-# If you get this after clicking on Start and before the Radio starts running
-
-<img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/wait.png">
-
-You can either just wait or click on Wait to close the dialog or you can change the timeout value by installing dconf-editor and change the /org/gnome/mutter/check-alive-timeout value from the default of 5000 to 60000.
-
 # When a device is selected and Start button clicked the radio will start running
 
 Currently Split, Mic Gain and Drive do not do anything. They will once transmit is implemented.
 
 Most of the other buttons are self explanitary.
 
-To change frequency you can use the scroll wheel in the VFO window, the Spectrum window and Waterfall window or you can click on the frequency to move to.
+By default when first started both RX1 and RX2 receivers are displayed. The currently active receiver is indicated by the spectrum display having the lighter blue background. When enabled, clicking on the spectru or waterfall will more the receiver to tht frequency.  If you click on spectrum or waterfall display of the receiver with the darker blue spectrum background it will become the active receiver and further clicks will change the frequency.
+
+Note that the scroll wheel will change frequency of the receiver that the mouse cursor is over.
+
+The scroll wheel can be used to change frequency when the curosr is in the VFO window, the Spectrum window and Waterfall window.
 
 The CTUN button enables Click Tuning. When active it allows you to click within the Spectrum or Waterfall to QSY without shifting the Spectrum or Waterfall display. When "CTUN" is inactive, clicking on the Spectrum re-centers the Spectrum, thereby shifting the entire Spectrum. 
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot1.png">
-
-<img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/screenshot2.png">
 
 # Adjusting spectrum and waterfall display
 

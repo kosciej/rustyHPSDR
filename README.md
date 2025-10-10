@@ -82,6 +82,6 @@ cargo build
 cargo run
 </pre>
 
-# System Utilization running Ubuntu 25.04 on a BOSGAME P3 Ryzen 9 Mini PC - 8 Cores (16 threads), 32GB Memory
+# System Utilization with 2 receivers running Ubuntu 25.04 on a BOSGAME P3 Ryzen 9 Mini PC - 8 Cores (16 threads), 32GB Memory
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/system.png">

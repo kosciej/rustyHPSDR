@@ -293,6 +293,213 @@ pub fn discover(devices: Rc<RefCell<Vec<Device>>>) {
     }
 }
 
+pub fn manual_discovery(devices: Rc<RefCell<Vec<Device>>>, target_ip: std::net::IpAddr) -> bool {
+    let socket = UdpSocket::bind("0.0.0.0:0").expect("bind failed");
+    socket.set_broadcast(false).expect("set_broadcast call failed");
+    socket.set_read_timeout(Some(Duration::from_millis(1000))).expect("set_read_timeout call failed");
+    socket.set_write_timeout(Some(Duration::from_millis(250))).expect("set_write_timeout call failed");
+
+    let _res = setsockopt(&socket, ReusePort, &true);
+    let _res = setsockopt(&socket, ReuseAddr, &true);
+
+    let target_addr = SocketAddr::new(target_ip, 1024);
+
+    // Try protocol 1 first
+    let mut buf = [0u8; 63];
+    buf[0] = 0xEF;
+    buf[1] = 0xFE;
+    buf[2] = 0x02;
+    socket.send_to(&buf, target_addr).expect("couldn't send data");
+
+    let mut found = false;
+    loop {
+        let mut buf = [0; 1024];
+        match socket.recv_from(&mut buf) {
+            Ok((amt,src)) => {
+                if amt == 60 && src.ip() == target_ip {
+                    let mac: [u8;6] = [buf[3],buf[4],buf[5],buf[6],buf[7],buf[8]];
+                    let mut board = Boards::Unknown;
+                    let mut adcs=1;
+                    let mut supported_receivers=1;
+                    let mut supported_transmitters=1;
+                    let mut frequency_min=0;
+                    let mut frequency_max=61440000;
+
+                    match  buf[10] {
+                        0=>{ // METIS
+                           board = Boards::Metis;
+                           adcs=1;
+                           supported_receivers=5;
+                           supported_transmitters=1;
+                           frequency_min=0;
+                           frequency_max=61440000;
+                           },
+                        1=>{ // HERMES
+                           board = Boards::Hermes;
+                           adcs=1;
+                           supported_receivers=5;
+                           supported_transmitters=1;
+                           frequency_min=0;
+                           frequency_max=61440000;
+                           },
+                        4=>{ // ANGELIA
+                           board = Boards::Angelia;
+                           adcs=2;
+                           supported_receivers=7;
+                           supported_transmitters=1;
+                           frequency_min=0;
+                           frequency_max=61440000;
+                           },
+                        5=>{ // ORION
+                           board = Boards::Orion;
+                           adcs=2;
+                           supported_receivers=7;
+                           supported_transmitters=1;
+                           frequency_min=0;
+                           frequency_max=61440000;
+                           },
+                        6=>{ // HERMES_LITE
+                           if buf[9] < 42 {
+                               // HERMES_LITE V1
+                               board = Boards::HermesLite;
+                               supported_receivers=2;
+                           } else {
+                               // HERMES_LITE V2
+                               board = Boards::HermesLite2;
+                               supported_receivers=buf[19];
+                           }
+                           adcs=1;
+                           supported_transmitters=1;
+                           frequency_min=0;
+                           frequency_max=30720000;
+                           },
+                        10=>{ // ORION2
+                           board = Boards::Orion2;
+                           adcs=2;
+                           supported_receivers=7;
+                           supported_transmitters=1;
+                           frequency_min=0;
+                           frequency_max=61440000;
+                           },
+                        _=>{ // UNKNOWN - use defaults
+                           },
+                    }
+                    let local_addr = socket.local_addr().expect("failed to get local address");
+                    add_device(Rc::clone(&devices),src,local_addr,buf[10],board,1,buf[9],buf[2],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
+                    found = true;
+                    break;
+                }
+            },
+            Err(_e) => {
+                break;
+            }
+        }
+    }
+
+    // If not found with protocol 1, try protocol 2
+    if !found {
+        let mut buf = [0u8; 60];
+        buf[4] = 0x02;
+        socket.send_to(&buf, target_addr).expect("couldn't send data");
+
+        loop {
+            let mut buf = [0; 1024];
+            match socket.recv_from(&mut buf) {
+                Ok((amt,src)) => {
+                    if amt == 60 && src.ip() == target_ip {
+                        let mac: [u8;6] = [buf[5],buf[6],buf[7],buf[8],buf[9],buf[10]];
+                        let mut board = Boards::Unknown;
+                        let mut adcs=1;
+                        let mut supported_receivers=1;
+                        let mut supported_transmitters=1;
+                        let mut frequency_min=0;
+                        let mut frequency_max=61440000;
+
+                        match  buf[11] {
+                            0=>{ // ATLAS
+                                board = Boards::Metis;
+                                adcs=1;
+                                supported_receivers=5;
+                                supported_transmitters=1;
+                                frequency_min=0;
+                                frequency_max=61440000;
+                               },
+                            1=>{ // HERMES
+                                board = Boards::Hermes;
+                                adcs=1;
+                                supported_receivers=5;
+                                supported_transmitters=1;
+                                frequency_min=0;
+                                frequency_max=61440000;
+                               },
+                            2=>{ // HERMES2
+                                board = Boards::Hermes2;
+                                adcs=1;
+                                supported_receivers=5;
+                                supported_transmitters=1;
+                                frequency_min=0;
+                                frequency_max=61440000;
+                               },
+                            3=>{ // ANGELIA
+                                board = Boards::Angelia;
+                                adcs=2;
+                                supported_receivers=7;
+                                supported_transmitters=1;
+                                frequency_min=0;
+                                frequency_max=61440000;
+                               },
+                            4=>{ // ORION
+                                board = Boards::Orion;
+                                adcs=2;
+                                supported_receivers=7;
+                                supported_transmitters=1;
+                                frequency_min=0;
+                                frequency_max=61440000;
+                               },
+                            5=>{ // ORION2
+                                board = Boards::Orion2;
+                                adcs=2;
+                                supported_receivers=7;
+                                supported_transmitters=1;
+                                frequency_min=0;
+                                frequency_max=61440000;
+                               },
+                            6=>{ // HERMES_LITE
+                                board = Boards::HermesLite2;
+                                adcs=1;
+                                supported_receivers=5;
+                                supported_transmitters=1;
+                                frequency_min=0;
+                                frequency_max=30720000;
+                               },
+                            10=>{ // SATURN
+                                board = Boards::Saturn;
+                                adcs=2;
+                                supported_receivers=7;
+                                supported_transmitters=1;
+                                frequency_min=0;
+                                frequency_max=61440000;
+                               },
+                            _=>{ // UNKNOWN - use defaults
+                               },
+                        }
+                        let local_addr = socket.local_addr().expect("failed to get local address");
+                        add_device(Rc::clone(&devices),src,local_addr,buf[11],board,2,buf[13],buf[4],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
+                        found = true;
+                        break;
+                    }
+                },
+                Err(_e) => {
+                    break;
+                }
+            }
+        }
+    }
+
+    drop(socket);
+    found
+}
+
 pub fn create_discovery_dialog(parent: &ApplicationWindow, discovery_data: Rc<RefCell<Vec<Device>>>, selected_index: Rc<RefCell<Option<i32>>>) -> Window {
 
     let ui_xml = include_str!("../ui/discovery.xml");
@@ -329,6 +536,14 @@ pub fn create_discovery_dialog(parent: &ApplicationWindow, discovery_data: Rc<Re
             .object("cancel_button")
             .expect("Could not get object `cancel_button` from builder.");
 
+    let manual_ip_entry: gtk::Entry = builder
+            .object("manual_ip_entry")
+            .expect("Could not get object `manual_ip_entry` from builder.");
+
+    let add_manual_button: Button = builder
+            .object("add_manual_button")
+            .expect("Could not get object `add_manual_button` from builder.");
+
     let start_button: Button = builder
             .object("start_button")
             .expect("Could not get object `start_button` from builder.");
@@ -357,17 +572,45 @@ pub fn create_discovery_dialog(parent: &ApplicationWindow, discovery_data: Rc<Re
     let discovery_data_clone = Rc::clone(&discovery_data);
     let list_clone = list.clone();
     let start_button_clone = start_button.clone();
+    let discovery_data_for_rediscover = Rc::clone(&discovery_data);
+    let list_for_rediscover = list.clone();
     rediscover_button.connect_clicked(move |_| {
-        let discovery_data_clone_clone = Rc::clone(&discovery_data_clone);
+        let discovery_data_clone_clone = Rc::clone(&discovery_data_for_rediscover);
         discover(discovery_data_clone_clone);
-        populate_list_box(&list_clone.clone(), Rc::clone(&discovery_data_clone));
-        if discovery_data.borrow().len() > 0 {
-            if let Some(first_radio_row) = list.row_at_index(1) {
+        populate_list_box(&list_for_rediscover.clone(), Rc::clone(&discovery_data_for_rediscover));
+        if discovery_data_for_rediscover.borrow().len() > 0 {
+            if let Some(first_radio_row) = list_for_rediscover.row_at_index(1) {
                 first_radio_row.activate();
             }
             start_button_clone.set_sensitive(true);
         } else {
             start_button_clone.set_sensitive(false);
+        }
+    });
+
+    let discovery_data_clone = Rc::clone(&discovery_data);
+    let list_clone = list.clone();
+    let start_button_clone = start_button.clone();
+    let manual_ip_entry_clone = manual_ip_entry.clone();
+    let discovery_data_for_manual = Rc::clone(&discovery_data);
+    let list_for_manual = list.clone();
+    add_manual_button.connect_clicked(move |_| {
+        let ip_text = manual_ip_entry_clone.text().to_string();
+        if let Ok(ip) = ip_text.parse::<std::net::IpAddr>() {
+            let discovery_data_clone_clone = Rc::clone(&discovery_data_for_manual);
+            if manual_discovery(discovery_data_clone_clone, ip) {
+                populate_list_box(&list_for_manual.clone(), Rc::clone(&discovery_data_for_manual));
+                if discovery_data_for_manual.borrow().len() > 0 {
+                    if let Some(first_radio_row) = list_for_manual.row_at_index(1) {
+                        first_radio_row.activate();
+                    }
+                    start_button_clone.set_sensitive(true);
+                }
+            } else {
+                // Could show an error dialog, but for now just do nothing
+            }
+        } else {
+            // Invalid IP, could show error
         }
     });
 

@@ -38,7 +38,6 @@ pub struct Transmitter {
     pub p1_packet_size: i32,
     pub packet_counter: i32,
     pub is_transmitting: bool,
-    pub local_microphone: bool,
     pub local_microphone_buffer_size: usize,
 #[serde(skip_serializing, skip_deserializing)]
     pub local_microphone_buffer: Vec<u8>,
@@ -46,14 +45,10 @@ pub struct Transmitter {
 #[serde(skip_serializing, skip_deserializing)]
     pub microphone_buffer: Vec<f32>,
     pub microphone_samples: usize,
-    pub iq_buffer_size: usize,
 #[serde(skip_serializing, skip_deserializing)]
     pub iq_buffer: Vec<f32>,
     pub iq_samples: usize,
     pub fft_size: i32,
-    pub microphone_sample_rate: i32,
-    pub microphone_dsp_rate: i32,
-    pub iq_output_rate: i32,
     pub low_latency: bool,
     pub use_rx_filter: bool,
     pub mode: usize,
@@ -89,7 +84,6 @@ impl Transmitter {
             output_samples = 1024*(output_rate/sample_rate);
         }
         let is_transmitting = false;
-        let local_microphone = false;
         let local_microphone_buffer_size = 1024 as usize;
         let local_microphone_buffer = vec![0u8; local_microphone_buffer_size];
 
@@ -100,18 +94,7 @@ impl Transmitter {
 
         let fft_size = 2048;
 
-        let mut microphone_sample_rate = 48000i32;
-        let mut microphone_dsp_rate = 48000i32;
-        let mut iq_output_rate = 48000i32; 
-        let mut iq_buffer_size = 1024 as usize;
-        if protocol == 2 {
-            microphone_sample_rate = 48000;
-            microphone_dsp_rate = 96000;
-            iq_output_rate = 192000; 
-            iq_buffer_size = (microphone_buffer_size as i32 * (iq_output_rate / microphone_sample_rate)) as usize;
-        }
-
-        let iq_buffer = vec![0.0f32; (iq_buffer_size * 2) as usize];
+        let iq_buffer = vec![0.0f32; (output_samples * 2) as usize];
         let iq_samples = 0 as usize;
 
         let low_latency = false;
@@ -134,7 +117,37 @@ impl Transmitter {
 
         let tx_antenna = ALEX_ANTENNA_1;
 
-        let tx = Transmitter{ protocol, channel, sample_rate, dsp_rate, output_rate, buffer_size, output_samples, p1_packet_size, packet_counter, is_transmitting, local_microphone, local_microphone_buffer_size, local_microphone_buffer, microphone_buffer_size, microphone_buffer, microphone_samples, iq_buffer_size, iq_buffer, iq_samples, fft_size, microphone_sample_rate, microphone_dsp_rate, iq_output_rate, low_latency, use_rx_filter, mode, filter_low, filter_high, drive, spectrum_width, fps, display_average_time, spectrum_high, spectrum_low, micgain, tx_antenna };
+        let tx = Transmitter{ protocol,
+            channel,
+            sample_rate,
+            dsp_rate,
+            output_rate,
+            buffer_size,
+            output_samples,
+            p1_packet_size,
+            packet_counter,
+            is_transmitting,
+            local_microphone_buffer_size,
+            local_microphone_buffer,
+            microphone_buffer_size,
+            microphone_buffer,
+            microphone_samples,
+            iq_buffer,
+            iq_samples,
+            fft_size,
+            low_latency,
+            use_rx_filter,
+            mode,
+            filter_low,
+            filter_high,
+            drive,
+            spectrum_width,
+            fps,
+            display_average_time,
+            spectrum_high,
+            spectrum_low,
+            micgain,
+            tx_antenna };
 
         tx
     }
@@ -142,7 +155,7 @@ impl Transmitter {
     pub fn init(&mut self) {
         self.local_microphone_buffer = vec![0u8; self.local_microphone_buffer_size * 2 as usize];
         self.microphone_buffer = vec![0.0f32; (self.microphone_buffer_size * 2) as usize];
-        self.iq_buffer = vec![0.0f32; (self.iq_buffer_size * 2) as usize];
+        self.iq_buffer = vec![0.0f32; (self.output_samples * 2) as usize];
         self.init_wdsp();
 
         let id_string = String::from("TX");
@@ -168,8 +181,7 @@ impl Transmitter {
     pub fn init_analyzer(&self) {
         let mut flp = [0];
         let keep_time: f32 = 0.1;
-        let fft_size = 8192;
-        let max_w = fft_size + min((keep_time * self.fps) as i32, (keep_time * fft_size as f32  * self.fps) as i32);
+        let max_w = self.fft_size + min((keep_time * self.fps) as i32, (keep_time * self.fft_size as f32  * self.fps) as i32);
         let buffer_size: i32 = (self.buffer_size  * 4) as i32;
         let mut multiplier = 3; // protocol1
         if self.protocol == 2 {
@@ -177,7 +189,7 @@ impl Transmitter {
         }
         let pixels = self.spectrum_width * multiplier;
         unsafe {
-            SetAnalyzer(self.channel, 1, 1, 1, flp.as_mut_ptr(), fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
+            SetAnalyzer(self.channel, 1, 1, 1, flp.as_mut_ptr(), self.fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
         }
    } 
 
@@ -185,13 +197,29 @@ impl Transmitter {
 
     fn init_wdsp(&mut self) {
         unsafe {
-            OpenChannel(self.channel, self.microphone_buffer_size as i32, self.fft_size, self.sample_rate, self.dsp_rate, self.output_rate, 1, 0, 0.010, 0.025, 0.0, 0.010, 0);
+            OpenChannel(self.channel,
+                self.microphone_buffer_size as i32,
+                self.fft_size,
+                self.sample_rate,
+                self.dsp_rate,
+                self.output_rate,
+                1,
+                0,
+                0.010,
+                0.025,
+                0.0,
+                0.010,
+                0);
             TXASetNC(self.channel, self.fft_size);
             TXASetMP(self.channel, self.low_latency as i32);
             SetTXABandpassWindow(self.channel, 1);
             SetTXABandpassRun(self.channel, 1);
             SetTXAFMEmphPosition(self.channel,false as i32);
-            SetTXACFIRRun(self.channel, 0);
+            if self.protocol == 1 {
+                SetTXACFIRRun(self.channel, 0);
+            } else {
+                SetTXACFIRRun(self.channel, 1);
+            }
             SetTXAEQRun(self.channel, 0);
             SetTXAAMSQRun(self.channel, 0);
             SetTXAosctrlRun(self.channel, 0);
@@ -218,7 +246,7 @@ impl Transmitter {
             SetTXAPostGenToneFreq(self.channel, 0.0);
             SetTXAPostGenRun(self.channel, 0);
 
-            SetTXAPanelGain1(self.channel,10.0_f32.powf(self.micgain / 20.0) as f64);
+            SetTXAPanelGain1(self.channel,(self.micgain / 20.0).powf(10.0_f32) as f64);
             SetTXAPanelRun(self.channel, 1);
 
             SetTXAFMDeviation(self.channel, 2500.0);
@@ -234,12 +262,14 @@ impl Transmitter {
     }
 
     pub fn set_mode(&self) {
+        eprintln!("Transmitter::set_mode channel {} mode {}", self.channel, self.mode as i32);
         unsafe {
             SetTXAMode(self.channel, self.mode as i32);
         }
     }
 
     pub fn set_filter(&self) {
+        eprintln!("Transmitter::set_filter channel {} low {} high {}", self.channel, self.filter_low, self.filter_high);
         unsafe {
             SetTXABandpassFreqs(self.channel, self.filter_low.into(), self.filter_high.into());
         }
@@ -248,7 +278,6 @@ impl Transmitter {
 
     pub fn set_tuning(&self, state: bool, cw_keyer_sidetone_frequency: i32) {
         unsafe {
-            eprintln!("set_tuning: state = {} channel = {}", state, self.channel);
             if state {
                 let mut frequency = (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64;
                 if self.mode == Modes::CWL.to_usize() {
@@ -260,7 +289,6 @@ impl Transmitter {
                 } else if self.mode == Modes::USB.to_usize() {
                     let frequency = (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64;
                 }
-                eprintln!("set_tuning: frequency: {}", frequency);
                 SetTXAPostGenToneFreq(self.channel, frequency);
                 SetTXAPostGenToneMag(self.channel, 0.99999);
                 SetTXAPostGenMode(self.channel, 0); // Tone
@@ -296,9 +324,9 @@ impl Transmitter {
                 2 => {},
                 _ => {eprintln!("microphone_sample: Invalid protocol {}", self.protocol); },
             }
-            //unsafe {
-            //    Spectrum0(1, self.channel, 0, 0, raw_ptr);
-            //}
+            unsafe {
+                Spectrum0(1, self.channel, 0, 0, raw_ptr);
+            }
             self.microphone_samples = 0;
         }
     }

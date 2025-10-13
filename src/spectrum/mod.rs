@@ -32,7 +32,6 @@ impl Spectrum {
     pub fn update(&mut self, width: i32, height: i32, radio_mutex: &RadioMutex, pixels: &Vec<f32>) {
 
         let r = radio_mutex.radio.lock().unwrap();
-
         let spectrum_height = height - 10; // leave space for the frequency
         let cr = Context::new(self.surface.clone()).expect("Couldn't create cairo context from surface");
         if r.receiver[self.rx].active {

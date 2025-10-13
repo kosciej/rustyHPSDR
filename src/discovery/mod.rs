@@ -65,7 +65,7 @@ fn add_device(devices: Rc<RefCell<Vec<Device>>>, address: SocketAddr, my_address
 }
 
 pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: SocketAddr) {
-    //let socket = UdpSocket::bind("0.0.0.0:0").expect("bind failed");
+    eprintln!("protocol1_discovery: address={:?}", socket_addr);
     let socket = UdpSocket::bind(socket_addr).expect("bind failed");
     socket.set_broadcast(true).expect("set_broadcast call failed");
     socket.set_read_timeout(Some(Duration::from_millis(250))).expect("set_read_timeout call failed");
@@ -88,7 +88,8 @@ pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
         match socket.recv_from(&mut buf) {
             Ok((amt,src)) => {
                 let local_addr = socket.local_addr().expect("failed to get local address");
-                if amt == 60 {
+//eprintln!("Protocol 1 received: amt={} src={:?} local={:?}", amt, src, local_addr);
+                if amt == 60  && src.port()==1024 {
                     let mac: [u8;6] = [buf[3],buf[4],buf[5],buf[6],buf[7],buf[8]];
                     let mut board = Boards::Unknown; 
                     let mut adcs=1;
@@ -169,7 +170,7 @@ pub fn protocol1_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
 }
 
 pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: SocketAddr) {
-    //let socket = UdpSocket::bind("0.0.0.0:0").expect("bind failed");
+    eprintln!("protocol2_discovery: address={:?}", socket_addr);
     let socket = UdpSocket::bind(socket_addr).expect("bind failed");
     socket.set_broadcast(true).expect("set_broadcast call failed");
     socket.set_read_timeout(Some(Duration::from_millis(250))).expect("set_read_timeout call failed");
@@ -189,7 +190,9 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
         let mut buf = [0; 1024];
         match socket.recv_from(&mut buf) {
             Ok((amt,src)) => {
-                if amt == 60 {
+                let local_addr = socket.local_addr().expect("failed to get local address");
+//eprintln!("Protocol 2 received: amt={} src={:?} local={:?}", amt, src, local_addr);
+                if amt == 60  && src.port() == 1024 {
                     let mac: [u8;6] = [buf[5],buf[6],buf[7],buf[8],buf[9],buf[10]];
                     let mut board = Boards::Unknown;
                     let mut adcs=1;
@@ -269,7 +272,7 @@ pub fn protocol2_discovery(devices: Rc<RefCell<Vec<Device>>>, socket_addr: Socke
                     let local_addr = socket.local_addr().expect("failed to get local address");
                     add_device(Rc::clone(&devices),src,local_addr,buf[11],board,2,buf[13],buf[4],mac,supported_receivers,supported_transmitters,adcs,frequency_min,frequency_max);
                 } else {
-                    println!("Expected 60 bytes but Received: {:?} From {:?}",amt,src);
+                    //println!("Expected 60 bytes but Received: {:?} From {:?}",amt,src);
                 }
             },
             Err(_e) => {
@@ -286,7 +289,7 @@ pub fn discover(devices: Rc<RefCell<Vec<Device>>>) {
     for itf in network_interfaces.iter() {
         if itf.addr.len()>0 {
             let std::net::IpAddr::V4(ip_addr) = itf.addr[0].ip() else { todo!() };
-            let socket_address = SocketAddr::new(std::net::IpAddr::V4(ip_addr),0);
+            let socket_address = SocketAddr::new(std::net::IpAddr::V4(ip_addr),1024);
             protocol1_discovery(Rc::clone(&devices), socket_address);
             protocol2_discovery(Rc::clone(&devices), socket_address);
         }

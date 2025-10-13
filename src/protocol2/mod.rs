@@ -120,7 +120,7 @@ impl Protocol2 {
         let mut buffer = vec![0; 65536];
         let mut microphone_buffer: Vec<f64> = vec![0.0; (r.transmitter.microphone_buffer_size * 2) as usize];
         let mut microphone_buffer_offset: usize = 0;
-        let mut microphone_iq_buffer: Vec<f64> = vec![0.0; (r.transmitter.iq_buffer_size * 2) as usize];
+        let mut microphone_iq_buffer: Vec<f64> = vec![0.0; (r.transmitter.output_samples * 2) as usize];
         let mut microphone_iq_buffer_offset: usize = 0;
         let mut tx_iq_buffer: Vec<f64> = vec![0.0; IQ_BUFFER_SIZE*2];
         let mut tx_iq_buffer_offset: usize = 0;
@@ -171,11 +171,10 @@ impl Protocol2 {
 
                                 let data_size = MIC_SAMPLES * MIC_SAMPLE_SIZE;
                                 let mut r = radio_mutex.radio.lock().unwrap();
-                                if r.transmitter.local_microphone {
+                                if r.audio[0].local_input {
                                     let mic_buffer = r.audio[0].read_input();
                                     eprintln!("mic_buffer read {}", mic_buffer.len());
                                 } else {
-                                if !r.transmitter.local_microphone {
                                     let mut sample:i32 = 0;
                                     let mut b = MIC_HEADER_SIZE;
                                     if size >= MIC_HEADER_SIZE + data_size {
@@ -187,11 +186,7 @@ impl Protocol2 {
                                             }
                                             b = b + 2;
                                             let x = microphone_buffer_offset * 2;
-                                            if r.tune {
-                                                microphone_buffer[x] = 0.0;
-                                            } else {
-                                                microphone_buffer[x] = sample as f64 / 32768.0;
-                                            }
+                                            microphone_buffer[x] = sample as f64 / 32768.0;
                                             microphone_buffer[x+1] = 0.0;
                                             microphone_buffer_offset = microphone_buffer_offset + 1;
                                             if microphone_buffer_offset >= r.transmitter.microphone_buffer_size {
@@ -205,11 +200,11 @@ impl Protocol2 {
                                                     Spectrum0(1, r.transmitter.channel, 0, 0, iq_ptr);
                                                 }
                                                 if r.is_transmitting() {
-                                                    for j in 0..r.transmitter.iq_buffer_size {
+                                                    for j in 0..r.transmitter.output_samples {
                                                         let ix = j * 2;
                                                         let ox = tx_iq_buffer_offset * 2;
-                                                        tx_iq_buffer[ox] = microphone_iq_buffer[ix] as f64;
-                                                        tx_iq_buffer[ox+1] = microphone_iq_buffer[ix+1] as f64;
+                                                        tx_iq_buffer[ox] = microphone_iq_buffer[ix as usize] as f64;
+                                                        tx_iq_buffer[ox+1] = microphone_iq_buffer[(ix+1) as usize] as f64;
                                                         tx_iq_buffer_offset = tx_iq_buffer_offset + 1;
                                                         if tx_iq_buffer_offset >= IQ_BUFFER_SIZE {
                                                             self.send_iq_buffer(tx_iq_buffer.clone());
@@ -222,7 +217,7 @@ impl Protocol2 {
                                         }
                                     }
                                 }
-                                }
+                                
                                 r.received = true;
                                 },
                         1027 => {}, // Wide Band IQ samples
@@ -406,9 +401,10 @@ impl Protocol2 {
     
         // receiver frequency
         let mut phase: u32 = 0;
+        let mut f = 0.0;
         for i in 0..r.receivers {
             // convert frequency to phase
-            let mut f = r.receiver[i as usize].frequency;
+            f = r.receiver[i as usize].frequency;
             if r.receiver[i as usize].mode == Modes::CWL.to_usize() {
                  f = f + r.receiver[i as usize].cw_pitch;
             } else if r.receiver[i as usize].mode == Modes::CWU.to_usize() {
@@ -425,14 +421,27 @@ impl Protocol2 {
 
         // transmit frequency
         if r.split {
-            let mut f = r.receiver[1].frequency;
+            f = r.receiver[1].frequency;
+            if r.receiver[1].ctun {
+                f = r.receiver[1].ctun_frequency;
+            }
             if r.receiver[1].mode == Modes::CWL.to_usize() {
                  f = f + r.receiver[1].cw_pitch;
             } else if r.receiver[1].mode == Modes::CWU.to_usize() {
                  f = f - r.receiver[1].cw_pitch;
             }
-            phase = ((4294967296.0*f)/122880000.0) as u32;
+        } else {
+            f = r.receiver[0].frequency;
+            if r.receiver[0].ctun {
+                f = r.receiver[0].ctun_frequency;
+            }
+            if r.receiver[0].mode == Modes::CWL.to_usize() {
+                 f = f + r.receiver[0].cw_pitch;
+            } else if r.receiver[0].mode == Modes::CWU.to_usize() {
+                 f = f - r.receiver[0].cw_pitch;
+            }
         }
+        phase = ((4294967296.0*f)/122880000.0) as u32;
         buf[329] = ((phase>>24) & 0xFF) as u8;
         buf[330] = ((phase>>16) & 0xFF) as u8;
         buf[331] = ((phase>>8) & 0xFF) as u8;
@@ -711,7 +720,7 @@ impl Protocol2 {
 
         // send 240 24 bit I/Q samples
         let mut b = 4;
-        for i in 0..240 {
+        for i in 0..IQ_BUFFER_SIZE {
             let mut ix = i * 2;
             let mut isample = buffer[ix] * 8388607.0;
             if isample>=0.0 {

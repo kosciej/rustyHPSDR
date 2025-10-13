@@ -34,7 +34,6 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     
     // AUDIO
     let r = radio_mutex.radio.lock().unwrap();
-        let remote_input = r.audio[0].remote_input;
         let local_input = r.audio[0].local_input;
         let input_device = r.audio[0].input_device.clone();
         let remote_output1 = r.audio[0].remote_output;
@@ -47,12 +46,10 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
 
     let input_devices = Audio::list_pcm_devices(Direction::Capture);
 
-
+    /*
     let remote_input_check_button: CheckButton = builder
             .object("remote_input_check_button")
             .expect("Could not get object `remote_input_check_button` from builder.");
-    
-    let remote_input_check_button = CheckButton::with_label("Remote Input");
     remote_input_check_button.set_active(remote_input);
     let radio_mutex_clone = radio_mutex.clone();
     remote_input_check_button.connect_toggled(move |button| {
@@ -60,6 +57,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         let mut r = radio_mutex_clone.radio.lock().unwrap();
         r.audio[0].remote_input = is_active;
     });
+    */
 
     let local_input_check_button: CheckButton = builder
             .object("local_input_check_button")

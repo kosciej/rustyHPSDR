@@ -430,6 +430,8 @@ fn build_ui(app: &Application) {
                         let mut r = radio_mutex_clone.radio.lock().unwrap();
                         r.receiver[0].spectrum_width = width;
                         r.receiver[0].init_analyzer(r.receiver[0].channel);
+                        r.transmitter.spectrum_width = width;
+                        r.transmitter.init_analyzer();
                         let mut spectrum = rc_spectrum_clone2.borrow_mut();
                         spectrum.resize(width, height);
                     });
@@ -1738,14 +1740,12 @@ fn spectrum_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWid
     let is_transmitting = r.is_transmitting();
     drop(r);
 
-    if !is_transmitting {
-        let app_widgets = rc_app_widgets.borrow();
-        let (flag, pixels) = radio_mutex.update_spectrum(app_widgets.spectrum_display.width());
-        if flag != 0 {
-            let mut spectrum = rc_spectrum.borrow_mut();
-            spectrum.update(app_widgets.spectrum_display.width(), app_widgets.spectrum_display.height(), &radio_mutex, &pixels);
-            app_widgets.spectrum_display.queue_draw();
-        }
+    let app_widgets = rc_app_widgets.borrow();
+    let (flag, pixels) = radio_mutex.update_spectrum(app_widgets.spectrum_display.width());
+    if flag != 0 {
+        let mut spectrum = rc_spectrum.borrow_mut();
+        spectrum.update(app_widgets.spectrum_display.width(), app_widgets.spectrum_display.height(), &radio_mutex, &pixels);
+        app_widgets.spectrum_display.queue_draw();
     }
 }
 

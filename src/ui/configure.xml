@@ -27,11 +27,6 @@
                   <object class="GtkBox">
                     <property name="orientation">vertical</property>
                     <child>
-                      <object class="GtkCheckButton" id="remote_input_check_button">
-                        <property name="label">Enable Remote Mic Input from Radio</property>
-                      </object>
-                    </child>
-                    <child>
                       <object class="GtkBox">
                         <property name="orientation">horizontal</property>
                         <child>

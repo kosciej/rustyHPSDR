@@ -171,7 +171,7 @@ impl Protocol1 {
         let mic_sample_divisor = r.transmitter.sample_rate / 48000;
         let mut microphone_buffer: Vec<f64> = vec![0.0; (r.transmitter.microphone_buffer_size * 2) as usize];
         let mut microphone_buffer_offset: usize = 0;
-        let mut microphone_iq_buffer: Vec<f64> = vec![0.0; (r.transmitter.iq_buffer_size * 2) as usize];
+        let mut microphone_iq_buffer: Vec<f64> = vec![0.0; (r.transmitter.output_samples * 2) as usize];
         let mut microphone_iq_buffer_offset: usize = 0;
 
         let mut i_sample = 0;
@@ -325,13 +325,13 @@ impl Protocol1 {
                 }
 
                 if r.is_transmitting() {
-                    for j in 0..r.transmitter.iq_buffer_size {
+                    for j in 0..r.transmitter.output_samples {
                         let ix = j * 2;
                         let ox = r.transmitter.iq_samples * 2;
-                        r.transmitter.iq_buffer[ox] = microphone_iq_buffer[ix] as f32;
-                        r.transmitter.iq_buffer[ox+1] = microphone_iq_buffer[ix+1] as f32;
+                        r.transmitter.iq_buffer[ox] = microphone_iq_buffer[ix as usize] as f32;
+                        r.transmitter.iq_buffer[ox+1] = microphone_iq_buffer[(ix+1) as usize] as f32;
                         r.transmitter.iq_samples = r.transmitter.iq_samples + 1;
-                        if r.transmitter.iq_samples >= r.transmitter.iq_buffer_size {
+                        if r.transmitter.iq_samples >= r.transmitter.output_samples as usize {
                             self.send_ozy_buffer(radio_mutex, 0);
                             r.transmitter.iq_samples  = 0;
                         }

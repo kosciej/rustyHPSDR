@@ -200,12 +200,6 @@ pub struct Radio {
 #[serde(skip_serializing, skip_deserializing)]
     pub adc_overload: bool,
 #[serde(skip_serializing, skip_deserializing)]
-    pub exciter_power: i32,
-#[serde(skip_serializing, skip_deserializing)]
-    pub alex_forward_power: i32,
-#[serde(skip_serializing, skip_deserializing)]
-    pub alex_reverse_power: i32,
-#[serde(skip_serializing, skip_deserializing)]
     pub supply_volts: i32,
 
 #[serde(skip_serializing, skip_deserializing)]
@@ -352,9 +346,6 @@ impl Radio {
 
         let pll_locked = false;
         let adc_overload = false;
-        let exciter_power = 0;
-        let alex_forward_power = 0;
-        let alex_reverse_power = 0;
         let supply_volts = 0;
         let swr = 1.0;
 
@@ -424,9 +415,6 @@ impl Radio {
 
             pll_locked,
             adc_overload,
-            exciter_power,
-            alex_forward_power,
-            alex_reverse_power,
             supply_volts,
 
             swr,
@@ -460,9 +448,6 @@ impl Radio {
 
         self.pll_locked = false;
         self.adc_overload = false;
-        self.exciter_power = 0;
-        self.alex_forward_power = 0;
-        self.alex_reverse_power = 0;
         self.supply_volts = 0;
 
         self.swr = 1.0;

@@ -62,6 +62,12 @@ pub struct Transmitter {
     pub spectrum_low: f32,
     pub micgain: f32,
     pub tx_antenna: u32,
+#[serde(skip_serializing, skip_deserializing)]
+    pub exciter_power: u16,
+#[serde(skip_serializing, skip_deserializing)]
+    pub alex_forward_power: u16,
+#[serde(skip_serializing, skip_deserializing)]
+    pub alex_reverse_power: u16,
 }
 
 impl Transmitter {
@@ -116,6 +122,9 @@ impl Transmitter {
         let micgain = 0.0;
 
         let tx_antenna = ALEX_ANTENNA_1;
+        let exciter_power:u16 = 0;
+        let alex_forward_power:u16 = 0;
+        let alex_reverse_power:u16 = 0;
 
         let tx = Transmitter{ protocol,
             channel,
@@ -147,7 +156,11 @@ impl Transmitter {
             spectrum_high,
             spectrum_low,
             micgain,
-            tx_antenna };
+            tx_antenna,
+            exciter_power,
+            alex_forward_power,
+            alex_reverse_power
+        };
 
         tx
     }

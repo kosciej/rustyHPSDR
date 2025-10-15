@@ -69,6 +69,7 @@ struct AppWidgets {
     pub step_dropdown: DropDown,
     pub meter_1_display: DrawingArea,
     pub meter_2_display: DrawingArea,
+    pub meter_tx_display: DrawingArea,
     pub spectrum_display: DrawingArea,
     pub waterfall_display: DrawingArea,
     pub spectrum_2_display: DrawingArea,
@@ -151,6 +152,10 @@ impl AppWidgets {
         let meter_2_display: DrawingArea = builder
             .object("meter_2_display")
             .expect("Could not get meter_2_display from builder");
+
+        let meter_tx_display: DrawingArea = builder
+            .object("meter_tx_display")
+            .expect("Could not get meter_tx_display from builder");
 
         let spectrum_display: DrawingArea = builder
             .object("spectrum_display")
@@ -278,6 +283,7 @@ impl AppWidgets {
             step_dropdown,
             meter_1_display,
             meter_2_display,
+            meter_tx_display,
             spectrum_display,
             waterfall_display,
             spectrum_2_display,
@@ -385,6 +391,8 @@ fn build_ui(app: &Application) {
     let rc_meter_1 = Rc::new(RefCell::new(meter_1));
     let mut meter_2 = Meter::new(256,36);
     let rc_meter_2 = Rc::new(RefCell::new(meter_2));
+    let mut meter_tx = Meter::new(256,36);
+    let rc_meter_tx = Rc::new(RefCell::new(meter_tx));
 
     let discovery_data = Rc::new(RefCell::new(Vec::new()));
     let selected_index: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
@@ -406,6 +414,7 @@ fn build_ui(app: &Application) {
     let rc_waterfall_2_clone = rc_waterfall_2.clone();
     let rc_meter_1_clone = rc_meter_1.clone();
     let rc_meter_2_clone = rc_meter_2.clone();
+    let rc_meter_tx_clone = rc_meter_tx.clone();
     let rc_app_widgets_clone = rc_app_widgets.clone();
     discovery_dialog.connect_close_request(move |_| {
         let mut app_widgets = rc_app_widgets_clone.borrow_mut();
@@ -1614,6 +1623,12 @@ fn build_ui(app: &Application) {
                         meter.draw(cr);
                     });
 
+                    let rc_meter_tx_clone2 = rc_meter_tx_clone.clone();
+                    app_widgets.meter_tx_display.set_draw_func(move |_da, cr, width, height| {
+                        let mut meter = rc_meter_tx_clone2.borrow_mut();
+                        meter.draw(cr);
+                    });
+
                     match device.protocol {
                         1 => {
                             let mut p1 = Protocol1::new(device);
@@ -1684,8 +1699,16 @@ fn build_ui(app: &Application) {
                     let radio_mutex_clone = radio_mutex.clone();
                     let rc_app_widgets_clone2 = rc_app_widgets_clone.clone();
                     let mut rc_meter_1_clone2 = rc_meter_1_clone.clone();
+                    let mut rc_meter_tx_clone2 = rc_meter_tx_clone.clone();
                     let meter_1_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
-                        meter_1_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_1_clone2);
+                        let mut r = radio_mutex_clone.radio.lock().unwrap();
+                        let is_transmitting = r.is_transmitting();
+                        drop(r);
+                        if is_transmitting {
+                            meter_tx_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_tx_clone2);
+                        } else {
+                            meter_1_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_1_clone2);
+                        }
                         Continue
                     });
 
@@ -1815,13 +1838,26 @@ fn meter_2_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidg
     let app_widgets = rc_app_widgets.borrow();
     let mut meter = rc_meter.borrow_mut();
     let mut r = radio_mutex.radio.lock().unwrap();
-    if r.is_transmitting() {
-    } else {
+    if !r.is_transmitting() {
         unsafe {
             r.s_meter_dbm = GetRXAMeter(r.receiver[1].channel,rxaMeterType_RXA_S_AV as i32);
         }
         meter.update_rx(r.s_meter_dbm, false);
         app_widgets.meter_2_display.queue_draw();
+    }
+}
+
+fn meter_tx_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWidgets>>, rc_meter: &Rc<RefCell<Meter>>) {
+    let app_widgets = rc_app_widgets.borrow();
+    let mut meter = rc_meter.borrow_mut();
+    let mut r = radio_mutex.radio.lock().unwrap();
+    let is_transmitting = r.is_transmitting();
+    let forward = r.transmitter.alex_forward_power;
+    let reverse = r.transmitter.alex_reverse_power;
+    drop(r);
+    if is_transmitting {
+        meter.update_tx(forward, reverse);
+        app_widgets.meter_tx_display.queue_draw();
     }
 }
 

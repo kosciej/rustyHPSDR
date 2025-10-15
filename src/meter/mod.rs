@@ -22,14 +22,17 @@ use crate::radio::RadioMutex;
 #[derive(Clone)]
 pub struct Meter {
     surface: ImageSurface,
+    swr: f32,
 }
 
 impl Meter {
 
     pub fn new(width: i32, height: i32) -> Self {
         let surface = ImageSurface::create(Format::ARgb32, width, height).expect("Failed to create surface");
+        let swr = 1.0;
         Self {
             surface,
+            swr,
         }
     }
 
@@ -86,16 +89,16 @@ impl Meter {
     }
 
 
-    pub fn update_tx(&mut self, radio_mutex: &RadioMutex) {
+    pub fn update_tx(&mut self, forward: u16, reverse: u16) {
+        eprintln!("Meter::update_tx fwd {} rev{}", forward, reverse);
         let cr = Context::new(self.surface.clone()).expect("Couldn't create cairo context from surface");
-        let mut r = radio_mutex.radio.lock().unwrap();
 
         cr.set_source_rgb (1.0, 1.0, 1.0);
         cr.paint().unwrap();
 
         // calculate the SWR
-        let fwd_power = r.alex_forward_power as f32;
-        let rev_power = r.alex_reverse_power as f32;
+        let fwd_power = forward as f32;
+        let rev_power = reverse as f32;
 
         // temp only ORION2 constants
         let c1 = 5.0;
@@ -106,18 +109,21 @@ impl Meter {
         let v_rev = (rev_power / 4095.0) * c1;
         let rev = (v_rev * v_rev) / c2;
 
-        let mut this_swr = (1.0 + (rev / fwd).sqrt())  / (1.0 - (rev / fwd).sqrt());
-        if this_swr < 0.0 {
-            this_swr = 1.0;
+        eprintln!("Meter::update_tx {} {} v_fwd {} fwd {} v_rev {} rev {}", forward, reverse, v_fwd, fwd, v_rev, rev );
+        let mut swr = (1.0 + (rev / fwd).sqrt())  / (1.0 - (rev / fwd).sqrt());
+        if swr < 0.0 {
+            swr = 1.0;
         } 
 
-        if !this_swr.is_nan() && !this_swr.is_infinite() {
-            let alpha = 0.7;
-            r.swr = (alpha * this_swr) + ((1.0 - alpha) * r.swr);
+        eprintln!("Meter::update_tx {} {} v_fwd {} fwd {} v_rev {} rev {} swr {}", forward, reverse, v_fwd, fwd, v_rev, rev, swr );
+
+        //if !swr.is_nan() && !swr.is_infinite() {
+            //let alpha = 0.7;
+            //self.swr = (alpha * swr) + ((1.0 - alpha) * self.swr);
      
-            let fwd_text = format!("FWD: {}", fwd);
-            let rev_text = format!("REV: {}", rev);
-            let swr_text = format!("SWR: {}:1.0", r.swr);
+            let fwd_text = format!("FWD: {:.1}", fwd);
+            let rev_text = format!("REV: {:.1}", rev);
+            let swr_text = format!("SWR: {:.1}:1.0", self.swr);
 
             cr.set_source_rgb (0.0, 0.0, 0.0);
             cr.move_to(5.0,10.0);
@@ -126,7 +132,7 @@ impl Meter {
             let _ = cr.show_text(&rev_text);
             cr.move_to(5.0,30.0);
             let _ = cr.show_text(&swr_text);
-        }
+        //}
     }
 
     pub fn draw(&self, cr: &Context) {

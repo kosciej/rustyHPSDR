@@ -20,6 +20,7 @@ use nix::sys::socket::sockopt::{ReuseAddr, ReusePort};
 use std::net::{UdpSocket};
 use std::os::raw::c_int;
 
+use crate::receiver::AudioOutput;
 use crate::discovery::Device;
 use crate::modes::Modes;
 use crate::radio::RadioMutex;

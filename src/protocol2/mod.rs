@@ -147,8 +147,8 @@ impl Protocol2 {
                                     r.dash = ((buffer[4] >> 2) & 0x01) == 0x01;
 
                                     r.pll_locked = ((buffer[5] >> 2) & 0x01) == 0x01;
-                                    r.alex_forward_power = u16::from_be_bytes([buffer[14], buffer[15]]) as i32;
-                                    r.alex_reverse_power = u16::from_be_bytes([buffer[22], buffer[23]]) as i32;
+                                    r.transmitter.alex_forward_power = u16::from_be_bytes([buffer[14], buffer[15]]);
+                                    r.transmitter.alex_reverse_power = u16::from_be_bytes([buffer[22], buffer[23]]);
                                     r.supply_volts = u16::from_be_bytes([buffer[49], buffer[50]]) as i32;
 
                                     if r.ptt != previous_ptt {

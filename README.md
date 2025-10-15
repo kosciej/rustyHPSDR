@@ -50,6 +50,11 @@ I have now added the first attempt at Zoom and Pan
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/zoom1.png">
 
+# pre-requisistes to build
+<pre>
+  sudo apt install -y build-essential curl git
+</pre>
+
 # pre-requisites for WDSP
 <pre>
 sudo apt install -y libfftw3-dev

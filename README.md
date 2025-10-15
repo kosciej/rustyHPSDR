@@ -52,7 +52,7 @@ I have now added the first attempt at Zoom and Pan
 
 # pre-requisises
 <pre>
-  sudo apt install -y build-essential curl git libfftw3-dev libgtk-4-dev libasound2-dev
+sudo apt install -y build-essential curl git libfftw3-dev libgtk-4-dev libasound2-dev
 </pre>
 
 # Download and compile WDSP

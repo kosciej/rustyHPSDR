@@ -23,7 +23,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::discovery::Device;
 use crate::modes::Modes;
-use crate::receiver::Receiver;
+use crate::receiver::{AudioOutput, Receiver};
 use crate::radio::{Keyer, RadioMutex};
 use crate::wdsp::*;
 use crate::alex::*;
@@ -260,62 +260,75 @@ impl Protocol2 {
                                     r.receiver[ddc].iq_input_buffer[i+1]=q_sample as f64/16777215.0;
                                     r.receiver[ddc].samples = r.receiver[ddc].samples+1;
                                     if r.receiver[ddc].samples >= r.receiver[ddc].buffer_size {
-                                        let raw_ptr: *mut f64 = r.receiver[ddc].iq_input_buffer.as_mut_ptr() as *mut f64;
-                                        let audio_ptr: *mut f64 =  r.receiver[ddc].audio_buffer.as_mut_ptr() as *mut f64;
-
-                                        if r.receiver[ddc].nb {
-                                            unsafe {
-                                                xanbEXT(r.receiver[ddc].channel, raw_ptr, raw_ptr);
-                                            }
-                                        }
-                                        if r.receiver[ddc].nb2{
-                                            unsafe {
-                                                xnobEXT(r.receiver[ddc].channel, raw_ptr, raw_ptr);
-                                            }
-                                        }
-
-                                        let mut result: c_int = 0;
-                                        unsafe {
-                                            fexchange0(r.receiver[ddc].channel, raw_ptr, audio_ptr, &mut result);
-                                        }
-                                        unsafe {
-                                            Spectrum0(1, r.receiver[ddc].channel, 0, 0, raw_ptr);
-                                        }
+                                        r.receiver[ddc].process_iq_samples();
                                         r.receiver[ddc].samples = 0;
                                         for i in 0..r.receiver[ddc].output_samples {
                                             let ix = i * 2;
                                             let left_sample: i32 = (r.receiver[ddc].audio_buffer[ix] * 32767.0) as i32;
                                             let mut right_sample: i32 = (r.receiver[ddc].audio_buffer[ix+1] * 32767.0) as i32;
                                             let rox = r.receiver[ddc].remote_audio_buffer_offset;
-                                            if r.audio[ddc].remote_output {
-                                                r.receiver[ddc].remote_audio_buffer[rox] = (left_sample >> 8) as u8;
-                                                r.receiver[ddc].remote_audio_buffer[rox+1] = left_sample as u8;
-                                                r.receiver[ddc].remote_audio_buffer[rox+2] = (right_sample >> 8) as u8;
-                                                r.receiver[ddc].remote_audio_buffer[rox+3] = right_sample as u8;
-                                            } else {
-                                                r.receiver[ddc].remote_audio_buffer[rox] = 0;
-                                                r.receiver[ddc].remote_audio_buffer[rox+1] = 0;
-                                                r.receiver[ddc].remote_audio_buffer[rox+2] = 0;
-                                                r.receiver[ddc].remote_audio_buffer[rox+3] = 0;
+
+                                            // always stereo to radio
+                                            r.receiver[ddc].remote_audio_buffer[rox] = (left_sample >> 8) as u8;
+                                            r.receiver[ddc].remote_audio_buffer[rox+1] = left_sample as u8;
+                                            r.receiver[ddc].remote_audio_buffer[rox+2] = (right_sample >> 8) as u8;
+                                            r.receiver[ddc].remote_audio_buffer[rox+3] = right_sample as u8;
+                                            /*
+                                            match r.receiver[ddc].audio_output {
+                                                AudioOutput::Stereo => {
+                                                    r.receiver[ddc].remote_audio_buffer[rox] = (left_sample >> 8) as u8;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+1] = left_sample as u8;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+2] = (right_sample >> 8) as u8;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+3] = right_sample as u8;
+                                                },
+                                                AudioOutput::Left => {
+                                                    r.receiver[ddc].remote_audio_buffer[rox] = (left_sample >> 8) as u8;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+1] = left_sample as u8;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+2] = 0;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+3] = 0;
+                                                },
+                                                AudioOutput::Right => {
+                                                    r.receiver[ddc].remote_audio_buffer[rox] = 0;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+1] = 0;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+2] = (right_sample >> 8) as u8;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+3] = right_sample as u8;
+                                                },
+                                                AudioOutput::Mute => {
+                                                    r.receiver[ddc].remote_audio_buffer[rox] = 0;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+1] = 0;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+2] = 0;
+                                                    r.receiver[ddc].remote_audio_buffer[rox+3] = 0;
+                                                },
                                             }
+                                            */
+
                                             r.receiver[ddc].remote_audio_buffer_offset = r.receiver[ddc].remote_audio_buffer_offset + 4;
                                             if r.receiver[ddc].remote_audio_buffer_offset >= r.receiver[ddc].remote_audio_buffer_size {
-                                                self.send_audio(r.receiver[ddc].clone());
+                                                if r.receiver[ddc].active {
+                                                    self.send_audio(r.receiver[ddc].clone());
+                                                }
                                                 r.receiver[ddc].remote_audio_buffer_offset = 4;
                                             }
 
                                             if r.audio[ddc].local_output {
                                                 let lox=r.receiver[ddc].local_audio_buffer_offset * 2;
-                                                if ddc == 0 {
-                                                    r.receiver[ddc].local_audio_buffer[lox]=(r.receiver[ddc].audio_buffer[ix] * 32767.0) as i16;
-                                                    if r.rx2_enabled {
+                                                match r.receiver[ddc].audio_output {
+                                                    AudioOutput::Stereo => {
+                                                        r.receiver[ddc].local_audio_buffer[lox]=left_sample as i16;
+                                                        r.receiver[ddc].local_audio_buffer[lox+1]=right_sample as i16;
+                                                    },
+                                                    AudioOutput::Left => {
+                                                        r.receiver[ddc].local_audio_buffer[lox]=left_sample as i16;
                                                         r.receiver[ddc].local_audio_buffer[lox+1]=0;
-                                                    } else {
-                                                        r.receiver[ddc].local_audio_buffer[lox+1]=(r.receiver[ddc].audio_buffer[ix+1] * 32767.0) as i16;
-                                                    }
-                                                } else if ddc == 1 {
-                                                    r.receiver[ddc].local_audio_buffer[lox]=0;
-                                                    r.receiver[ddc].local_audio_buffer[lox+1]=(r.receiver[ddc].audio_buffer[ix+1] * 32767.0) as i16;
+                                                    },
+                                                    AudioOutput::Right => {
+                                                        r.receiver[ddc].local_audio_buffer[lox]=0;
+                                                        r.receiver[ddc].local_audio_buffer[lox+1]=right_sample as i16;
+                                                    },
+                                                    AudioOutput::Mute => {
+                                                        r.receiver[ddc].local_audio_buffer[lox]=0;
+                                                        r.receiver[ddc].local_audio_buffer[lox+1]=0;
+                                                    },
                                                 }
                                                 r.receiver[ddc].local_audio_buffer_offset = r.receiver[ddc].local_audio_buffer_offset + 1;
                                                 if r.receiver[ddc].local_audio_buffer_offset == r.receiver[ddc].local_audio_buffer_size {
@@ -720,8 +733,8 @@ impl Protocol2 {
 
         // send 240 24 bit I/Q samples
         let mut b = 4;
-        for i in 0..IQ_BUFFER_SIZE {
-            let mut ix = i * 2;
+        for x in 0..IQ_BUFFER_SIZE {
+            let mut ix = x * 2;
             let mut isample = buffer[ix] * 8388607.0;
             if isample>=0.0 {
                 isample = (isample + 0.5).floor();
@@ -735,12 +748,15 @@ impl Protocol2 {
                 qsample = (qsample - 0.5).ceil();
             }
 
-            buf[b]=(isample as i32 >> 16) as u8;
-            buf[b+1]=(isample as i32 >> 8) as u8;
-            buf[b+2]=(isample as i32) as u8;
-            buf[b+3]=(qsample as i32 >> 16) as u8;
-            buf[b+4]=(qsample as i32 >> 8) as u8;
-            buf[b+5]=(qsample as i32 ) as u8;
+            let i = isample as i32;
+            let q = qsample as i32;
+
+            buf[b]=(i >> 16) as u8 &0xFF;
+            buf[b+1]=(i >> 8) as u8 &0xFF;
+            buf[b+2]=i as u8 &0xFF;
+            buf[b+3]=(q >> 16) as u8 &0xFF;
+            buf[b+4]=(q >> 8) as u8 &0xFF;
+            buf[b+5]=q as u8 &0xFF;
 
             b = b + 6;
         }

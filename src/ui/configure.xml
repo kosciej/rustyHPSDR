@@ -848,6 +848,21 @@
                             <property name="selected">3</property>
                           </object>
                         </child>
+                        <child>
+                          <object class="GtkDropDown" id="rx0_audio_dropdown">
+                            <property name="model">
+                            <object class="GtkStringList">
+                            <items>
+                              <item>Stereo</item>
+                              <item>Left</item>
+                              <item>Right</item>
+                              <item>Mute</item>
+                            </items>
+                            </object>
+                            </property>
+                            <property name="selected">0</property>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>
@@ -889,6 +904,21 @@
                             </object>
                             </property>
                             <property name="selected">3</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkDropDown" id="rx1_audio_dropdown">
+                            <property name="model">
+                            <object class="GtkStringList">
+                            <items>
+                              <item>Stereo</item>
+                              <item>Left</item>
+                              <item>Right</item>
+                              <item>Mute</item>
+                            </items>
+                            </object>
+                            </property>
+                            <property name="selected">0</property>
                           </object>
                         </child>
                       </object>

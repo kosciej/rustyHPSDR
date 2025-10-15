@@ -201,6 +201,7 @@ impl Protocol1 {
         b = b + 5;
         for _s in 0..self.iq_samples {
             for rx in 0..r.receivers {
+                let ddc = rx as usize;
                 if buffer[b] & 0x80 != 0 {
                     i_sample = u32::from_be_bytes([0xFF, buffer[b], buffer[b+1], buffer[b+2]]) as i32;
                 } else {
@@ -214,28 +215,20 @@ impl Protocol1 {
                 }
                 b = b + 3;
 
-                let i = r.receiver[rx as usize].samples*2;
-                r.receiver[rx as usize].iq_input_buffer[i]=i_sample as f64/16777215.0;
-                r.receiver[rx as usize].iq_input_buffer[i+1]=q_sample as f64/16777215.0;
-                r.receiver[rx as usize].samples = r.receiver[rx as usize].samples+1;
-                if r.receiver[rx as usize].samples >= r.receiver[rx as usize].buffer_size {
-                    let raw_ptr: *mut f64 = r.receiver[rx as usize].iq_input_buffer.as_mut_ptr() as *mut f64;
-                    let audio_ptr: *mut f64 =  audio_buffer.as_mut_ptr() as *mut f64;
-                    let mut result: c_int = 0;
-                    unsafe {
-                        fexchange0(r.receiver[rx as usize].channel, raw_ptr, audio_ptr, &mut result);
-                    }
-                    unsafe {
-                        Spectrum0(1, r.receiver[rx as usize].channel, 0, 0, raw_ptr);
-                    }
-                    r.receiver[rx as usize].samples = 0;
-                    if rx==0 || (rx==1 && r.rx2_enabled) {
-                        for i in 0..r.receiver[rx as usize].output_samples {
-                            let ix = i * 2 ;
-                            let left_sample: i32 = (audio_buffer[ix] * 16777215.0) as i32;
-                            let mut right_sample: i32 = (audio_buffer[ix+1] * 16777215.0) as i32;
+                let i = r.receiver[ddc].samples*2;
+                r.receiver[ddc].iq_input_buffer[i]=i_sample as f64/16777215.0;
+                r.receiver[ddc].iq_input_buffer[i+1]=q_sample as f64/16777215.0;
+                r.receiver[ddc].samples = r.receiver[ddc].samples+1;
+                if r.receiver[ddc].samples >= r.receiver[ddc].buffer_size {
+                    r.receiver[ddc].process_iq_samples();
+                    r.receiver[ddc].samples = 0;
 
-                            if r.audio[rx as usize].remote_output {
+                    if r.receiver[ddc].active {
+                        for i in 0..r.receiver[ddc].output_samples {
+                            let ix = i * 2 ;
+                            let left_sample: i32 = (r.receiver[ddc].audio_buffer[ix] * 16777215.0) as i32;
+                            let mut right_sample: i32 = (r.receiver[ddc].audio_buffer[ix+1] * 16777215.0) as i32;
+                            if r.audio[ddc].remote_output {
                                 self.ozy_buffer[self.ozy_buffer_offset] = (left_sample >> 8) as u8;
                                 self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
                                 self.ozy_buffer[self.ozy_buffer_offset] = left_sample as u8;
@@ -275,23 +268,32 @@ impl Protocol1 {
                                 r = radio_mutex.radio.lock().unwrap();
                             }
 
-                            if r.audio[rx as usize].local_output {
-                                let left_sample: i16 = (audio_buffer[ix] * 32767.0) as i16;
-                                let mut right_sample: i16 = (audio_buffer[ix+1] * 32767.0) as i16;
-                                let ox=r.receiver[rx as usize].local_audio_buffer_offset * 2;
-                                r.receiver[rx as usize].local_audio_buffer[ox+1]=left_sample;
-                                r.receiver[rx as usize].local_audio_buffer[ox]=right_sample;
-                                r.receiver[rx as usize].local_audio_buffer_offset = r.receiver[rx as usize].local_audio_buffer_offset + 1;
-                                if r.receiver[rx as usize].local_audio_buffer_offset == r.receiver[rx as usize].local_audio_buffer_size {
-                                    let buffer_clone = r.receiver[rx as usize].local_audio_buffer.clone();
-                                    match r.audio[rx as usize].write_output(&buffer_clone) {
-                                        Ok(()) => {
-                                        },
-                                        Err(e) => {
-                                            eprintln!("Protocol1: write_output: {}", e);
-                                        },
-                                    }
-                                    r.receiver[rx as usize].local_audio_buffer_offset = 0;
+                            if r.audio[ddc].local_output {
+                                let lox=r.receiver[ddc].local_audio_buffer_offset * 2;
+                                match r.receiver[ddc].audio_output {
+                                    AudioOutput::Stereo => {
+                                        r.receiver[ddc].local_audio_buffer[lox]=left_sample as i16;
+                                        r.receiver[ddc].local_audio_buffer[lox+1]=right_sample as i16;
+                                    },
+                                    AudioOutput::Left => {
+                                        r.receiver[ddc].local_audio_buffer[lox]=left_sample as i16;
+                                        r.receiver[ddc].local_audio_buffer[lox+1]=0;
+                                    },
+                                    AudioOutput::Right => {
+                                        r.receiver[ddc].local_audio_buffer[lox]=0;
+                                        r.receiver[ddc].local_audio_buffer[lox+1]=right_sample as i16;
+                                    },
+                                    AudioOutput::Mute => {
+                                        r.receiver[ddc].local_audio_buffer[lox]=0;
+                                        r.receiver[ddc].local_audio_buffer[lox+1]=0;
+                                    },
+                                }
+
+                                r.receiver[ddc].local_audio_buffer_offset = r.receiver[ddc].local_audio_buffer_offset + 1;
+                                if r.receiver[ddc].local_audio_buffer_offset == r.receiver[ddc].local_audio_buffer_size {
+                                    r.receiver[ddc].local_audio_buffer_offset = 0;
+                                    let buffer_clone = r.receiver[ddc].local_audio_buffer.clone();
+                                    r.audio[ddc].write_output(&buffer_clone);
                                 }
                             }
                         }

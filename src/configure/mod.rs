@@ -20,6 +20,7 @@ use gtk::prelude::*;
 use gtk::{Adjustment, ApplicationWindow, Box, Builder, Button, CheckButton, ComboBoxText, DropDown, Frame, Label, ListBox, ListBoxRow, Orientation, PositionType, Scale, ToggleButton, Window};
 
 use crate::radio::{Keyer, RadioModels, RadioMutex};
+use crate::receiver::{AudioOutput};
 use crate::audio::*;
 
 pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMutex) -> Window {
@@ -113,12 +114,15 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     local_output_check_button.connect_toggled(move |button| {
         let is_active = button.is_active();
         let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.audio[0].local_output = is_active;
+        r.audio[1].local_output = is_active;
         if is_active {
             r.audio[0].open_output();
             r.audio[1].open_output();
+        } else {
+            r.audio[0].close_output();
+            r.audio[1].close_output();
         }
-        r.audio[0].local_output = is_active;
-        r.audio[1].local_output = is_active;
     });
 
     let output_combo_box: ComboBoxText = builder
@@ -681,6 +685,20 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         });
     }
 
+    let rx0_audio: DropDown = builder
+            .object("rx0_audio_dropdown")
+            .expect("Could not get object `rx0_audio_dropdown` from builder.");
+    let r = radio_mutex.radio.lock().unwrap();
+        let audio_output = r.receiver[0].audio_output;
+    drop(r);
+    let radio_mutex_clone = radio_mutex.clone();
+    rx0_audio.set_selected(audio_output.to_u32());
+    rx0_audio.connect_selected_notify(move |dropdown| {
+        let output = dropdown.selected();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[0].audio_output = AudioOutput::from_u32(output);
+    });
+
     let r = radio_mutex.radio.lock().unwrap();
     let adcs = r.adc.len();
     drop(r);
@@ -742,6 +760,20 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     }
 
   
+    let rx1_audio: DropDown = builder
+            .object("rx1_audio_dropdown")
+            .expect("Could not get object `rx1_audio_dropdown` from builder.");
+    let r = radio_mutex.radio.lock().unwrap();
+        let audio_output = r.receiver[1].audio_output;
+    drop(r);
+    let radio_mutex_clone = radio_mutex.clone();
+    rx1_audio.set_selected(audio_output.to_u32());
+    rx1_audio.connect_selected_notify(move |dropdown| {
+        let output = dropdown.selected();
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[1].audio_output = AudioOutput::from_u32(output);
+    });
+
 
 
     // Equalizer

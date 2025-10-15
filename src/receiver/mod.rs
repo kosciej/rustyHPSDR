@@ -22,6 +22,7 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 
 use crate::agc::AGC;
+use crate::audio::*;
 use crate::bands::{Bands, BandInfo};
 use crate::filters::Filters;
 use crate::modes::Modes;
@@ -31,6 +32,30 @@ const DEFAULT_SAMPLE_RATE: i32 = 384000; // 1536000;// 768000; // 384000;
 const DEFAULT_SPECTRUM_AVERAGE_TIME: f32 = 250.0;
 const DEFAULT_WATERFALL_AVERAGE_TIME: f32 = 10.0;
 const SUBRX_BASE_CHANNEL: i32 = 16;
+
+#[derive(PartialEq, Serialize, Deserialize, Copy, Clone, Debug)]
+pub enum AudioOutput {
+    Stereo,
+    Left,
+    Right,
+    Mute,
+}
+
+impl AudioOutput {
+    pub fn from_u32(value: u32) -> Self {
+        match value {
+            0 => AudioOutput::Stereo,
+            1 => AudioOutput::Left,
+            2 => AudioOutput::Right,
+            3 => AudioOutput::Mute,
+            _ => AudioOutput::Stereo,
+        }
+    }
+
+    pub fn to_u32(&self) -> u32 {
+        *self as u32
+    }
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Receiver {
@@ -90,6 +115,8 @@ pub struct Receiver {
 #[serde(skip_serializing, skip_deserializing)]
     pub iq_input_buffer: Vec<f64>,
     pub samples: usize,
+    pub local_output: bool,
+    pub audio_output: AudioOutput,
 #[serde(skip_serializing, skip_deserializing)]
     pub audio_buffer: Vec<f64>,
     pub local_audio_buffer_size: usize,
@@ -118,6 +145,7 @@ pub struct Receiver {
     pub spectrum_average_time: f32,
     pub waterfall_average_time: f32,
     pub band_info: Vec<BandInfo>,
+
 }
 
 impl Receiver {
@@ -176,6 +204,8 @@ impl Receiver {
         let filter = Filters::F6.to_usize(); // 2.4k
         let iq_input_buffer = vec![0.0; (buffer_size * 2) as usize];
         let samples: usize = 0;
+        let local_output: bool = false;
+        let audio_output: AudioOutput = AudioOutput::Stereo;
         let audio_buffer = vec![0.0; (output_samples * 2) as usize];
         let local_audio_buffer_size: usize = 2048;
         let local_audio_buffer = vec![0i16; local_audio_buffer_size*2];
@@ -253,6 +283,8 @@ impl Receiver {
                             filter,
                             iq_input_buffer,
                             samples,
+                            local_output,
+                            audio_output,
                             audio_buffer,
                             local_audio_buffer_size,
                             local_audio_buffer,
@@ -565,10 +597,9 @@ impl Receiver {
     }
 
     pub fn process_iq_samples(&mut self) {
-        let mut audio_buffer: Vec<f64> = vec![0.0; (self.output_samples*2) as usize];
 
         let raw_ptr: *mut f64 = self.iq_input_buffer.as_mut_ptr() as *mut f64;
-        let audio_ptr: *mut f64 =  audio_buffer.as_mut_ptr() as *mut f64;
+        let audio_ptr: *mut f64 = self.audio_buffer.as_mut_ptr() as *mut f64;
         if self.nb {
             unsafe {
                 xanbEXT(self.channel, raw_ptr, raw_ptr);

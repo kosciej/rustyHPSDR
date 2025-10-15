@@ -83,6 +83,7 @@
                         <object class="GtkDrawingArea" id="meter_1_display">
                           <property name="content-width">256</property>
                           <property name="content-height">36</property>
+              <property name="hexpand">True</property>
                         </object>
                       </child>
                     </object>
@@ -188,6 +189,7 @@
                         <object class="GtkDrawingArea" id="meter_2_display">
                           <property name="content-width">256</property>
                           <property name="content-height">36</property>
+              <property name="hexpand">True</property>
                         </object>
                       </child>
                     </object>
@@ -240,6 +242,7 @@
                     <object class="GtkDrawingArea" id="tx_meter">
                       <property name="content-width">256</property>
                       <property name="content-height">72</property>
+              <property name="hexpand">True</property>
                     </object>
                   </child>
                 </object>
@@ -248,7 +251,7 @@
           </child>
           <child>
             <object class="GtkDrawingArea" id="spectrum_display">
-              <property name="content-width">1076</property>
+              <property name="content-width">768</property>
               <property name="content-height">64</property>
               <property name="hexpand">True</property>
               <property name="vexpand">True</property>
@@ -256,7 +259,7 @@
           </child>
           <child>
             <object class="GtkDrawingArea" id="waterfall_display">
-              <property name="content-width">1024</property>
+              <property name="content-width">768</property>
               <property name="content-height">64</property>
               <property name="hexpand">True</property>
               <property name="vexpand">True</property>
@@ -264,7 +267,7 @@
           </child>
           <child>
             <object class="GtkDrawingArea" id="spectrum_2_display">
-              <property name="content-width">1076</property>
+              <property name="content-width">768</property>
               <property name="content-height">64</property>
               <property name="hexpand">True</property>
               <property name="vexpand">True</property>
@@ -273,7 +276,7 @@
           </child>
           <child>
             <object class="GtkDrawingArea" id="waterfall_2_display">
-              <property name="content-width">1024</property>
+              <property name="content-width">768</property>
               <property name="content-height">64</property>
               <property name="hexpand">True</property>
               <property name="vexpand">True</property>

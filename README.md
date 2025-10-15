@@ -50,14 +50,9 @@ I have now added the first attempt at Zoom and Pan
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/zoom1.png">
 
-# pre-requisistes to build
+# pre-requisises
 <pre>
-  sudo apt install -y build-essential curl git
-</pre>
-
-# pre-requisites for WDSP
-<pre>
-sudo apt install -y libfftw3-dev
+  sudo apt install -y build-essential curl git libfftw3-dev libgtk-4-dev libasound2-dev
 </pre>
 
 # Download and compile WDSP
@@ -69,9 +64,9 @@ make
 sudo make install
 </pre>
 
-# pre-requisites for rustyHPSDR
+# install Rust
 <pre>
-sudo apt install -y libgtk-4-dev libasound2-dev
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 </pre>
 
 # Download and compile rustyHPSDR
@@ -79,12 +74,12 @@ sudo apt install -y libgtk-4-dev libasound2-dev
 git clone https://github.com/g0orx/rustyHPSDR.git
 cd rusyHPSDR
 cargo clean
-cargo build
+cargo build --release
 </pre>
 
 # Running rustyHPSDR
 <pre>
-cargo run
+./target/release/rustyHPSDR
 </pre>
 
 # System Utilization with 2 receivers running Ubuntu 25.04 on a BOSGAME P3 Ryzen 9 Mini PC - 8 Cores (16 threads), 32GB Memory

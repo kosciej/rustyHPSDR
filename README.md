@@ -82,6 +82,8 @@ cargo build --release
 ./target/release/rustyHPSDR
 </pre>
 
+Note that the first time it is run it will create the FFTW3 Wisdom File, which may take several minutes to complete.
+
 # System Utilization with 2 receivers running Ubuntu 25.04 on a BOSGAME P3 Ryzen 9 Mini PC - 8 Cores (16 threads), 32GB Memory
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/system.png">

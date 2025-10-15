@@ -50,7 +50,7 @@ I have now added the first attempt at Zoom and Pan
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/zoom1.png">
 
-# pre-requisises
+# Build pre-requisises
 <pre>
 sudo apt install -y build-essential curl git libfftw3-dev libgtk-4-dev libasound2-dev
 </pre>

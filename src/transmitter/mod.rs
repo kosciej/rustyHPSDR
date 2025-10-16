@@ -43,10 +43,10 @@ pub struct Transmitter {
     pub local_microphone_buffer: Vec<u8>,
     pub microphone_buffer_size: usize,
 #[serde(skip_serializing, skip_deserializing)]
-    pub microphone_buffer: Vec<f32>,
+    pub microphone_buffer: Vec<f64>,
     pub microphone_samples: usize,
 #[serde(skip_serializing, skip_deserializing)]
-    pub iq_buffer: Vec<f32>,
+    pub iq_buffer: Vec<f64>,
     pub iq_samples: usize,
     pub fft_size: i32,
     pub low_latency: bool,
@@ -94,13 +94,13 @@ impl Transmitter {
         let local_microphone_buffer = vec![0u8; local_microphone_buffer_size];
 
         let microphone_buffer_size = 1024 as usize;
-        let microphone_buffer = vec![0.0f32; (microphone_buffer_size * 2) as usize];
+        let microphone_buffer = vec![0.0f64; (microphone_buffer_size * 2) as usize];
         let microphone_samples = 0;
 
 
         let fft_size = 2048;
 
-        let iq_buffer = vec![0.0f32; (output_samples * 2) as usize];
+        let iq_buffer = vec![0.0f64; (output_samples * 2) as usize];
         let iq_samples = 0 as usize;
 
         let low_latency = false;
@@ -167,8 +167,8 @@ impl Transmitter {
 
     pub fn init(&mut self) {
         self.local_microphone_buffer = vec![0u8; self.local_microphone_buffer_size * 2 as usize];
-        self.microphone_buffer = vec![0.0f32; (self.microphone_buffer_size * 2) as usize];
-        self.iq_buffer = vec![0.0f32; (self.output_samples * 2) as usize];
+        self.microphone_buffer = vec![0.0f64; (self.microphone_buffer_size * 2) as usize];
+        self.iq_buffer = vec![0.0f64; (self.output_samples * 2) as usize];
         self.init_wdsp();
 
         let id_string = String::from("TX");
@@ -321,6 +321,17 @@ impl Transmitter {
     pub fn run(&mut self) {
     }
 
+    pub fn process_mic_samples(&mut self) {
+        let raw_ptr: *mut f64 = self.microphone_buffer.as_mut_ptr() as *mut f64;
+        let iq_ptr: *mut f64 =  self.iq_buffer.as_mut_ptr() as *mut f64;
+        let mut result: c_int = 0;
+        unsafe {
+            fexchange0(self.channel, raw_ptr, iq_ptr, &mut result);
+            Spectrum0(1, self.channel, 0, 0, iq_ptr);
+        }
+    }
+
+    /*
     pub fn microphone_sample(&mut self, sample: f32) {
         self.microphone_buffer[self.microphone_samples * 2] = sample;
         self.microphone_buffer[(self.microphone_samples * 2) + 1] = 0.0; //sample;
@@ -343,4 +354,5 @@ impl Transmitter {
             self.microphone_samples = 0;
         }
     }
+    */
 }

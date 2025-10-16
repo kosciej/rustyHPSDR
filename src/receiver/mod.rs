@@ -614,8 +614,6 @@ impl Receiver {
         let mut result: c_int = 0;
         unsafe {
             fexchange0(self.channel, raw_ptr, audio_ptr, &mut result);
-        }
-        unsafe {
             Spectrum0(1, self.channel, 0, 0, raw_ptr);
         }
     }

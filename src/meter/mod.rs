@@ -117,22 +117,22 @@ impl Meter {
 
         eprintln!("Meter::update_tx {} {} v_fwd {} fwd {} v_rev {} rev {} swr {}", forward, reverse, v_fwd, fwd, v_rev, rev, swr );
 
-        //if !swr.is_nan() && !swr.is_infinite() {
-            //let alpha = 0.7;
-            //self.swr = (alpha * swr) + ((1.0 - alpha) * self.swr);
+        //let alpha = 0.7;
+        //self.swr = (alpha * swr) + ((1.0 - alpha) * self.swr);
      
-            let fwd_text = format!("FWD: {:.1}", fwd);
-            let rev_text = format!("REV: {:.1}", rev);
-            let swr_text = format!("SWR: {:.1}:1.0", self.swr);
+        let fwd_text = format!("FWD: {:.1}", fwd);
+        let rev_text = format!("REV: {:.1}", rev);
+        let swr_text = format!("SWR: {:.1}:1.0", self.swr);
 
-            cr.set_source_rgb (0.0, 0.0, 0.0);
-            cr.move_to(5.0,10.0);
-            let _ = cr.show_text(&fwd_text);
-            cr.move_to(5.0,20.0); 
-            let _ = cr.show_text(&rev_text);
-            cr.move_to(5.0,30.0);
+        cr.set_source_rgb (0.0, 0.0, 0.0);
+        cr.move_to(5.0,10.0);
+        let _ = cr.show_text(&fwd_text);
+        cr.move_to(5.0,20.0); 
+        let _ = cr.show_text(&rev_text);
+        cr.move_to(5.0,30.0);
+        if !self.swr.is_nan() {
             let _ = cr.show_text(&swr_text);
-        //}
+        }
     }
 
     pub fn draw(&self, cr: &Context) {

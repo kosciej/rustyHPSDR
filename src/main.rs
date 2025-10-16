@@ -399,6 +399,7 @@ fn build_ui(app: &Application) {
     let selected_index_for_discovery_dialog = selected_index.clone();
     let discovery_data_clone = Rc::clone(&discovery_data);
 
+
     let rc_app_widgets_clone = rc_app_widgets.clone();
     let app_widgets = rc_app_widgets_clone.borrow();
     let discovery_dialog = create_discovery_dialog(&app_widgets.main_window.clone(), discovery_data_clone, selected_index_for_discovery_dialog);
@@ -418,6 +419,9 @@ fn build_ui(app: &Application) {
     let rc_app_widgets_clone = rc_app_widgets.clone();
     discovery_dialog.connect_close_request(move |_| {
         let mut app_widgets = rc_app_widgets_clone.borrow_mut();
+
+eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.main_window.height());
+
         let index = *selected_index_clone.borrow();
         match index {
             Some(i) => {

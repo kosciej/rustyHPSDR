@@ -814,8 +814,11 @@
             <child>
               <object class="GtkFrame">
                 <property name="label">RX1</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
                 <child>
-                  <object class="GtkFrame">
+                  <object class="GtkFrame" id="rx0_adc_frame">
                     <property name="label">ADC</property>
                     <child>
                       <object class="GtkBox">
@@ -848,6 +851,16 @@
                             <property name="selected">3</property>
                           </object>
                         </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Audio</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
                         <child>
                           <object class="GtkDropDown" id="rx0_audio_dropdown">
                             <property name="model">
@@ -867,13 +880,18 @@
                     </child>
                   </object>
                 </child>
+                    </object>
+                    </child>
               </object>
             </child>
             <child>
-              <object class="GtkFrame" id="rx1-adc">
+              <object class="GtkFrame">
                 <property name="label">RX2</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
                 <child>
-                  <object class="GtkFrame">
+                  <object class="GtkFrame" id="rx1_adc_frame">
                     <property name="label">ADC</property>
                     <child>
                       <object class="GtkBox">
@@ -881,12 +899,12 @@
                         <child>
                           <object class="GtkSpinButton" id="rx1_adc_spinbutton">
                             <property name="adjustment">
-                              <object class="GtkAdjustment" id="rx1_adc_adjustment">
-                                <property name="lower">0</property>
-                                <property name="upper">1</property>
-                                <property name="step-increment">1</property>
-                              </object>
-                            </property>
+                            <object class="GtkAdjustment" id="rx1_adc_adjustment">
+                              <property name="lower">0</property>
+                              <property name="upper">1</property>
+                              <property name="step-increment">1</property>
+                            </object>
+                          </property>
                           </object>
                         </child>
                         <child>
@@ -906,6 +924,16 @@
                             <property name="selected">3</property>
                           </object>
                         </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Audio</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
                         <child>
                           <object class="GtkDropDown" id="rx1_audio_dropdown">
                             <property name="model">
@@ -925,9 +953,10 @@
                     </child>
                   </object>
                 </child>
+                    </object>
+                  </child>
               </object>
             </child>
-
           </object>
         </child>
         <child type="tab">

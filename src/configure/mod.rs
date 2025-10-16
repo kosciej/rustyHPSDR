@@ -634,7 +634,9 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     let r = radio_mutex.radio.lock().unwrap();
     let rx_0_adc = r.receiver[0].adc;
     let rx_1_adc = r.receiver[1].adc;
+    let adcs = r.adc.len();
     drop(r);
+
     let rx_0_adc_adjustment: Adjustment = builder
             .object("rx0_adc_adjustment")
             .expect("Could not get object `rx0_adc_adjustment` from builder.");
@@ -645,6 +647,12 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         r.receiver[0].adc = adjustment.value() as usize;
         r.updated = true;
     });
+    if adcs < 2 {
+        let rx_0_adc_frame: Frame = builder
+            .object("rx0_adc_frame")
+            .expect("Could not get object `rx0_adc_frame` from builder.");
+        rx_0_adc_frame.set_visible(false);
+    }
 
     let rx0_sample_rate: DropDown = builder
             .object("rx0_sample_rate_dropdown")
@@ -702,22 +710,21 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     let r = radio_mutex.radio.lock().unwrap();
     let adcs = r.adc.len();
     drop(r);
-    if adcs == 2 {
-        let rx_1_adc_adjustment: Adjustment = builder
-                .object("rx1_adc_adjustment")
-                .expect("Could not get object `rx1_adc_adjustment` from builder.");
-        rx_1_adc_adjustment.set_value(rx_1_adc as f64);
-        let radio_mutex_clone = radio_mutex.clone();
-        rx_1_adc_adjustment.connect_value_changed(move |adjustment| {
-            let mut r = radio_mutex_clone.radio.lock().unwrap();
-            r.receiver[1].adc = adjustment.value() as usize;
-            r.updated = true;
-        });
-    } else {
-        let rx1_adc: Frame = builder
-                .object("rx1-adc")
-                .expect("Could not get object `rx1-adc` from builder.");
-        rx1_adc.set_visible(false);
+    let rx_1_adc_adjustment: Adjustment = builder
+            .object("rx1_adc_adjustment")
+            .expect("Could not get object `rx1_adc_adjustment` from builder.");
+    rx_1_adc_adjustment.set_value(rx_1_adc as f64);
+    let radio_mutex_clone = radio_mutex.clone();
+    rx_1_adc_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.receiver[1].adc = adjustment.value() as usize;
+        r.updated = true;
+    });
+    if adcs < 2 {
+        let rx_1_adc_frame: Frame = builder
+            .object("rx1_adc_frame")
+            .expect("Could not get object `rx1_adc_frame` from builder.");
+        rx_1_adc_frame.set_visible(false);
     }
 
     let rx1_sample_rate: DropDown = builder

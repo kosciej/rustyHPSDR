@@ -220,6 +220,17 @@ impl Protocol1 {
         c4 = buffer[b];
         b = b + 1;
 
+        let previous_ptt = r.ptt;
+        let previous_dot = r.dot;
+        let previous_dash = r.dash;
+        r.ptt = (c0 & 0x01) == 0x01;
+        r.dot = (c0 & 0x02) == 0x02;
+        r.dash = (c0 & 0x04) == 0x04;
+
+        if r.ptt != previous_ptt || r.dot != previous_dot || r.dash != previous_dash {
+            r.set_state();
+        }
+
         // colleact the RX IQ samples and MIC Audio Samples
         for _s in 0..self.iq_samples {
             // IQ samples for each receiver
@@ -378,8 +389,10 @@ impl Protocol1 {
 
                     // TX IQ samples
                     let ix = j * 2;
-                    let i_sample: i16 = (r.transmitter.iq_buffer[ix as usize] * 32767.0) as i16;
-                    let q_sample: i16 = (r.transmitter.iq_buffer[(ix+1) as usize]* 32767.0)  as i16;
+                    //let i_sample: i16 = (r.transmitter.iq_buffer[ix as usize] * 32767.0) as i16;
+                    //let q_sample: i16 = (r.transmitter.iq_buffer[(ix+1) as usize]* 32767.0)  as i16;
+                    let i_sample: i16 = (r.transmitter.iq_buffer[ix as usize] * 8388607.0) as i16;
+                    let q_sample: i16 = (r.transmitter.iq_buffer[(ix+1) as usize]* 8388607.0)  as i16;
                     self.ozy_buffer[self.ozy_buffer_offset] = (i_sample >> 8) as u8;
                     self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
                     self.ozy_buffer[self.ozy_buffer_offset] = i_sample as u8;

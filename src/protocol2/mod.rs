@@ -151,13 +151,7 @@ impl Protocol2 {
                                     r.transmitter.alex_reverse_power = u16::from_be_bytes([buffer[22], buffer[23]]);
                                     r.supply_volts = u16::from_be_bytes([buffer[49], buffer[50]]) as i32;
 
-                                    if r.ptt != previous_ptt {
-                                        r.set_state();
-                                    }
-                                    if r.dot != previous_dot {
-                                        r.set_state();
-                                    }
-                                    if r.dash != previous_dash {
+                                    if r.ptt != previous_ptt || r.dot != previous_dot || r.dash != previous_dash {
                                         r.set_state();
                                     }
 

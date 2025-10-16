@@ -331,28 +331,4 @@ impl Transmitter {
         }
     }
 
-    /*
-    pub fn microphone_sample(&mut self, sample: f32) {
-        self.microphone_buffer[self.microphone_samples * 2] = sample;
-        self.microphone_buffer[(self.microphone_samples * 2) + 1] = 0.0; //sample;
-        self.microphone_samples =self.microphone_samples + 1;
-        if self.microphone_samples >= self.microphone_buffer_size {
-            let raw_ptr: *mut f64 = self.microphone_buffer.as_mut_ptr() as *mut f64;
-            let iq_ptr: *mut f64 =  self.iq_buffer.as_mut_ptr() as *mut f64;
-            let mut result: c_int = 0;
-            unsafe {
-                fexchange0(self.channel, raw_ptr, iq_ptr, &mut result);
-            }
-            match self.protocol {
-                1 => {},
-                2 => {},
-                _ => {eprintln!("microphone_sample: Invalid protocol {}", self.protocol); },
-            }
-            unsafe {
-                Spectrum0(1, self.channel, 0, 0, raw_ptr);
-            }
-            self.microphone_samples = 0;
-        }
-    }
-    */
 }

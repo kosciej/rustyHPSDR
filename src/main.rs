@@ -894,7 +894,7 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                         last_spectrum_x_clone.set(x);
                         last_spectrum_y_clone.set(y);
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
-                        if x < 40.0 {
+                        if x < 80.0 {
                             let height = app_widgets.spectrum_display.height();
                             let top = height / 4;
                             let bottom = height - top;
@@ -926,7 +926,7 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                         last_spectrum_x_clone.set(x);
                         last_spectrum_y_clone.set(y);
                         let app_widgets = rc_app_widgets_clone_clone.borrow();
-                        if x < 40.0 {
+                        if x < 80.0 {
                             let height = app_widgets.spectrum_2_display.height();
                             let top = height / 4;
                             let bottom = height - top;
@@ -960,7 +960,7 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                         let top = height / 4;
                         let bottom = height - top;
 
-                        if last_spectrum_x_clone.get() < 40.0 {
+                        if last_spectrum_x_clone.get() < 80.0 {
                             let mut r = radio_mutex_clone.radio.lock().unwrap();
                             if r.is_transmitting() {
                                 if last_spectrum_y_clone.get() < top.into() {
@@ -1007,7 +1007,7 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                         let top = height / 4;
                         let bottom = height - top;
 
-                        if last_spectrum_x_clone.get() < 40.0 {
+                        if last_spectrum_x_clone.get() < 80.0 {
                             let mut r = radio_mutex_clone.radio.lock().unwrap();
                             if r.is_transmitting() {
                                 if last_spectrum_y_clone.get() < top.into() {

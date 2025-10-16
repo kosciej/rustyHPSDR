@@ -454,7 +454,9 @@ impl Radio {
     }
 
     pub fn is_transmitting(&self) -> bool {
-        self.mox | self.ptt | self.vox | self.tune
+        let cw = (self.dot | self.dash) && (self.receiver[0].mode == Modes::CWL.to_usize() || self.receiver[0].mode == Modes::CWU.to_usize());
+
+        self.mox | self.ptt | cw | self.vox | self.tune
     }
 
     pub fn run(&self) {

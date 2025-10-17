@@ -275,14 +275,12 @@ impl Transmitter {
     }
 
     pub fn set_mode(&self) {
-        eprintln!("Transmitter::set_mode channel {} mode {}", self.channel, self.mode as i32);
         unsafe {
             SetTXAMode(self.channel, self.mode as i32);
         }
     }
 
     pub fn set_filter(&self) {
-        eprintln!("Transmitter::set_filter channel {} low {} high {}", self.channel, self.filter_low, self.filter_high);
         unsafe {
             SetTXABandpassFreqs(self.channel, self.filter_low.into(), self.filter_high.into());
         }
@@ -290,6 +288,7 @@ impl Transmitter {
 
 
     pub fn set_tuning(&self, state: bool, cw_keyer_sidetone_frequency: i32) {
+        eprintln!("Transmitter::set_tuning {}",  state);
         unsafe {
             if state {
                 let mut frequency = (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64;

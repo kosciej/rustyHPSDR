@@ -85,7 +85,7 @@ struct AppWidgets {
     pub afgain_adjustment: Adjustment,
     pub agc_dropdown: DropDown,
     pub agcgain_adjustment: Adjustment,
-    pub adcattn_adjustment: Adjustment,
+    pub attenuation_adjustment: Adjustment,
     pub micgain_adjustment: Adjustment,
     pub drive_adjustment: Adjustment,
     pub band_frame: Frame,
@@ -231,7 +231,7 @@ impl AppWidgets {
             .object("agcgain_adjustment")
             .expect("Could not get agcgain_adjustment from builder");
 
-        let adcattn_adjustment: Adjustment = builder
+        let attenuation_adjustment: Adjustment = builder
             .object("attenuation_adjustment")
             .expect("Could not get attenuation_adjustment from builder");
 
@@ -309,7 +309,7 @@ impl AppWidgets {
             afgain_adjustment,
             agc_dropdown,
             agcgain_adjustment,
-            adcattn_adjustment,
+            attenuation_adjustment,
             micgain_adjustment,
             drive_adjustment,
             cwpitch_adjustment,
@@ -448,6 +448,8 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                     app_widgets.main_window.set_title(Some(&title));
                     }
 
+                    
+
 
                     let mut rc_spectrum_clone2 = rc_spectrum_clone.clone();
                     let radio_mutex_clone = radio_mutex.clone();
@@ -557,6 +559,11 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                         app_widgets.afgain_adjustment.set_value((r.receiver[rx].afgain * 100.0).into());
                         app_widgets.agc_dropdown.set_selected(r.receiver[rx].agc as u32);
                         app_widgets.agcgain_adjustment.set_value(r.receiver[rx].agcgain.into());
+                        if r.dev == 6 { // HEMES_LITE
+                            app_widgets.attenuation_adjustment.set_lower(-12.0);
+                            app_widgets.attenuation_adjustment.set_upper(48.0);
+                        }
+                        app_widgets.attenuation_adjustment.set_value(r.adc[r.receiver[rx].adc].attenuation.into());
                         app_widgets.micgain_adjustment.set_value(r.transmitter.micgain.into());
                         app_widgets.micgain_adjustment.set_value(r.transmitter.micgain.into());
                         app_widgets.drive_adjustment.set_value(r.transmitter.drive.into());
@@ -1475,6 +1482,17 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                         }
                         r.receiver[rx].agcgain = adjustment.value() as f32;
                         r.receiver[rx].set_agcgain();
+                    });
+
+                    let radio_mutex_clone = radio_mutex.clone();
+                    app_widgets.attenuation_adjustment.connect_value_changed(move |adjustment| {
+                        let mut r = radio_mutex_clone.radio.lock().unwrap();
+                        let mut rx = 0;
+                        if r.receiver[1].active {
+                            rx = 1;
+                        }
+                        let adc = r.receiver[rx].adc;
+                        r.adc[adc].attenuation = adjustment.value() as i32;
                     });
 
                     let radio_mutex_clone = radio_mutex.clone();

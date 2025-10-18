@@ -127,7 +127,6 @@ pub struct Receiver {
 #[serde(skip_serializing, skip_deserializing)]
     pub remote_audio_buffer: Vec<u8>,
     pub remote_audio_buffer_offset: usize,
-    pub attenuation: i32,
     pub rxgain: i32,
     pub cw_pitch: f32,
     pub cw_decoder: bool,
@@ -213,7 +212,6 @@ impl Receiver {
         let remote_audio_buffer_size: usize = 260;
         let remote_audio_buffer = vec![0u8; remote_audio_buffer_size];
         let remote_audio_buffer_offset: usize = 4;
-        let attenuation: i32 = 0;
         let rxgain: i32 = 0;
         let cw_pitch: f32 = 400.0;
         let cw_decoder: bool =  false;
@@ -292,7 +290,6 @@ impl Receiver {
                             remote_audio_buffer_size,
                             remote_audio_buffer,
                             remote_audio_buffer_offset,
-                            attenuation,
                             rxgain,
                             cw_pitch,
                             cw_decoder,

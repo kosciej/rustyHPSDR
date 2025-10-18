@@ -460,10 +460,7 @@ impl Protocol1 {
              frequency_b = frequency_b - r.receiver[0].cw_pitch;
         }
 
-        let mut attenuation = r.receiver[0].attenuation;
-        if r.dev == 6 { // Hermes Lite
-           attenuation = r.receiver[0].rxgain;
-        }
+        let mut attenuation = r.adc[rx as usize].attenuation;
 
         if self.metis_buffer_offset == 8 {
             c0 = 0x00;
@@ -566,7 +563,8 @@ impl Protocol1 {
                             c4 |= 0x40;
                             c4 |= ((attenuation  + 12) & 0x3F) as u8;
                         }  else { // HERMES_LITE_1
-                            //c4 |= 0x20;
+                            c4 |= 0x20;
+                            c4 |= ((attenuation  + 12) & 0x1F) as u8;
                         }
                     } else {
                         //if attenuation != 0 {

@@ -594,8 +594,8 @@ impl Protocol2 {
             buf[1443] = 0;
             buf[1442] = 0;
         } else {
-            buf[1443] = r.receiver[0].attenuation as u8;
-            buf[1442] = r.receiver[1].attenuation as u8;
+            buf[1443] = r.adc[0].attenuation as u8;
+            buf[1442] = r.adc[1].attenuation as u8;
         }
 
         self.device.address.set_port(1027);

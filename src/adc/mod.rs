@@ -24,6 +24,7 @@ pub struct Adc {
     pub rx_antenna: u32,
     pub random: bool,
     pub dither: bool,
+    pub attenuation: i32,
 }
 
 impl Adc {
@@ -32,7 +33,8 @@ impl Adc {
         let rx_antenna = ALEX_ANTENNA_1;
         let random = false;
         let dither = false;
+        let attenuation = 0;
 
-        Adc {rx_antenna, random, dither}
+        Adc {rx_antenna, random, dither, attenuation}
     }
 }

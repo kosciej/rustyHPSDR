@@ -122,7 +122,7 @@ impl Meter {
      
         let fwd_text = format!("FWD: {:.1}", fwd);
         let rev_text = format!("REV: {:.1}", rev);
-        let swr_text = format!("SWR: {:.1}:1.0", self.swr);
+        let swr_text = format!("SWR: {:.1}:1", self.swr);
 
         cr.set_source_rgb (0.0, 0.0, 0.0);
         cr.move_to(5.0,10.0);

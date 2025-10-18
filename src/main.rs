@@ -69,7 +69,7 @@ struct AppWidgets {
     pub step_dropdown: DropDown,
     pub meter_1_display: DrawingArea,
     pub meter_2_display: DrawingArea,
-    pub meter_tx_display: DrawingArea,
+    //pub meter_tx_display: DrawingArea,
     pub spectrum_display: DrawingArea,
     pub waterfall_display: DrawingArea,
     pub spectrum_2_display: DrawingArea,
@@ -97,6 +97,8 @@ struct AppWidgets {
     pub cwpitch_adjustment: Adjustment,
     pub low_adjustment: Adjustment,
     pub high_adjustment: Adjustment,
+    pub tx_power: Label,
+    pub tx_swr: Label,
 }
 
 impl AppWidgets {
@@ -153,9 +155,9 @@ impl AppWidgets {
             .object("meter_2_display")
             .expect("Could not get meter_2_display from builder");
 
-        let meter_tx_display: DrawingArea = builder
-            .object("meter_tx_display")
-            .expect("Could not get meter_tx_display from builder");
+        //let meter_tx_display: DrawingArea = builder
+        //    .object("meter_tx_display")
+        //    .expect("Could not get meter_tx_display from builder");
 
         let spectrum_display: DrawingArea = builder
             .object("spectrum_display")
@@ -269,6 +271,14 @@ impl AppWidgets {
         let mode_grid = ModeGrid::new(&builder);
         let filter_grid = FilterGrid::new(&builder);
 
+        let tx_power: Label = builder
+            .object("tx_power")
+            .expect("Could not get tx_power from builder");
+
+        let tx_swr: Label = builder
+            .object("tx_swr")
+            .expect("Could not get tx_swr from builder");
+
         AppWidgets {
             main_window,
             configure_button,
@@ -283,7 +293,7 @@ impl AppWidgets {
             step_dropdown,
             meter_1_display,
             meter_2_display,
-            meter_tx_display,
+            //meter_tx_display,
             spectrum_display,
             waterfall_display,
             spectrum_2_display,
@@ -311,6 +321,8 @@ impl AppWidgets {
             band_grid,
             mode_grid,
             filter_grid,
+            tx_power,
+            tx_swr,
         }
     }
 }
@@ -1627,11 +1639,11 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                         meter.draw(cr);
                     });
 
-                    let rc_meter_tx_clone2 = rc_meter_tx_clone.clone();
-                    app_widgets.meter_tx_display.set_draw_func(move |_da, cr, width, height| {
-                        let mut meter = rc_meter_tx_clone2.borrow_mut();
-                        meter.draw(cr);
-                    });
+                    //let rc_meter_tx_clone2 = rc_meter_tx_clone.clone();
+                    //app_widgets.meter_tx_display.set_draw_func(move |_da, cr, width, height| {
+                    //    let mut meter = rc_meter_tx_clone2.borrow_mut();
+                    //    meter.draw(cr);
+                    //});
 
                     match device.protocol {
                         1 => {
@@ -1705,14 +1717,7 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                     let mut rc_meter_1_clone2 = rc_meter_1_clone.clone();
                     let mut rc_meter_tx_clone2 = rc_meter_tx_clone.clone();
                     let meter_1_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
-                        let mut r = radio_mutex_clone.radio.lock().unwrap();
-                        let is_transmitting = r.is_transmitting();
-                        drop(r);
-                        if is_transmitting {
-                            meter_tx_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_tx_clone2);
-                        } else {
-                            meter_1_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_1_clone2);
-                        }
+                        meter_1_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_1_clone2);
                         Continue
                     });
 
@@ -1721,6 +1726,15 @@ eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.mai
                     let mut rc_meter_2_clone2 = rc_meter_2_clone.clone();
                     let meter_2_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
                         meter_2_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_2_clone2);
+                        Continue
+                    });
+
+                    let update_interval = 250.0;
+                    let radio_mutex_clone = radio_mutex.clone();
+                    let rc_app_widgets_clone2 = rc_app_widgets_clone.clone();
+                    let mut rc_meter_tx_clone2 = rc_meter_tx_clone.clone();
+                    let meter_tx_timeout_id = timeout_add_local(Duration::from_millis(update_interval as u64), move || {
+                        meter_tx_update(&radio_mutex_clone, &rc_app_widgets_clone2, &rc_meter_tx_clone2);
                         Continue
                     });
 
@@ -1859,10 +1873,39 @@ fn meter_tx_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWid
     let forward = r.transmitter.alex_forward_power;
     let reverse = r.transmitter.alex_reverse_power;
     drop(r);
-    if is_transmitting {
-        meter.update_tx(forward, reverse);
-        app_widgets.meter_tx_display.queue_draw();
+
+    // calculate the SWR
+    let fwd_power = forward as f32;
+    let rev_power = reverse as f32;
+
+    // temp only ORION2 constants
+    let c1 = 5.0;
+    let c2 = 0.108;
+    let v_fwd = (fwd_power / 4095.0) * c1;
+    let fwd = (v_fwd * v_fwd) / c2;
+
+    let v_rev = (rev_power / 4095.0) * c1;
+    let rev = (v_rev * v_rev) / c2;
+
+    let mut swr = (1.0 + (rev / fwd).sqrt())  / (1.0 - (rev / fwd).sqrt());
+    if swr < 0.0 {
+        swr = 1.0;
     }
+    if swr.is_nan() {
+        swr = 1.0;
+    }
+
+    if is_transmitting {
+        let formatted_power = format!("Power: {:.1} W", fwd);
+        app_widgets.tx_power.set_label(&formatted_power);
+        let formatted_swr = format!("SWR: {:.1}:1", swr);
+        app_widgets.tx_swr.set_label(&formatted_swr);
+    }
+
+    //if is_transmitting {
+    //    meter.update_tx(forward, reverse);
+    //    app_widgets.meter_tx_display.queue_draw();
+   // }
 }
 
 fn spectrum_waterfall_clicked(radio_mutex: &RadioMutex, rc_app_widgets: &Rc<RefCell<AppWidgets>>, rx: usize, x: f64, width: i32, button: u32) -> bool {

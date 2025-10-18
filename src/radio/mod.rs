@@ -471,7 +471,11 @@ impl Radio {
         }
         let mut pixels_len = width * zoom;
         if self.is_transmitting() {
-            pixels_len = width * 12;
+            if self.protocol == 1 {
+                pixels_len = width * 3;
+            } else {
+                pixels_len = width * 12;
+            }
         } 
         let mut pixels = vec![0.0; pixels_len as usize];
         let mut flag: c_int = 0;

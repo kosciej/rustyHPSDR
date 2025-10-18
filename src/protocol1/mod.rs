@@ -225,6 +225,26 @@ impl Protocol1 {
             r.set_state();
         }
 
+        let address = (c0>>3) & 0x1F;
+        match address {
+            0 => {
+                }
+            1 => {
+                r.transmitter.exciter_power=u16::from_be_bytes([c1,c2]);
+                r.transmitter.alex_forward_power=u16::from_be_bytes([c3,c4]);
+                }
+            2 => {
+                r.transmitter.alex_reverse_power=u16::from_be_bytes([c1,c2]);
+                }
+            3 => {
+                }
+            4 => {
+                }
+            _ => {
+                eprintln!("Invalid address from Radio {}", address);
+                }
+        }
+
         // colleact the RX IQ samples and MIC Audio Samples
         for _s in 0..self.iq_samples {
             // IQ samples for each receiver
@@ -323,16 +343,16 @@ impl Protocol1 {
                             let lox=r.receiver[rx as usize].local_audio_buffer_offset * 2;
                             match r.receiver[rx as usize].audio_output {
                                 AudioOutput::Stereo => {
-                                    r.receiver[rx as usize].local_audio_buffer[lox]=left_sample;
-                                    r.receiver[rx as usize].local_audio_buffer[lox+1]=right_sample;
+                                    r.receiver[rx as usize].local_audio_buffer[lox]=left_sample as i16;
+                                    r.receiver[rx as usize].local_audio_buffer[lox+1]=right_sample as i16;
                                 },
                                 AudioOutput::Left => {
-                                    r.receiver[rx as usize].local_audio_buffer[lox]=left_sample;
+                                    r.receiver[rx as usize].local_audio_buffer[lox]=left_sample as i16;
                                     r.receiver[rx as usize].local_audio_buffer[lox+1]=0;
                                 },
                                 AudioOutput::Right => {
                                     r.receiver[rx as usize].local_audio_buffer[lox]=0;
-                                    r.receiver[rx as usize].local_audio_buffer[lox+1]=right_sample;
+                                    r.receiver[rx as usize].local_audio_buffer[lox+1]=right_sample as i16;
                                 },
                                 AudioOutput::Mute => {
                                     r.receiver[rx as usize].local_audio_buffer[lox]=0;
@@ -383,7 +403,7 @@ impl Protocol1 {
             if r.is_transmitting() {
                 for j in 0..r.transmitter.output_samples {
     
-                    // RX Audio samples
+                    // Dummy RX Audio samples
                     self.ozy_buffer[self.ozy_buffer_offset] = 0;
                     self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
                     self.ozy_buffer[self.ozy_buffer_offset] = 0;
@@ -397,8 +417,6 @@ impl Protocol1 {
                     let ix = j * 2;
                     let i_sample: i16 = (r.transmitter.iq_buffer[ix as usize] * 32767.0) as i16;
                     let q_sample: i16 = (r.transmitter.iq_buffer[(ix+1) as usize]* 32767.0)  as i16;
-                    //let i_sample: i16 = (r.transmitter.iq_buffer[ix as usize] * 8388607.0) as i16;
-                    //let q_sample: i16 = (r.transmitter.iq_buffer[(ix+1) as usize]* 8388607.0)  as i16;
                     self.ozy_buffer[self.ozy_buffer_offset] = (i_sample >> 8) as u8;
                     self.ozy_buffer_offset = self.ozy_buffer_offset + 1;
                     self.ozy_buffer[self.ozy_buffer_offset] = i_sample as u8;
@@ -507,10 +525,23 @@ impl Protocol1 {
                      },
                 3 => {
                     c0 = 0x12; // C0
-                    c1 = 0x00; // C1
+                    c1 = 0x00; // C1 // drive level 0..255
+                    if r.is_transmitting() {
+                        c1 = ((r.transmitter.drive/100.0) * 255.0) as u8;
+                    }
+
                     c2 = 0x00; // C2
                     if r.mic_boost {
                         c2 |= 0x01;
+                    }
+
+                    if self.device.device == 6 { // HERMES_LITE
+                        if self.device.version > 42 { // HERMES_LITE_2
+                            c2 |= 0x2C; // PA
+                            if r.tune {
+                                c2 |= 0x10;
+                            }
+                        }
                     }
                     c3 = 0x00; // C3
                     c4 = 0x00; // C4

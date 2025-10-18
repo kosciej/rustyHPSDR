@@ -83,7 +83,7 @@
                         <object class="GtkDrawingArea" id="meter_1_display">
                           <property name="content-width">256</property>
                           <property name="content-height">36</property>
-              <property name="hexpand">True</property>
+              <property name="hexpand">False</property>
                         </object>
                       </child>
                     </object>
@@ -189,7 +189,7 @@
                         <object class="GtkDrawingArea" id="meter_2_display">
                           <property name="content-width">256</property>
                           <property name="content-height">36</property>
-              <property name="hexpand">True</property>
+              <property name="hexpand">False</property>
                         </object>
                       </child>
                     </object>
@@ -234,15 +234,35 @@
               <child>
                 <object class="GtkFrame" id="tx_frame">
                   <property name="label">TX</property>
+                  <property name="hexpand">True</property>
                   <layout>
                     <property name="column">5</property>
                     <property name="row">0</property>
                   </layout>
                   <child>
-                    <object class="GtkDrawingArea" id="meter_tx_display">
-                      <property name="content-width">256</property>
-                      <property name="content-height">70</property>
-                      <property name="hexpand">True</property>
+                    <object class="GtkBox" id="tx_v_box">
+                      <property name="orientation">vertical</property>
+                      <style>
+                        <class name="basic-button"/>
+                      </style>
+                      <child>
+                        <object class="GtkLabel" id="tx_power">
+                          <property name="label">Power: 0.0 W</property>
+                          <style>
+                            <class name="tx-power"/>
+                          </style>
+                          <property name="xalign">0.0</property>
+                        </object>
+                      </child>
+                      <child>
+                        <object class="GtkLabel" id="tx_swr">
+                          <property name="label">SWR: 1.0:1</property>
+                          <style>
+                            <class name="tx-swr"/>
+                          </style>
+                          <property name="xalign">0.0</property>
+                        </object>
+                      </child>
                     </object>
                   </child>
                 </object>

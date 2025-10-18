@@ -13,9 +13,15 @@
   color: Lime;
   min-width: 180px;
 }
-.vfo-tx-label {
+.tx-power {
   font-family: FreeSans;
-  font-size: 40px;
+  font-size: 25px;
+  color: red;
+  min-width: 180px;
+}
+.tx-swr {
+  font-family: FreeSans;
+  font-size: 25px;
   color: red;
   min-width: 180px;
 }

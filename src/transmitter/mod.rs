@@ -84,11 +84,11 @@ impl Transmitter {
         }
         let buffer_size=1024;
         let mut output_samples=1024;
-        let p1_packet_size = 126;
-        let packet_counter = 0;
         if protocol == 2 {
             output_samples = 1024*(output_rate/sample_rate);
         }
+        let p1_packet_size = 126;
+        let packet_counter = 0;
         let is_transmitting = false;
         let local_microphone_buffer_size = 1024 as usize;
         let local_microphone_buffer = vec![0u8; local_microphone_buffer_size];
@@ -98,7 +98,7 @@ impl Transmitter {
         let microphone_samples = 0;
 
 
-        let fft_size = 2048;
+        let fft_size = 8192;
 
         let iq_buffer = vec![0.0f64; (output_samples * 2) as usize];
         let iq_samples = 0 as usize;
@@ -179,13 +179,6 @@ impl Transmitter {
         unsafe {
             let mut result: c_int = 0;
             XCreateAnalyzer(self.channel, &mut result, 262144, 1, 1, c_char_ptr);
-            SetDisplayDetectorMode(self.channel, 0, DETECTOR_MODE_AVERAGE.try_into().expect("SetDisplayDetectorMode failed!"));
-            SetDisplayAverageMode(self.channel, 0,  AVERAGE_MODE_LOG_RECURSIVE.try_into().expect("SetDisplayAverageMode failed!"));
-            let t = 0.001 * self.display_average_time;
-            let display_avb = (-1.0 / (self.fps * t)).exp();
-            let display_average = max(2, min(60, (self.fps * t) as i32));
-            SetDisplayAvBackmult(self.channel, 0, display_avb.into());
-            SetDisplayNumAverage(self.channel, 0, display_average);
         }
 
         self.init_analyzer();
@@ -202,7 +195,32 @@ impl Transmitter {
         }
         let pixels = self.spectrum_width * multiplier;
         unsafe {
-            SetAnalyzer(self.channel, 1, 1, 1, flp.as_mut_ptr(), self.fft_size, buffer_size, 4, 14.0, 2048, 0, 0, 0, pixels, 1, 0, 0.0, 0.0, max_w);
+            SetAnalyzer(self.channel,
+                1,
+                1,
+                1,
+                flp.as_mut_ptr(),
+                self.fft_size,
+                self.output_samples,
+                4,
+                14.0,
+                2048,
+                0,
+                0,
+                0,
+                pixels,
+                1,
+                0,
+                0.0,
+                0.0,
+                max_w);
+            SetDisplayDetectorMode(self.channel, 0, DETECTOR_MODE_AVERAGE.try_into().expect("SetDisplayDetectorMode failed!"));
+            SetDisplayAverageMode(self.channel, 0,  AVERAGE_MODE_LOG_RECURSIVE.try_into().expect("SetDisplayAverageMode failed!"));
+            let t = 0.001 * self.display_average_time;
+            let display_avb = (-1.0 / (self.fps * t)).exp();
+            let display_average = max(2, min(60, (self.fps * t) as i32));
+            SetDisplayAvBackmult(self.channel, 0, display_avb.into());
+            SetDisplayNumAverage(self.channel, 0, display_average);
         }
    } 
 
@@ -288,7 +306,6 @@ impl Transmitter {
 
 
     pub fn set_tuning(&self, state: bool, cw_keyer_sidetone_frequency: i32) {
-        eprintln!("Transmitter::set_tuning {}",  state);
         unsafe {
             if state {
                 let mut frequency = (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64;

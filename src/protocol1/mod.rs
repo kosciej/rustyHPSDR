@@ -448,16 +448,22 @@ impl Protocol1 {
         //let r = radio.lock().unwrap();
         let r = radio_mutex.radio.lock().unwrap();
         let mut frequency = r.receiver[0].frequency;
+        if r.receiver[0].ctun {
+            frequency = r.receiver[0].ctun_frequency;
+        }
         if r.receiver[0].mode == Modes::CWL.to_usize() {
              frequency = frequency + r.receiver[0].cw_pitch;
         } else if r.receiver[0].mode == Modes::CWU.to_usize() {
              frequency = frequency - r.receiver[0].cw_pitch;
         }
         let mut frequency_b = r.receiver[1].frequency;
-        if r.receiver[0].mode == Modes::CWL.to_usize() {
-             frequency_b = frequency_b + r.receiver[0].cw_pitch;
-        } else if r.receiver[0].mode == Modes::CWU.to_usize() {
-             frequency_b = frequency_b - r.receiver[0].cw_pitch;
+        if r.receiver[1].ctun {
+            frequency = r.receiver[1].ctun_frequency;
+        }
+        if r.receiver[1].mode == Modes::CWL.to_usize() {
+             frequency_b = frequency_b + r.receiver[1].cw_pitch;
+        } else if r.receiver[1].mode == Modes::CWU.to_usize() {
+             frequency_b = frequency_b - r.receiver[1].cw_pitch;
         }
 
         let mut attenuation = r.adc[rx as usize].attenuation;

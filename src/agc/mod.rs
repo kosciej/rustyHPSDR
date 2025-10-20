@@ -15,9 +15,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use serde::{Deserialize, Serialize};
 use crate::receiver::Receiver;
 use crate::wdsp::*;
+use serde::{Deserialize, Serialize};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
@@ -48,47 +48,37 @@ impl AGC {
     pub fn set_agc(rx: &Receiver, channel: i32) {
         unsafe {
             SetRXAAGCMode(channel, rx.agc.to_i32());
-            SetRXAAGCSlope(channel,rx.agcslope);
-            SetRXAAGCTop(channel,rx.agcgain.into());
+            SetRXAAGCSlope(channel, rx.agcslope);
+            SetRXAAGCTop(channel, rx.agcgain.into());
         }
         match rx.agc {
             AGC::OFF => {
-                       // nothing else to do as mode already set to OFF
-                },
-            AGC::LONG => {
-                unsafe {
-                    SetRXAAGCAttack(channel,2);
-                    SetRXAAGCHang(channel,2000);
-                    SetRXAAGCDecay(channel,2000);
-                    SetRXAAGCHangThreshold(channel,rx.agcchangethreshold);
-                }
-                },
-            AGC::SLOW => {
-                unsafe {
-                    SetRXAAGCAttack(channel,2);
-                    SetRXAAGCHang(channel,1000);
-                    SetRXAAGCDecay(channel,500);
-                    SetRXAAGCHangThreshold(channel,rx.agcchangethreshold);
-                }
-                },
-            AGC::MEDIUM => {
-                unsafe {
-                    SetRXAAGCAttack(channel,2);
-                    SetRXAAGCHang(channel,0);
-                    SetRXAAGCDecay(channel,250);
-                    SetRXAAGCHangThreshold(channel,100);
-                }
-                },
-            AGC::FAST => {
-                unsafe {
-                    SetRXAAGCAttack(channel,2);
-                    SetRXAAGCHang(channel,0);
-                    SetRXAAGCDecay(channel,50);
-                    SetRXAAGCHangThreshold(channel,100);
-                }
-                },
+                // nothing else to do as mode already set to OFF
+            }
+            AGC::LONG => unsafe {
+                SetRXAAGCAttack(channel, 2);
+                SetRXAAGCHang(channel, 2000);
+                SetRXAAGCDecay(channel, 2000);
+                SetRXAAGCHangThreshold(channel, rx.agcchangethreshold);
+            },
+            AGC::SLOW => unsafe {
+                SetRXAAGCAttack(channel, 2);
+                SetRXAAGCHang(channel, 1000);
+                SetRXAAGCDecay(channel, 500);
+                SetRXAAGCHangThreshold(channel, rx.agcchangethreshold);
+            },
+            AGC::MEDIUM => unsafe {
+                SetRXAAGCAttack(channel, 2);
+                SetRXAAGCHang(channel, 0);
+                SetRXAAGCDecay(channel, 250);
+                SetRXAAGCHangThreshold(channel, 100);
+            },
+            AGC::FAST => unsafe {
+                SetRXAAGCAttack(channel, 2);
+                SetRXAAGCHang(channel, 0);
+                SetRXAAGCDecay(channel, 50);
+                SetRXAAGCHangThreshold(channel, 100);
+            },
         }
     }
-
 }
-

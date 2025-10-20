@@ -10,10 +10,10 @@
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-    
+
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/  
+*/
 
 use serde::{Deserialize, Serialize};
 
@@ -27,7 +27,11 @@ pub struct Notch {
 
 impl Notch {
     pub fn new(rx: i32, frequency: f64, width: f64, active: i32) -> Notch {
-        Notch { rx, frequency, width, active }
+        Notch {
+            rx,
+            frequency,
+            width,
+            active,
+        }
     }
 }
-

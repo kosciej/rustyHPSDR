@@ -58,11 +58,11 @@ impl Filters {
     }
 }
 
+use crate::modes::Modes;
 use gtk::prelude::*;
 use gtk::{Adjustment, Builder, Button, Grid, SpinButton};
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::modes::Modes;
 
 // Define a type for our callback function
 pub type FilterClickCallback = Box<dyn Fn(usize)>;
@@ -82,190 +82,765 @@ pub struct FilterGrid {
     high_spinbutton: SpinButton,
     high_adjustment: Adjustment,
     active_index: Rc<RefCell<Option<usize>>>,
-    callback: Rc<RefCell<Box<dyn Fn(usize) + 'static>>>
+    callback: Rc<RefCell<Box<dyn Fn(usize) + 'static>>>,
 }
 
 impl FilterGrid {
+    const filterLSB: [Filter; 12] = [
+        Filter {
+            low: -5150.0,
+            high: -150.0,
+            label: "5.0k",
+        },
+        Filter {
+            low: -4550.0,
+            high: -150.0,
+            label: "4.4k",
+        },
+        Filter {
+            low: -3950.0,
+            high: -150.0,
+            label: "3.8k",
+        },
+        Filter {
+            low: -3450.0,
+            high: -150.0,
+            label: "3.3k",
+        },
+        Filter {
+            low: -3050.0,
+            high: -150.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: -2850.0,
+            high: -150.0,
+            label: "2.7k",
+        },
+        Filter {
+            low: -2550.0,
+            high: -150.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: -2250.0,
+            high: -150.0,
+            label: "2.1k",
+        },
+        Filter {
+            low: -1950.0,
+            high: -150.0,
+            label: "1.8k",
+        },
+        Filter {
+            low: -1150.0,
+            high: -150.0,
+            label: "1.0k",
+        },
+        Filter {
+            low: -2850.0,
+            high: -150.0,
+            label: "Var1",
+        },
+        Filter {
+            low: -2850.0,
+            high: -150.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterLSB: [Filter; 12] = [
-            Filter {low: -5150.0, high: -150.0, label: "5.0k"},
-            Filter {low: -4550.0, high: -150.0, label: "4.4k"},
-            Filter {low: -3950.0, high: -150.0, label: "3.8k"},
-            Filter {low: -3450.0, high: -150.0, label: "3.3k"},
-            Filter {low: -3050.0, high: -150.0, label: "2.9k"},
-            Filter {low: -2850.0, high: -150.0, label: "2.7k"},
-            Filter {low: -2550.0, high: -150.0, label: "2.4k"},
-            Filter {low: -2250.0, high: -150.0, label: "2.1k"},
-            Filter {low: -1950.0, high: -150.0, label: "1.8k"},
-            Filter {low: -1150.0, high: -150.0, label: "1.0k"},
-            Filter {low: -2850.0, high: -150.0, label: "Var1"},
-            Filter {low: -2850.0, high: -150.0, label: "Var2"},
-        ];
-      
-        const filterUSB: [Filter; 12] = [
-            Filter {low: 150.0, high: 5150.0, label: "5.0k"},
-            Filter {low: 150.0, high: 4550.0, label: "4.4k"},
-            Filter {low: 150.0, high: 3950.0, label: "3.8k"},
-            Filter {low: 150.0, high: 3450.0, label: "3.3k"},
-            Filter {low: 150.0, high: 3050.0, label: "2.9k"},
-            Filter {low: 150.0, high: 2850.0, label: "2.7k"},
-            Filter {low: 150.0, high: 2550.0, label: "2.4k"},
-            Filter {low: 150.0, high: 2250.0, label: "2.1k"},
-            Filter {low: 150.0, high: 1950.0, label: "1.8k"},
-            Filter {low: 150.0, high: 1150.0, label: "1.0k"},
-            Filter {low: 150.0, high: 2850.0, label: "Var1"},
-            Filter {low: 150.0, high: 2850.0, label: "Var2"},
-        ];
+    const filterUSB: [Filter; 12] = [
+        Filter {
+            low: 150.0,
+            high: 5150.0,
+            label: "5.0k",
+        },
+        Filter {
+            low: 150.0,
+            high: 4550.0,
+            label: "4.4k",
+        },
+        Filter {
+            low: 150.0,
+            high: 3950.0,
+            label: "3.8k",
+        },
+        Filter {
+            low: 150.0,
+            high: 3450.0,
+            label: "3.3k",
+        },
+        Filter {
+            low: 150.0,
+            high: 3050.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: 150.0,
+            high: 2850.0,
+            label: "2.7k",
+        },
+        Filter {
+            low: 150.0,
+            high: 2550.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: 150.0,
+            high: 2250.0,
+            label: "2.1k",
+        },
+        Filter {
+            low: 150.0,
+            high: 1950.0,
+            label: "1.8k",
+        },
+        Filter {
+            low: 150.0,
+            high: 1150.0,
+            label: "1.0k",
+        },
+        Filter {
+            low: 150.0,
+            high: 2850.0,
+            label: "Var1",
+        },
+        Filter {
+            low: 150.0,
+            high: 2850.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterCWL: [Filter; 12] = [
-            Filter {low: 500.0, high: 500.0, label: "1.0k"},
-            Filter {low: 400.0, high: 400.0, label: "800"},
-            Filter {low: 375.0, high: 375.0, label: "750"},
-            Filter {low: 300.0, high: 300.0, label: "600"},
-            Filter {low: 250.0, high: 250.0, label: "500"},
-            Filter {low: 200.0, high: 200.0, label: "400"},
-            Filter {low: 125.0, high: 125.0, label: "250"},
-            Filter {low: 50.0, high: 50.0, label: "100"},
-            Filter {low: 25.0, high: 25.0, label: "50"},
-            Filter {low: 13.0, high: 13.0, label: "25"},
-            Filter {low: 250.0, high: 250.0, label: "Var1"},
-            Filter {low: 250.0, high: 250.0, label: "Var2"},
-        ];
+    const filterCWL: [Filter; 12] = [
+        Filter {
+            low: 500.0,
+            high: 500.0,
+            label: "1.0k",
+        },
+        Filter {
+            low: 400.0,
+            high: 400.0,
+            label: "800",
+        },
+        Filter {
+            low: 375.0,
+            high: 375.0,
+            label: "750",
+        },
+        Filter {
+            low: 300.0,
+            high: 300.0,
+            label: "600",
+        },
+        Filter {
+            low: 250.0,
+            high: 250.0,
+            label: "500",
+        },
+        Filter {
+            low: 200.0,
+            high: 200.0,
+            label: "400",
+        },
+        Filter {
+            low: 125.0,
+            high: 125.0,
+            label: "250",
+        },
+        Filter {
+            low: 50.0,
+            high: 50.0,
+            label: "100",
+        },
+        Filter {
+            low: 25.0,
+            high: 25.0,
+            label: "50",
+        },
+        Filter {
+            low: 13.0,
+            high: 13.0,
+            label: "25",
+        },
+        Filter {
+            low: 250.0,
+            high: 250.0,
+            label: "Var1",
+        },
+        Filter {
+            low: 250.0,
+            high: 250.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterCWU: [Filter; 12] = [
-            Filter {low: 500.0, high: 500.0, label: "1.0k"},
-            Filter {low: 400.0, high: 400.0, label: "800"},
-            Filter {low: 375.0, high: 375.0, label: "750"},
-            Filter {low: 300.0, high: 300.0, label: "600"},
-            Filter {low: 250.0, high: 250.0, label: "500"},
-            Filter {low: 200.0, high: 200.0, label: "400"},
-            Filter {low: 125.0, high: 125.0, label: "250"},
-            Filter {low: 50.0, high: 50.0, label: "100"},
-            Filter {low: 25.0, high: 25.0, label: "50"},
-            Filter {low: 13.0, high: 13.0, label: "25"},
-            Filter {low: 250.0, high: 250.0, label: "Var1"},
-            Filter {low: 250.0, high: 250.0, label: "Var2"},
-        ];
+    const filterCWU: [Filter; 12] = [
+        Filter {
+            low: 500.0,
+            high: 500.0,
+            label: "1.0k",
+        },
+        Filter {
+            low: 400.0,
+            high: 400.0,
+            label: "800",
+        },
+        Filter {
+            low: 375.0,
+            high: 375.0,
+            label: "750",
+        },
+        Filter {
+            low: 300.0,
+            high: 300.0,
+            label: "600",
+        },
+        Filter {
+            low: 250.0,
+            high: 250.0,
+            label: "500",
+        },
+        Filter {
+            low: 200.0,
+            high: 200.0,
+            label: "400",
+        },
+        Filter {
+            low: 125.0,
+            high: 125.0,
+            label: "250",
+        },
+        Filter {
+            low: 50.0,
+            high: 50.0,
+            label: "100",
+        },
+        Filter {
+            low: 25.0,
+            high: 25.0,
+            label: "50",
+        },
+        Filter {
+            low: 13.0,
+            high: 13.0,
+            label: "25",
+        },
+        Filter {
+            low: 250.0,
+            high: 250.0,
+            label: "Var1",
+        },
+        Filter {
+            low: 250.0,
+            high: 250.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterDIGL: [Filter; 12] = [
-            Filter {low: -5150.0, high: -150.0, label: "5.0k"},
-            Filter {low: -4550.0, high: -150.0, label: "4.4k"},
-            Filter {low: -3950.0, high: -150.0, label: "3.8k"},
-            Filter {low: -3450.0, high: -150.0, label: "3.3k"},
-            Filter {low: -3050.0, high: -150.0, label: "2.9k"},
-            Filter {low: -2850.0, high: -150.0, label: "2.7k"},
-            Filter {low: -2550.0, high: -150.0, label: "2.4k"},
-            Filter {low: -2250.0, high: -150.0, label: "2.1k"},
-            Filter {low: -1950.0, high: -150.0, label: "1.8k"},
-            Filter {low: -1150.0, high: -150.0, label: "1.0k"},
-            Filter {low: -4000.0, high: 0.0, label: "Var1"},
-            Filter {low: -2850.0, high: -150.0, label: "Var2"}
-        ];
+    const filterDIGL: [Filter; 12] = [
+        Filter {
+            low: -5150.0,
+            high: -150.0,
+            label: "5.0k",
+        },
+        Filter {
+            low: -4550.0,
+            high: -150.0,
+            label: "4.4k",
+        },
+        Filter {
+            low: -3950.0,
+            high: -150.0,
+            label: "3.8k",
+        },
+        Filter {
+            low: -3450.0,
+            high: -150.0,
+            label: "3.3k",
+        },
+        Filter {
+            low: -3050.0,
+            high: -150.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: -2850.0,
+            high: -150.0,
+            label: "2.7k",
+        },
+        Filter {
+            low: -2550.0,
+            high: -150.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: -2250.0,
+            high: -150.0,
+            label: "2.1k",
+        },
+        Filter {
+            low: -1950.0,
+            high: -150.0,
+            label: "1.8k",
+        },
+        Filter {
+            low: -1150.0,
+            high: -150.0,
+            label: "1.0k",
+        },
+        Filter {
+            low: -4000.0,
+            high: 0.0,
+            label: "Var1",
+        },
+        Filter {
+            low: -2850.0,
+            high: -150.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterDIGU: [Filter; 12] = [
-            Filter {low: 150.0, high: 5150.0, label: "5.0k"},
-            Filter {low: 150.0, high: 4550.0, label: "4.4k"},
-            Filter {low: 150.0, high: 3950.0, label: "3.8k"},
-            Filter {low: 150.0, high: 3450.0, label: "3.3k"},
-            Filter {low: 150.0, high: 3050.0, label: "2.9k"},
-            Filter {low: 150.0, high: 2850.0, label: "2.7k"},
-            Filter {low: 150.0, high: 2550.0, label: "2.4k"},
-            Filter {low: 150.0, high: 2250.0, label: "2.1k"},
-            Filter {low: 150.0, high: 1950.0, label: "1.8k"},
-            Filter {low: 150.0, high: 1150.0, label: "1.0k"},
-            Filter {low: 0.0, high: 4000.0, label: "Var1"},
-            Filter {low: 150.0, high: 2850.0, label: "Var2"},
-        ];
+    const filterDIGU: [Filter; 12] = [
+        Filter {
+            low: 150.0,
+            high: 5150.0,
+            label: "5.0k",
+        },
+        Filter {
+            low: 150.0,
+            high: 4550.0,
+            label: "4.4k",
+        },
+        Filter {
+            low: 150.0,
+            high: 3950.0,
+            label: "3.8k",
+        },
+        Filter {
+            low: 150.0,
+            high: 3450.0,
+            label: "3.3k",
+        },
+        Filter {
+            low: 150.0,
+            high: 3050.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: 150.0,
+            high: 2850.0,
+            label: "2.7k",
+        },
+        Filter {
+            low: 150.0,
+            high: 2550.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: 150.0,
+            high: 2250.0,
+            label: "2.1k",
+        },
+        Filter {
+            low: 150.0,
+            high: 1950.0,
+            label: "1.8k",
+        },
+        Filter {
+            low: 150.0,
+            high: 1150.0,
+            label: "1.0k",
+        },
+        Filter {
+            low: 0.0,
+            high: 4000.0,
+            label: "Var1",
+        },
+        Filter {
+            low: 150.0,
+            high: 2850.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterAM: [Filter; 12] = [
-            Filter {low: -8000.0, high: 8000.0, label: "16k"},
-            Filter {low: -6000.0, high: 6000.0, label: "12k"},
-            Filter {low: -5000.0, high: 5000.0, label: "10k"},
-            Filter {low: -4000.0, high: 4000.0, label: "8k"},
-            Filter {low: -3300.0, high: 3300.0, label: "6.6k"},
-            Filter {low: -2600.0, high: 2600.0, label: "5.2k"},
-            Filter {low: -2000.0, high: 2000.0, label: "4.0k"},
-            Filter {low: -1550.0, high: 1550.0, label: "3.1k"},
-            Filter {low: -1450.0, high: 1450.0, label: "2.9k"},
-            Filter {low: -1200.0, high: 1200.0, label: "2.4k"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var1"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var2"},
-        ];
+    const filterAM: [Filter; 12] = [
+        Filter {
+            low: -8000.0,
+            high: 8000.0,
+            label: "16k",
+        },
+        Filter {
+            low: -6000.0,
+            high: 6000.0,
+            label: "12k",
+        },
+        Filter {
+            low: -5000.0,
+            high: 5000.0,
+            label: "10k",
+        },
+        Filter {
+            low: -4000.0,
+            high: 4000.0,
+            label: "8k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "6.6k",
+        },
+        Filter {
+            low: -2600.0,
+            high: 2600.0,
+            label: "5.2k",
+        },
+        Filter {
+            low: -2000.0,
+            high: 2000.0,
+            label: "4.0k",
+        },
+        Filter {
+            low: -1550.0,
+            high: 1550.0,
+            label: "3.1k",
+        },
+        Filter {
+            low: -1450.0,
+            high: 1450.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: -1200.0,
+            high: 1200.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var1",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterSAM: [Filter; 12] = [
-            Filter {low: -8000.0, high: 8000.0, label: "16k"},
-            Filter {low: -6000.0, high: 6000.0, label: "12k"},
-            Filter {low: -5000.0, high: 5000.0, label: "10k"},
-            Filter {low: -4000.0, high: 4000.0, label: "8k"},
-            Filter {low: -3300.0, high: 3300.0, label: "6.6k"},
-            Filter {low: -2600.0, high: 2600.0, label: "5.2k"},
-            Filter {low: -2000.0, high: 2000.0, label: "4.0k"},
-            Filter {low: -1550.0, high: 1550.0, label: "3.1k"},
-            Filter {low: -1450.0, high: 1450.0, label: "2.9k"},
-            Filter {low: -1200.0, high: 1200.0, label: "2.4k"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var1"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var2"},
-        ];
+    const filterSAM: [Filter; 12] = [
+        Filter {
+            low: -8000.0,
+            high: 8000.0,
+            label: "16k",
+        },
+        Filter {
+            low: -6000.0,
+            high: 6000.0,
+            label: "12k",
+        },
+        Filter {
+            low: -5000.0,
+            high: 5000.0,
+            label: "10k",
+        },
+        Filter {
+            low: -4000.0,
+            high: 4000.0,
+            label: "8k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "6.6k",
+        },
+        Filter {
+            low: -2600.0,
+            high: 2600.0,
+            label: "5.2k",
+        },
+        Filter {
+            low: -2000.0,
+            high: 2000.0,
+            label: "4.0k",
+        },
+        Filter {
+            low: -1550.0,
+            high: 1550.0,
+            label: "3.1k",
+        },
+        Filter {
+            low: -1450.0,
+            high: 1450.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: -1200.0,
+            high: 1200.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var1",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterFMN: [Filter; 12] = [
-            Filter {low: -8000.0, high: 8000.0, label: "8k"},
-            Filter {low: -6000.0, high: 6000.0, label: "16k"},
-            Filter {low: -5000.0, high: 5000.0, label: "10k"},
-            Filter {low: -4000.0, high: 4000.0, label: "8k"},
-            Filter {low: -3300.0, high: 3300.0, label: "6.6k"},
-            Filter {low: -2600.0, high: 2600.0, label: "5.2k"},
-            Filter {low: -2000.0, high: 2000.0, label: "4.0k"},
-            Filter {low: -1550.0, high: 1550.0, label: "3.1k"},
-            Filter {low: -1450.0, high: 1450.0, label: "2.9k"},
-            Filter {low: -1200.0, high: 1200.0, label: "2.4k"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var1"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var2"},
-        ];
+    const filterFMN: [Filter; 12] = [
+        Filter {
+            low: -8000.0,
+            high: 8000.0,
+            label: "8k",
+        },
+        Filter {
+            low: -6000.0,
+            high: 6000.0,
+            label: "16k",
+        },
+        Filter {
+            low: -5000.0,
+            high: 5000.0,
+            label: "10k",
+        },
+        Filter {
+            low: -4000.0,
+            high: 4000.0,
+            label: "8k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "6.6k",
+        },
+        Filter {
+            low: -2600.0,
+            high: 2600.0,
+            label: "5.2k",
+        },
+        Filter {
+            low: -2000.0,
+            high: 2000.0,
+            label: "4.0k",
+        },
+        Filter {
+            low: -1550.0,
+            high: 1550.0,
+            label: "3.1k",
+        },
+        Filter {
+            low: -1450.0,
+            high: 1450.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: -1200.0,
+            high: 1200.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var1",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterDSB: [Filter; 12] = [
-            Filter {low: -8000.0, high: 8000.0, label: "16k"},
-            Filter {low: -6000.0, high: 6000.0, label: "12k"},
-            Filter {low: -5000.0, high: 5000.0, label: "10k"},
-            Filter {low: -4000.0, high: 4000.0, label: "8k"},
-            Filter {low: -3300.0, high: 3300.0, label: "6.6k"},
-            Filter {low: -2600.0, high: 2600.0, label: "5.2k"},
-            Filter {low: -2000.0, high: 2000.0, label: "4.0k"},
-            Filter {low: -1550.0, high: 1550.0, label: "3.1k"},
-            Filter {low: -1450.0, high: 1450.0, label: "2.9k"},
-            Filter {low: -1200.0, high: 1200.0, label: "2.4k"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var1"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var2"},
-        ];
+    const filterDSB: [Filter; 12] = [
+        Filter {
+            low: -8000.0,
+            high: 8000.0,
+            label: "16k",
+        },
+        Filter {
+            low: -6000.0,
+            high: 6000.0,
+            label: "12k",
+        },
+        Filter {
+            low: -5000.0,
+            high: 5000.0,
+            label: "10k",
+        },
+        Filter {
+            low: -4000.0,
+            high: 4000.0,
+            label: "8k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "6.6k",
+        },
+        Filter {
+            low: -2600.0,
+            high: 2600.0,
+            label: "5.2k",
+        },
+        Filter {
+            low: -2000.0,
+            high: 2000.0,
+            label: "4.0k",
+        },
+        Filter {
+            low: -1550.0,
+            high: 1550.0,
+            label: "3.1k",
+        },
+        Filter {
+            low: -1450.0,
+            high: 1450.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: -1200.0,
+            high: 1200.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var1",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterSPEC: [Filter; 12] = [
-            Filter {low: -8000.0, high: 8000.0, label: "16k"},
-            Filter {low: -6000.0, high: 6000.0, label: "12k"},
-            Filter {low: -5000.0, high: 5000.0, label: "10k"},
-            Filter {low: -4000.0, high: 4000.0, label: "8k"},
-            Filter {low: -3300.0, high: 3300.0, label: "6.6k"},
-            Filter {low: -2600.0, high: 2600.0, label: "5.2k"},
-            Filter {low: -2000.0, high: 2000.0, label: "4.0k"},
-            Filter {low: -1550.0, high: 1550.0, label: "3.1k"},
-            Filter {low: -1450.0, high: 1450.0, label: "2.9k"},
-            Filter {low: -1200.0, high: 1200.0, label: "2.4k"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var1"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var2"},
-        ];
+    const filterSPEC: [Filter; 12] = [
+        Filter {
+            low: -8000.0,
+            high: 8000.0,
+            label: "16k",
+        },
+        Filter {
+            low: -6000.0,
+            high: 6000.0,
+            label: "12k",
+        },
+        Filter {
+            low: -5000.0,
+            high: 5000.0,
+            label: "10k",
+        },
+        Filter {
+            low: -4000.0,
+            high: 4000.0,
+            label: "8k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "6.6k",
+        },
+        Filter {
+            low: -2600.0,
+            high: 2600.0,
+            label: "5.2k",
+        },
+        Filter {
+            low: -2000.0,
+            high: 2000.0,
+            label: "4.0k",
+        },
+        Filter {
+            low: -1550.0,
+            high: 1550.0,
+            label: "3.1k",
+        },
+        Filter {
+            low: -1450.0,
+            high: 1450.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: -1200.0,
+            high: 1200.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var1",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var2",
+        },
+    ];
 
-        const filterDRM: [Filter; 12] = [
-            Filter {low: -8000.0, high: 8000.0, label: "16k"},
-            Filter {low: -6000.0, high: 6000.0, label: "12k"},
-            Filter {low: -5000.0, high: 5000.0, label: "10k"},
-            Filter {low: -4000.0, high: 4000.0, label: "8k"},
-            Filter {low: -3300.0, high: 3300.0, label: "6.6k"},
-            Filter {low: -2600.0, high: 2600.0, label: "5.2k"},
-            Filter {low: -2000.0, high: 2000.0, label: "4.0k"},
-            Filter {low: -1550.0, high: 1550.0, label: "3.1k"},
-            Filter {low: -1450.0, high: 1450.0, label: "2.9k"},
-            Filter {low: -1200.0, high: 1200.0, label: "2.4k"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var1"},
-            Filter {low: -3300.0, high: 3300.0, label: "Var2"},
-        ];
+    const filterDRM: [Filter; 12] = [
+        Filter {
+            low: -8000.0,
+            high: 8000.0,
+            label: "16k",
+        },
+        Filter {
+            low: -6000.0,
+            high: 6000.0,
+            label: "12k",
+        },
+        Filter {
+            low: -5000.0,
+            high: 5000.0,
+            label: "10k",
+        },
+        Filter {
+            low: -4000.0,
+            high: 4000.0,
+            label: "8k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "6.6k",
+        },
+        Filter {
+            low: -2600.0,
+            high: 2600.0,
+            label: "5.2k",
+        },
+        Filter {
+            low: -2000.0,
+            high: 2000.0,
+            label: "4.0k",
+        },
+        Filter {
+            low: -1550.0,
+            high: 1550.0,
+            label: "3.1k",
+        },
+        Filter {
+            low: -1450.0,
+            high: 1450.0,
+            label: "2.9k",
+        },
+        Filter {
+            low: -1200.0,
+            high: 1200.0,
+            label: "2.4k",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var1",
+        },
+        Filter {
+            low: -3300.0,
+            high: 3300.0,
+            label: "Var2",
+        },
+    ];
 
     pub fn new(builder: &Builder) -> Self {
         let grid: Grid = builder
@@ -275,15 +850,12 @@ impl FilterGrid {
         let mut buttons = Vec::with_capacity(15);
         let active_index = Rc::new(RefCell::new(None));
         let callback = Rc::new(RefCell::new(Box::new(|_: usize| {}) as Box<dyn Fn(usize)>));
-    
+
         let labels = [
-            "f0", "f1", "f2",
-            "f3", "f4", "f5",
-            "f6", "f7", "f8",
-            "f9", "var1", "var2",
+            "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "var1", "var2",
         ];
 
-        for (_i, &label) in labels.iter().enumerate() {
+        for &label in labels.iter() {
             let id = format!("{}_button", label);
             let button: Button = builder
                 .object(id)
@@ -309,7 +881,6 @@ impl FilterGrid {
             .object("high_adjustment")
             .expect("Could not get object high_adjustment from builder.");
 
-
         FilterGrid {
             grid,
             buttons,
@@ -320,7 +891,6 @@ impl FilterGrid {
             active_index,
             callback,
         }
-
     }
 
     pub fn set_callback<F>(&mut self, callback: F, initial_button: usize)
@@ -339,7 +909,7 @@ impl FilterGrid {
             self.low_spinbutton.set_sensitive(false);
             self.high_spinbutton.set_sensitive(false);
         }
-        
+
         // now add the callback
         for (i, button) in self.buttons.iter().enumerate() {
             let callback_clone = self.callback.clone();
@@ -385,22 +955,22 @@ impl FilterGrid {
         &self.grid
     }
 
-    pub fn get_filter_values(&self,mode: usize, filter: usize) -> (f32, f32) {
+    pub fn get_filter_values(&self, mode: usize, filter: usize) -> (f32, f32) {
         let mut m = Self::filterUSB;
         match Modes::from_usize(mode) {
-           Some(Modes::LSB) => m = Self::filterLSB,
-           Some(Modes::USB) => m = Self::filterUSB,
-           Some(Modes::DSB) => m = Self::filterDSB,
-           Some(Modes::CWL) => m = Self::filterCWL,
-           Some(Modes::CWU) => m = Self::filterCWU,
-           Some(Modes::FMN) => m = Self::filterFMN,
-           Some(Modes::AM) => m = Self::filterAM,
-           Some(Modes::DIGU) => m = Self::filterDIGU,
-           Some(Modes::SPEC) => m = Self::filterSPEC,
-           Some(Modes::DIGL) => m = Self::filterDIGL,
-           Some(Modes::SAM) => m = Self::filterSAM,
-           Some(Modes::DRM) => m = Self::filterDRM,
-           None => m = Self::filterUSB,
+            Some(Modes::LSB) => m = Self::filterLSB,
+            Some(Modes::USB) => m = Self::filterUSB,
+            Some(Modes::DSB) => m = Self::filterDSB,
+            Some(Modes::CWL) => m = Self::filterCWL,
+            Some(Modes::CWU) => m = Self::filterCWU,
+            Some(Modes::FMN) => m = Self::filterFMN,
+            Some(Modes::AM) => m = Self::filterAM,
+            Some(Modes::DIGU) => m = Self::filterDIGU,
+            Some(Modes::SPEC) => m = Self::filterSPEC,
+            Some(Modes::DIGL) => m = Self::filterDIGL,
+            Some(Modes::SAM) => m = Self::filterSAM,
+            Some(Modes::DRM) => m = Self::filterDRM,
+            None => m = Self::filterUSB,
         }
         (m[filter].low, m[filter].high)
     }
@@ -408,19 +978,19 @@ impl FilterGrid {
     pub fn update_filter_buttons(&self, mode: usize) {
         let mut filters = Self::filterUSB;
         match Modes::from_usize(mode) {
-           Some(Modes::LSB) => filters = Self::filterLSB,
-           Some(Modes::USB) => filters = Self::filterUSB,
-           Some(Modes::DSB) => filters = Self::filterDSB,
-           Some(Modes::CWL) => filters = Self::filterCWL,
-           Some(Modes::CWU) => filters = Self::filterCWU,
-           Some(Modes::FMN) => filters = Self::filterFMN,
-           Some(Modes::AM) => filters = Self::filterAM,
-           Some(Modes::DIGU) => filters = Self::filterDIGU,
-           Some(Modes::SPEC) => filters = Self::filterSPEC,
-           Some(Modes::DIGL) => filters = Self::filterDIGL,
-           Some(Modes::SAM) => filters = Self::filterSAM,
-           Some(Modes::DRM) => filters = Self::filterDRM,
-           None => filters = Self::filterUSB,
+            Some(Modes::LSB) => filters = Self::filterLSB,
+            Some(Modes::USB) => filters = Self::filterUSB,
+            Some(Modes::DSB) => filters = Self::filterDSB,
+            Some(Modes::CWL) => filters = Self::filterCWL,
+            Some(Modes::CWU) => filters = Self::filterCWU,
+            Some(Modes::FMN) => filters = Self::filterFMN,
+            Some(Modes::AM) => filters = Self::filterAM,
+            Some(Modes::DIGU) => filters = Self::filterDIGU,
+            Some(Modes::SPEC) => filters = Self::filterSPEC,
+            Some(Modes::DIGL) => filters = Self::filterDIGL,
+            Some(Modes::SAM) => filters = Self::filterSAM,
+            Some(Modes::DRM) => filters = Self::filterDRM,
+            None => filters = Self::filterUSB,
         }
 
         for (i, button) in self.buttons.iter().enumerate() {
@@ -433,7 +1003,10 @@ impl FilterGrid {
     }
 
     pub fn set_active_index(&self, index: usize) {
-        let old_index: usize = self.active_index.borrow().expect("Filters: set_active_index error using active_index");
+        let old_index: usize = self
+            .active_index
+            .borrow()
+            .expect("Filters: set_active_index error using active_index");
         self.buttons[old_index].remove_css_class("active-button");
         self.buttons[old_index].add_css_class("inactive-button");
         let mut active_idx = self.active_index.borrow_mut();
@@ -458,10 +1031,7 @@ impl FilterGrid {
         self.high_adjustment.set_value(high.into());
     }
 
-    pub fn set_filter_low(&self, low: f32) {
-    }
+    pub fn set_filter_low(&self, low: f32) {}
 
-    pub fn set_filter_high(&self, high: f32) {
-    }
-
+    pub fn set_filter_high(&self, high: f32) {}
 }

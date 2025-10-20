@@ -15,24 +15,23 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pub mod discovery;
-pub mod radio;
-pub mod receiver;
-pub mod transmitter;
-pub mod bands;
-pub mod modes;
-pub mod filters;
+pub mod adc;
 pub mod agc;
+pub mod alex;
+pub mod audio;
+pub mod bands;
 pub mod configure;
+pub mod discovery;
+pub mod filters;
+pub mod meter;
+pub mod modes;
+pub mod notches;
 pub mod protocol1;
 pub mod protocol2;
-pub mod wdsp;
-pub mod audio;
-pub mod alex;
-pub mod adc;
+pub mod radio;
+pub mod receiver;
 pub mod spectrum;
-pub mod waterfall;
-pub mod meter;
+pub mod transmitter;
 pub mod util;
-pub mod notches;
-
+pub mod waterfall;
+pub mod wdsp;

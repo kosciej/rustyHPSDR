@@ -26,13 +26,22 @@ pub struct Adc {
     pub dither: bool,
 }
 
-impl Adc {
+impl Default for Adc {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
+impl Adc {
     pub fn new() -> Adc {
         let rx_antenna = ALEX_ANTENNA_1;
         let random = false;
         let dither = false;
 
-        Adc {rx_antenna, random, dither}
+        Adc {
+            rx_antenna,
+            random,
+            dither,
+        }
     }
 }

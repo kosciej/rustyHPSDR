@@ -1,6 +1,6 @@
-use gtk::prelude::*;
-use gtk::cairo::Context;
 use gdk_pixbuf::{Colorspace, Pixbuf};
+use gtk::cairo::Context;
+use gtk::prelude::*;
 
 use crate::radio::RadioMutex;
 
@@ -11,24 +11,26 @@ pub struct Waterfall {
 }
 
 impl Waterfall {
-
     pub fn new(id: usize, width: i32, height: i32) -> Self {
         let rx = id;
         let pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, width, height).unwrap();
-        Self {
-            rx,
-            pixbuf,
-        }
+        Self { rx, pixbuf }
     }
 
     pub fn resize(&mut self, width: i32, height: i32) {
-        if width!=0 && height !=0 {
+        if width != 0 && height != 0 {
             let new_pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, width, height).unwrap();
             self.pixbuf = new_pixbuf;
         }
     }
 
-    pub fn update(&mut self, width:i32, height: i32, radio_mutex: &RadioMutex, new_pixels: &Vec<f32>) {
+    pub fn update(
+        &mut self,
+        width: i32,
+        height: i32,
+        radio_mutex: &RadioMutex,
+        new_pixels: &Vec<f32>,
+    ) {
         let low_R = 0.0; // low is black
         let low_G = 0.0;
         let low_B = 0.0;
@@ -48,17 +50,19 @@ impl Waterfall {
             let rowstride = self.pixbuf.rowstride() as usize;
             let channels = self.pixbuf.n_channels() as usize;
 
-            for y in (0..height - 1).rev() { // Iterate in reverse order
-                let src_offset = (y * rowstride) as usize;
-                let dest_offset = ((y + 1) * rowstride) as usize;
+            for y in (0..height - 1).rev() {
+                // Iterate in reverse order
+                let src_offset = y * rowstride;
+                let dest_offset = (y + 1) * rowstride;
                 if dest_offset + rowstride <= pixels.len() {
-                    pixels.copy_within(src_offset..src_offset + rowstride as usize, dest_offset);
+                    pixels.copy_within(src_offset..src_offset + rowstride, dest_offset);
                 }
             }
 
             // fill in the top line with the latest spectrum data
             let waterfall_width = r.receiver[self.rx].spectrum_width;
-            let pan = ((new_pixels.len() as f32 - waterfall_width as f32) / 100.0) * r.receiver[self.rx].pan as f32;
+            let pan = ((new_pixels.len() as f32 - waterfall_width as f32) / 100.0)
+                * r.receiver[self.rx].pan as f32;
 
             let b = r.receiver[self.rx].band.to_usize();
             let mut R = 0.0;
@@ -66,7 +70,7 @@ impl Waterfall {
             let mut B = 0.0;
             let mut max_percent = 0.0;
             for x in 0..waterfall_width {
-                let mut value: f32 = new_pixels[x as usize + pan as usize] as f32;
+                let value: f32 = new_pixels[x as usize + pan as usize];
                 if value < r.receiver[self.rx].band_info[b].spectrum_low {
                     average += r.receiver[self.rx].band_info[b].spectrum_low;
                 } else {
@@ -82,9 +86,10 @@ impl Waterfall {
                     G = 240.0;
                     B = 240.0;
                 } else {
-                    let range = r.receiver[self.rx].band_info[b].waterfall_high - r.receiver[self.rx].band_info[b].waterfall_low;
+                    let range = r.receiver[self.rx].band_info[b].waterfall_high
+                        - r.receiver[self.rx].band_info[b].waterfall_low;
                     let offset = value - r.receiver[self.rx].band_info[b].waterfall_low;
-                    let mut percent = 100.0 * offset / range;
+                    let percent = 100.0 * offset / range;
                     if percent > max_percent {
                         max_percent = percent;
                     }
@@ -95,10 +100,6 @@ impl Waterfall {
                         B = 64.0;
                     } else if percent < 20.0 {
                         R = 128.0;
-                        G = R;
-                        B = 0.0;
-                    } else if percent < 40.0 {
-                        R = 255.0;
                         G = R;
                         B = 0.0;
                     } else if percent < 40.0 {
@@ -127,7 +128,9 @@ impl Waterfall {
             }
             //println!("average {} max_percent {}", average / width as f32, max_percent);
             if r.waterfall_auto {
-                r.receiver[self.rx].band_info[b].waterfall_low = (r.receiver[self.rx].band_info[b].waterfall_low + (average / width as f32)) / 2.0;
+                r.receiver[self.rx].band_info[b].waterfall_low =
+                    (r.receiver[self.rx].band_info[b].waterfall_low + (average / width as f32))
+                        / 2.0;
                 //r.receiver[self.rx].band_info[b].waterfall_low = (average / width as f32) - 14.0;
                 //r.receiver[self.rx].band_info[b].waterfall_high = r.receiver[self.rx].band_info[b].waterfall_low + 80.0;
             }
@@ -135,7 +138,7 @@ impl Waterfall {
     }
 
     pub fn draw(&self, cr: &Context, width: i32, height: i32) {
-                cr.set_source_pixbuf(&self.pixbuf, 0.0, 0.0);
-                cr.paint().unwrap();
+        cr.set_source_pixbuf(&self.pixbuf, 0.0, 0.0);
+        cr.paint().unwrap();
     }
 }

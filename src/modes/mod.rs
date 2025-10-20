@@ -58,7 +58,6 @@ impl Modes {
     }
 }
 
-
 use gtk::prelude::*;
 use gtk::{Builder, Button, Grid};
 use std::cell::RefCell;
@@ -72,24 +71,21 @@ pub struct ModeGrid {
     pub grid: Grid,
     buttons: Vec<Button>,
     active_index: Rc<RefCell<Option<usize>>>,
-    callback: Rc<RefCell<Box<dyn Fn(usize) + 'static>>>
+    callback: Rc<RefCell<Box<dyn Fn(usize) + 'static>>>,
 }
 
 impl ModeGrid {
     pub fn new(builder: &Builder) -> Self {
         let grid: Grid = builder
             .object("mode_grid")
-            .expect("Could not get object 'mode_grid' from builder."); 
-        
+            .expect("Could not get object 'mode_grid' from builder.");
+
         let labels = [
-        "lsb", "usb", "dsb",
-        "cwl", "cwu", "fmn",
-        "am", "digu", "spec",
-        "digl", "sam", "drm",
+            "lsb", "usb", "dsb", "cwl", "cwu", "fmn", "am", "digu", "spec", "digl", "sam", "drm",
         ];
 
         let mut buttons = Vec::with_capacity(12);
-        for (_i, &label) in labels.iter().enumerate() {
+        for &label in labels.iter() {
             let id = format!("{}_button", label);
             let button: Button = builder
                 .object(id)
@@ -117,7 +113,7 @@ impl ModeGrid {
 
         let mut active_idx = self.active_index.borrow_mut();
         *active_idx = Some(initial_button);
-            
+
         // now add the callback
         for (i, button) in self.buttons.iter().enumerate() {
             let callback_clone = self.callback.clone();
@@ -154,7 +150,10 @@ impl ModeGrid {
     }
 
     pub fn set_active_index(&self, index: usize) {
-        let old_index: usize = self.active_index.borrow().expect("Modes: set_active_index error using active_index");
+        let old_index: usize = self
+            .active_index
+            .borrow()
+            .expect("Modes: set_active_index error using active_index");
         self.buttons[old_index].remove_css_class("active-button");
         self.buttons[old_index].add_css_class("inactive-button");
         let mut active_idx = self.active_index.borrow_mut();
@@ -170,6 +169,4 @@ impl ModeGrid {
     pub fn get_widget(&self) -> &Grid {
         &self.grid
     }
-
 }
-

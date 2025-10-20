@@ -19,6 +19,7 @@ use alsa::Direction;
 use gtk::prelude::*;
 use gtk::{Adjustment, ApplicationWindow, Box, Builder, Button, CheckButton, ComboBoxText, DropDown, Frame, Label, ListBox, ListBoxRow, Orientation, PositionType, Scale, ToggleButton, Window};
 
+use crate::bands::Bands;
 use crate::radio::{Keyer, RadioModels, RadioMutex};
 use crate::receiver::{AudioOutput};
 use crate::audio::*;
@@ -32,6 +33,8 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     let window: Window = builder
             .object("configure_window")
             .expect("Could not get object `configure_window` from builder.");
+
+    window.set_transient_for(Some(parent)); // keeps it on top
     
     // AUDIO
     let r = radio_mutex.radio.lock().unwrap();
@@ -349,6 +352,176 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     }); 
 
 
+    // PA Calibration
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_2200_value = r.transmitter.pa_calibration[Bands::Band2200.to_usize()];
+    drop(r);
+    let pa_2200_adjustment: Adjustment = builder
+            .object("pa_2200_adjustment")
+            .expect("Could not get object `pa_2200_adjustment` from builder.");
+    pa_2200_adjustment.set_value(pa_2200_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_2200_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band2200.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_630_value = r.transmitter.pa_calibration[Bands::Band630.to_usize()];
+    drop(r);
+    let pa_630_adjustment: Adjustment = builder
+            .object("pa_630_adjustment")
+            .expect("Could not get object `pa_630_adjustment` from builder.");
+    pa_630_adjustment.set_value(pa_630_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_630_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band630.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_160_value = r.transmitter.pa_calibration[Bands::Band160.to_usize()];
+    drop(r);
+    let pa_160_adjustment: Adjustment = builder
+            .object("pa_160_adjustment")
+            .expect("Could not get object `pa_160_adjustment` from builder.");
+    pa_160_adjustment.set_value(pa_160_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_160_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band160.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_80_value = r.transmitter.pa_calibration[Bands::Band80.to_usize()];
+    drop(r);
+    let pa_80_adjustment: Adjustment = builder
+            .object("pa_80_adjustment")
+            .expect("Could not get object `pa_80_adjustment` from builder.");
+    pa_80_adjustment.set_value(pa_80_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_80_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band80.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_60_value = r.transmitter.pa_calibration[Bands::Band60.to_usize()];
+    drop(r);
+    let pa_60_adjustment: Adjustment = builder
+            .object("pa_60_adjustment")
+            .expect("Could not get object `pa_60_adjustment` from builder.");
+    pa_60_adjustment.set_value(pa_60_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_60_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band60.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_40_value = r.transmitter.pa_calibration[Bands::Band40.to_usize()];
+    drop(r);
+    let pa_40_adjustment: Adjustment = builder
+            .object("pa_40_adjustment")
+            .expect("Could not get object `pa_40_adjustment` from builder.");
+    pa_40_adjustment.set_value(pa_40_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_40_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band40.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_30_value = r.transmitter.pa_calibration[Bands::Band30.to_usize()];
+    drop(r);
+    let pa_30_adjustment: Adjustment = builder
+            .object("pa_30_adjustment")
+            .expect("Could not get object `pa_30_adjustment` from builder.");
+    pa_30_adjustment.set_value(pa_30_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_30_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band30.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_20_value = r.transmitter.pa_calibration[Bands::Band20.to_usize()];
+    drop(r);
+    let pa_20_adjustment: Adjustment = builder
+            .object("pa_20_adjustment")
+            .expect("Could not get object `pa_20_adjustment` from builder.");
+    pa_20_adjustment.set_value(pa_20_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_20_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band20.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_17_value = r.transmitter.pa_calibration[Bands::Band17.to_usize()];
+    drop(r);
+    let pa_17_adjustment: Adjustment = builder
+            .object("pa_17_adjustment")
+            .expect("Could not get object `pa_17_adjustment` from builder.");
+    pa_17_adjustment.set_value(pa_17_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_17_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band17.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_15_value = r.transmitter.pa_calibration[Bands::Band15.to_usize()];
+    drop(r);
+    let pa_15_adjustment: Adjustment = builder
+            .object("pa_15_adjustment")
+            .expect("Could not get object `pa_15_adjustment` from builder.");
+    pa_15_adjustment.set_value(pa_15_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_15_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band15.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_12_value = r.transmitter.pa_calibration[Bands::Band12.to_usize()];
+    drop(r);
+    let pa_12_adjustment: Adjustment = builder
+            .object("pa_12_adjustment")
+            .expect("Could not get object `pa_12_adjustment` from builder.");
+    pa_12_adjustment.set_value(pa_12_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_12_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band12.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_10_value = r.transmitter.pa_calibration[Bands::Band10.to_usize()];
+    drop(r);
+    let pa_10_adjustment: Adjustment = builder
+            .object("pa_10_adjustment")
+            .expect("Could not get object `pa_10_adjustment` from builder.");
+    pa_10_adjustment.set_value(pa_10_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_10_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band10.to_usize()] = adjustment.value() as f32;
+    }); 
+
+    let r = radio_mutex.radio.lock().unwrap();
+    let pa_6_value = r.transmitter.pa_calibration[Bands::Band6.to_usize()];
+    drop(r);
+    let pa_6_adjustment: Adjustment = builder
+            .object("pa_6_adjustment")
+            .expect("Could not get object `pa_6_adjustment` from builder.");
+    pa_6_adjustment.set_value(pa_6_value.into());
+    let radio_mutex_clone = radio_mutex.clone();
+    pa_6_adjustment.connect_value_changed(move |adjustment| {
+        let mut r = radio_mutex_clone.radio.lock().unwrap();
+        r.transmitter.pa_calibration[Bands::Band6.to_usize()] = adjustment.value() as f32;
+    }); 
 
     // Radio
 

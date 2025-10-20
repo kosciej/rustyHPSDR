@@ -23,12 +23,15 @@ use std::os::raw::{c_char, c_int};
 use serde::{Deserialize, Serialize};
 
 use crate::alex::*;
+use crate::bands::Bands;
+use crate::discovery::Boards;
 use crate::modes::Modes;
 use crate::wdsp::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Transmitter {
     pub protocol: u8,
+    pub board: Boards,
     pub channel: i32,
     pub sample_rate: i32,
     pub dsp_rate: i32,
@@ -38,12 +41,14 @@ pub struct Transmitter {
     pub p1_packet_size: i32,
     pub packet_counter: i32,
     pub is_transmitting: bool,
-    pub local_microphone_buffer_size: usize,
-#[serde(skip_serializing, skip_deserializing)]
-    pub local_microphone_buffer: Vec<u8>,
+//    pub local_microphone_buffer_size: usize,
+//#[serde(skip_serializing, skip_deserializing)]
+//    pub local_microphone_buffer: Vec<u8>,
     pub microphone_buffer_size: usize,
+//#[serde(skip_serializing, skip_deserializing)]
 #[serde(skip_serializing, skip_deserializing)]
     pub microphone_buffer: Vec<f64>,
+#[serde(skip_serializing, skip_deserializing)]
     pub microphone_samples: usize,
 #[serde(skip_serializing, skip_deserializing)]
     pub iq_buffer: Vec<f64>,
@@ -68,12 +73,16 @@ pub struct Transmitter {
     pub alex_forward_power: u16,
 #[serde(skip_serializing, skip_deserializing)]
     pub alex_reverse_power: u16,
+    pub pa_calibration: Vec<f32>,
+    pub c1: f32,
+    pub c2: f32,
 }
 
 impl Transmitter {
 
-    pub fn new(chan: u8, proto: u8 ) -> Transmitter {
+    pub fn new(chan: u8, proto: u8, board: Boards ) -> Transmitter {
         let protocol: u8 = proto;
+        let board: Boards = board;
         let channel: i32 = chan as i32;
         let sample_rate = 48000; // protocol 1 & 2
         let mut dsp_rate = 48000;    // protocol 1
@@ -90,8 +99,8 @@ impl Transmitter {
         let p1_packet_size = 126;
         let packet_counter = 0;
         let is_transmitting = false;
-        let local_microphone_buffer_size = 1024 as usize;
-        let local_microphone_buffer = vec![0u8; local_microphone_buffer_size];
+//        let local_microphone_buffer_size = 1024 as usize;
+//        let local_microphone_buffer = vec![0u8; local_microphone_buffer_size];
 
         let microphone_buffer_size = 1024 as usize;
         let microphone_buffer = vec![0.0f64; (microphone_buffer_size * 2) as usize];
@@ -125,8 +134,57 @@ impl Transmitter {
         let exciter_power:u16 = 0;
         let alex_forward_power:u16 = 0;
         let alex_reverse_power:u16 = 0;
+        let pa_calibration: Vec<f32> =  vec![38.8, 38.8, 38.8, 38.8, 38.8, 38.8, 38.8, 38.8, 38.8, 38.8, 38.8, 38.8, 38.8, 38.8, 38.8]; // 15 bands
+
+        let mut c1 = 3.3;     // METIS
+        let mut c2 = 0.09;
+
+        match board {
+            Boards::Metis => {
+                c1 = 3.3;
+                c2 = 0.09;
+            },
+            Boards::Hermes => {
+                c1 = 3.3;
+                c2 = 0.095;
+            },
+            Boards::Hermes2 => {
+                c1 = 3.3;
+                c2 = 0.095;
+            },
+            Boards::Angelia => {
+                c1 = 3.3;
+                c2 = 0.095;
+            },
+            Boards::Orion => {
+                c1 = 5.0;
+                c2 = 0.108;
+            },
+            Boards::Orion2 => {
+                c1 = 5.0;
+                c2 = 0.08;
+            },
+            Boards::Saturn => {
+                c1 = 3.3;
+                c2 = 0.09;
+            },
+            Boards::HermesLite => {
+                c1 = 3.3;
+                c2 = 1.4;
+            },
+            Boards::HermesLite2 => {
+                c1 = 3.3;
+                c2 = 1.4;
+            },
+            Boards::Unknown => {
+                c1 = 3.3;
+                c2 = 0.09;
+            },
+        }
+
 
         let tx = Transmitter{ protocol,
+            board,
             channel,
             sample_rate,
             dsp_rate,
@@ -136,8 +194,8 @@ impl Transmitter {
             p1_packet_size,
             packet_counter,
             is_transmitting,
-            local_microphone_buffer_size,
-            local_microphone_buffer,
+            //local_microphone_buffer_size,
+            //local_microphone_buffer,
             microphone_buffer_size,
             microphone_buffer,
             microphone_samples,
@@ -159,14 +217,17 @@ impl Transmitter {
             tx_antenna,
             exciter_power,
             alex_forward_power,
-            alex_reverse_power
+            alex_reverse_power,
+            pa_calibration,
+            c1,
+            c2,
         };
 
         tx
     }
 
     pub fn init(&mut self) {
-        self.local_microphone_buffer = vec![0u8; self.local_microphone_buffer_size * 2 as usize];
+        //self.local_microphone_buffer = vec![0u8; self.local_microphone_buffer_size * 2 as usize];
         self.microphone_buffer = vec![0.0f64; (self.microphone_buffer_size * 2) as usize];
         self.iq_buffer = vec![0.0f64; (self.output_samples * 2) as usize];
         self.init_wdsp();

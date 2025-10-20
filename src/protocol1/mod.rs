@@ -524,14 +524,35 @@ impl Protocol1 {
                     c0 = 0x12; // C0
                     c1 = 0x00; // C1 // drive level 0..255
                     if r.is_transmitting() {
-                        c1 = ((r.transmitter.drive/100.0) * 255.0) as u8;
-                    }
+                        let mut b = r.receiver[0].band.to_usize();
+                        if r.split {
+                            b = r.receiver[1].band.to_usize();
+                        }
 
+                        let power = r.transmitter.drive;
+
+                        let mut target_dbm = 10.0 * ((power * 1000.0).log10());
+                        let mut gbb = r.transmitter.pa_calibration[b];
+                        target_dbm = target_dbm - gbb;
+                        let target_volts = (10.0_f32.powf(target_dbm * 0.1) * 0.05).sqrt();
+                        let volts=(target_volts / 0.8).min(1.0);
+                        let mut actual_volts=volts*(1.0/0.98);
+
+                        if actual_volts<0.0 {
+                          actual_volts=0.0;
+                        } else if actual_volts>1.0 {
+                          actual_volts=1.0;
+                        }
+
+                        let level=(actual_volts*255.0) as u8;
+
+                        //c1 = ((r.transmitter.drive/100.0) * 255.0) as u8;
+                        c1 = level;
+                    }
                     c2 = 0x00; // C2
                     if r.mic_boost {
                         c2 |= 0x01;
                     }
-
                     if self.device.device == 6 { // HERMES_LITE
                         if self.device.version > 42 { // HERMES_LITE_2
                             c2 |= 0x2C; // PA

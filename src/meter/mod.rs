@@ -89,7 +89,7 @@ impl Meter {
     }
 
 
-    pub fn update_tx(&mut self, forward: u16, reverse: u16) {
+    pub fn update_tx(&mut self, forward: u16, reverse: u16, c1: f32, c2: f32 ) {
         eprintln!("Meter::update_tx fwd {} rev{}", forward, reverse);
         let cr = Context::new(self.surface.clone()).expect("Couldn't create cairo context from surface");
 
@@ -100,9 +100,6 @@ impl Meter {
         let fwd_power = forward as f32;
         let rev_power = reverse as f32;
 
-        // temp only ORION2 constants
-        let c1 = 5.0;
-        let c2 = 0.108;
         let v_fwd = (fwd_power / 4095.0) * c1;
         let fwd = (v_fwd * v_fwd) / c2;
 

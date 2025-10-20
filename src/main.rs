@@ -432,8 +432,6 @@ fn build_ui(app: &Application) {
     discovery_dialog.connect_close_request(move |_| {
         let mut app_widgets = rc_app_widgets_clone.borrow_mut();
 
-eprintln!("main_window: {}x{}", app_widgets.main_window.width(), app_widgets.main_window.height());
-
         let index = *selected_index_clone.borrow();
         match index {
             Some(i) => {
@@ -1890,15 +1888,14 @@ fn meter_tx_update(radio_mutex: &RadioMutex,  rc_app_widgets: &Rc<RefCell<AppWid
     let is_transmitting = r.is_transmitting();
     let forward = r.transmitter.alex_forward_power;
     let reverse = r.transmitter.alex_reverse_power;
+    let c1 = r.transmitter.c1;
+    let c2 = r.transmitter.c2;
     drop(r);
 
     // calculate the SWR
     let fwd_power = forward as f32;
     let rev_power = reverse as f32;
 
-    // temp only ORION2 constants
-    let c1 = 5.0;
-    let c2 = 0.108;
     let v_fwd = (fwd_power / 4095.0) * c1;
     let fwd = (v_fwd * v_fwd) / c2;
 

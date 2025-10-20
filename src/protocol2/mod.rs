@@ -119,7 +119,7 @@ impl Protocol2 {
         let r = radio_mutex.radio.lock().unwrap();
         let mut buffer = vec![0; 65536];
         let mut microphone_buffer: Vec<f64> = vec![0.0; (r.transmitter.microphone_buffer_size * 2) as usize];
-        let mut microphone_buffer_offset: usize = 0;
+        let mut microphone_samples: usize = 0;
         let mut microphone_iq_buffer: Vec<f64> = vec![0.0; (r.transmitter.output_samples * 2) as usize];
         let mut microphone_iq_buffer_offset: usize = 0;
         let mut tx_iq_buffer: Vec<f64> = vec![0.0; IQ_BUFFER_SIZE*2];
@@ -162,56 +162,47 @@ impl Protocol2 {
                                 self.send_high_priority(radio_mutex);
                                 },
                         1026 => { // Mic/Line In Samples
-
                                 let data_size = MIC_SAMPLES * MIC_SAMPLE_SIZE;
+                                let mut iq_buffer = false;
                                 let mut r = radio_mutex.radio.lock().unwrap();
-                                if r.audio[0].local_input {
+                                if r.audio[0].local_input  & !r.tune {
                                     let mic_buffer = r.audio[0].read_input();
                                     eprintln!("mic_buffer read {}", mic_buffer.len());
+                                    drop(r);
+                                    for i in 0..mic_buffer.len() {
+                                        iq_buffer = self.microphone_sample(mic_buffer[i] as f64 / 32768.0, radio_mutex);
+                                    }
+                                    r = radio_mutex.radio.lock().unwrap();
                                 } else {
-                                    let mut sample:i32 = 0;
+                                    let mut sample:f64 = 0.0;
                                     let mut b = MIC_HEADER_SIZE;
                                     if size >= MIC_HEADER_SIZE + data_size {
+                                        drop(r);
                                         for _i in 0..MIC_SAMPLES {
                                             if buffer[b] & 0x80 != 0 {
-                                                sample = u32::from_be_bytes([0xFF, 0xFF, buffer[b], buffer[b+1]]) as i32;
+                                                sample = u32::from_be_bytes([0xFF, 0xFF, buffer[b], buffer[b+1]]) as f64;
                                             } else {
-                                                sample = u32::from_be_bytes([0, 0, buffer[b], buffer[b+1]]) as i32;
+                                                sample = u32::from_be_bytes([0, 0, buffer[b], buffer[b+1]]) as f64;
                                             }
                                             b = b + 2;
-                                            let x = microphone_buffer_offset * 2;
-                                            microphone_buffer[x] = sample as f64 / 32768.0;
-                                            microphone_buffer[x+1] = 0.0;
-                                            microphone_buffer_offset = microphone_buffer_offset + 1;
-                                            if microphone_buffer_offset >= r.transmitter.microphone_buffer_size {
-                                                let raw_ptr: *mut f64 = microphone_buffer.as_mut_ptr() as *mut f64;
-                                                let iq_ptr: *mut f64 =  microphone_iq_buffer.as_mut_ptr() as *mut f64;
-                                                let mut result: c_int = 0;
-                                                unsafe {
-                                                    fexchange0(r.transmitter.channel, raw_ptr, iq_ptr, &mut result);
-                                                }
-                                                unsafe {
-                                                    Spectrum0(1, r.transmitter.channel, 0, 0, iq_ptr);
-                                                }
-                                                if r.is_transmitting() {
-                                                    for j in 0..r.transmitter.output_samples {
-                                                        let ix = j * 2;
-                                                        let ox = tx_iq_buffer_offset * 2;
-                                                        tx_iq_buffer[ox] = microphone_iq_buffer[ix as usize] as f64;
-                                                        tx_iq_buffer[ox+1] = microphone_iq_buffer[(ix+1) as usize] as f64;
-                                                        tx_iq_buffer_offset = tx_iq_buffer_offset + 1;
-                                                        if tx_iq_buffer_offset >= IQ_BUFFER_SIZE {
-                                                            self.send_iq_buffer(tx_iq_buffer.clone());
-                                                            tx_iq_buffer_offset = 0;
-                                                        }
-                                                    }
-                                                }
-                                                microphone_buffer_offset = 0;
-                                            }
+                                            iq_buffer = self.microphone_sample(sample, radio_mutex);
+                                        }
+                                        r = radio_mutex.radio.lock().unwrap();
+                                    }
+                                }
+                                if r.is_transmitting()  && iq_buffer {
+                                    for j in 0..r.transmitter.output_samples {
+                                        let ix = j * 2;
+                                        let ox = tx_iq_buffer_offset * 2;
+                                        tx_iq_buffer[ox] = microphone_iq_buffer[ix as usize] as f64;
+                                        tx_iq_buffer[ox+1] = microphone_iq_buffer[(ix+1) as usize] as f64;
+                                        tx_iq_buffer_offset = tx_iq_buffer_offset + 1;
+                                        if tx_iq_buffer_offset >= IQ_BUFFER_SIZE {
+                                            self.send_iq_buffer(tx_iq_buffer.clone());
+                                            tx_iq_buffer_offset = 0;
                                         }
                                     }
                                 }
-                                
                                 r.received = true;
                                 },
                         1027 => {}, // Wide Band IQ samples
@@ -360,6 +351,21 @@ impl Protocol2 {
                 self.send_high_priority(radio_mutex);
             }
         }
+    }
+
+    fn microphone_sample(&self, sample: f64, radio_mutex: &RadioMutex) -> bool{
+        let mut processed = false;
+        let mut r = radio_mutex.radio.lock().unwrap();
+        let x = r.transmitter.microphone_samples * 2;
+        r.transmitter.microphone_buffer[x] = sample;
+        r.transmitter.microphone_buffer[x+1] = 0.0;
+        r.transmitter.microphone_samples = r.transmitter.microphone_samples + 1;
+        if r.transmitter.microphone_samples >= r.transmitter.microphone_buffer_size {
+            r.transmitter.process_mic_samples();
+            r.transmitter.microphone_samples = 0;
+            processed = true;
+        }
+        processed
     }
 
     pub fn send_general(&mut self) {

@@ -306,7 +306,7 @@ impl Radio {
         for _i in 0..receivers {
             audio.push(Audio::new());
         }
-        let transmitter = Transmitter::new(8, device.protocol);
+        let transmitter = Transmitter::new(8, device.protocol, device.board);
         let mut filter_board = FilterBoards::ALEX;
         match device.board {
             Boards::HermesLite => filter_board = FilterBoards::N2ADR,

@@ -481,6 +481,318 @@
           </object>
         </child>
         
+        <!-- PA Calibration -->
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">2200: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_2200_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_2200_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">630: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_630_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_630_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">160: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_160_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_160_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">80: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_80_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_80_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">60: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_60_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_60_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">40: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_40_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_40_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">30: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_30_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_30_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">20: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_20_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_20_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">17: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_17_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_17_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">15: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_15_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_15_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">12: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_12_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_12_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">10: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_10_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_10_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <!-- <property name="halign">end</property> -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">6: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pa_6_spinbutton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="pa_6_adjustment">
+                        <property name="lower">38</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+          </object>
+        </child>
+        <child type="tab">
+          <object class="GtkLabel" id="pa_calibration_label">
+            <property name="label">PA Calibration</property>
+          </object>
+        </child>
+
         <!-- Radio -->
         <child>
           <object class="GtkBox">

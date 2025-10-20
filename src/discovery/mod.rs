@@ -22,13 +22,14 @@ use network_interface::NetworkInterfaceConfig;
 use nix::sys::socket::setsockopt;
 use nix::sys::socket::sockopt::ReuseAddr;
 use nix::sys::socket::sockopt::ReusePort;
+use serde::{Deserialize, Serialize};
 use std::net::UdpSocket;
 use std::net::SocketAddr;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum Boards {
     Metis,
     Hermes,

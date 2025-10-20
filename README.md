@@ -72,7 +72,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Download and compile rustyHPSDR
 <pre>
 git clone https://github.com/g0orx/rustyHPSDR.git
-cd rusyHPSDR
+cd rustyHPSDR
 cargo clean
 cargo build --release
 </pre>

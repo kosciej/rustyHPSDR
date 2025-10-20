@@ -497,11 +497,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_2200_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_2200_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -520,11 +521,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_630_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_630_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -543,11 +545,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_160_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_160_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -566,11 +569,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_80_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_80_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -589,11 +593,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_60_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_60_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -612,11 +617,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_40_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_40_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -635,11 +641,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_30_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_30_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -658,11 +665,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_20_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_20_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -681,11 +689,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_17_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_17_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -704,11 +713,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_15_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_15_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -727,11 +737,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_12_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_12_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -750,11 +761,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_10_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_10_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>
@@ -773,11 +785,12 @@
                 </child>
                 <child>
                   <object class="GtkSpinButton" id="pa_6_spinbutton">
+                    <property name="digits">2</property>
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="pa_6_adjustment">
-                        <property name="lower">38</property>
-                        <property name="upper">100</property>
-                        <property name="step-increment">1</property>
+                        <property name="lower">38.8</property>
+                        <property name="upper">100.0</property>
+                        <property name="step-increment">0.1</property>
                       </object>
                     </property>
                   </object>

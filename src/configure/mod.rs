@@ -15,7 +15,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use alsa::Direction;
 use gtk::prelude::*;
 use gtk::{
     Adjustment, ApplicationWindow, Builder, Button, CheckButton, ComboBoxText, DropDown, Frame,
@@ -46,7 +45,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
     let output_device2 = r.audio[1].output_device.clone();
     drop(r);
 
-    let input_devices = Audio::list_pcm_devices(Direction::Capture);
+    let input_devices = Audio::list_pcm_devices(true);
 
     let remote_input_check_button: CheckButton = builder
         .object("remote_input_check_button")
@@ -93,7 +92,7 @@ pub fn create_configure_dialog(parent: &ApplicationWindow, radio_mutex: &RadioMu
         }
     });
 
-    let output_devices = Audio::list_pcm_devices(Direction::Playback);
+    let output_devices = Audio::list_pcm_devices(false);
 
     let remote_output_check_button: CheckButton = builder
         .object("remote_output_check_button")

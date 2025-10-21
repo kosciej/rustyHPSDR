@@ -19,5 +19,5 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ron = "0.10"
 dirs = "6.0"
-alsa = "0.9"
-
+cpal = "0.16"
+ringbuf = "0.4.8"

@@ -18,7 +18,7 @@ Please note that not all images or the current UI. My antenna came down in a rec
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/latest.png">
 
-# When the application is run it will first discovery all the HPSDR compatable devices on the nework interfaces.
+# When the application is run it will first discovery all the HPSDR compatable devices on the network interfaces.
 
 <img src="https://github.com/g0orx/rustyHPSDR/blob/main/images/discovery.png">
 

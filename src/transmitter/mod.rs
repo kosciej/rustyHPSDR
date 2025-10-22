@@ -23,7 +23,6 @@ use std::os::raw::{c_char, c_int};
 use serde::{Deserialize, Serialize};
 
 use crate::alex::*;
-use crate::bands::Bands;
 use crate::discovery::Boards;
 use crate::modes::Modes;
 use crate::wdsp::*;
@@ -369,7 +368,7 @@ impl Transmitter {
     pub fn set_tuning(&self, state: bool, cw_keyer_sidetone_frequency: i32) {
         unsafe {
             if state {
-                let mut frequency = (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64;
+                let frequency = (self.filter_low + ((self.filter_high - self.filter_low) / 2.0)) as f64;
                 if self.mode == Modes::CWL.to_usize() {
                     let frequency = -cw_keyer_sidetone_frequency as f64;
                 } else if self.mode == Modes::CWU.to_usize() {

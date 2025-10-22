@@ -18,13 +18,11 @@
 use nix::sys::socket::setsockopt;
 use nix::sys::socket::sockopt::{ReuseAddr, ReusePort};
 use std::net::{UdpSocket};
-use std::os::raw::c_int;
 
 use crate::receiver::AudioOutput;
 use crate::discovery::Device;
 use crate::modes::Modes;
 use crate::radio::RadioMutex;
-use crate::wdsp::*;
 
 const OZY_BUFFER_SIZE: usize = 512;
 const METIS_BUFFER_SIZE: usize = (OZY_BUFFER_SIZE * 2) + 8;
@@ -465,7 +463,7 @@ impl Protocol1 {
              frequency_b = frequency_b - r.receiver[1].cw_pitch;
         }
 
-        let mut attenuation = r.adc[rx as usize].attenuation;
+        let attenuation = r.adc[rx as usize].attenuation;
 
         if self.metis_buffer_offset == 8 {
             c0 = 0x00;
@@ -537,7 +535,7 @@ impl Protocol1 {
                         let power = r.transmitter.drive;
 
                         let mut target_dbm = 10.0 * ((power * 1000.0).log10());
-                        let mut gbb = r.transmitter.pa_calibration[b];
+                        let gbb = r.transmitter.pa_calibration[b];
                         target_dbm = target_dbm - gbb;
                         let target_volts = (10.0_f32.powf(target_dbm * 0.1) * 0.05).sqrt();
                         let volts=(target_volts / 0.8).min(1.0);

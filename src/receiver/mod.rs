@@ -22,7 +22,6 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 
 use crate::agc::AGC;
-use crate::audio::*;
 use crate::bands::{Bands, BandInfo};
 use crate::filters::Filters;
 use crate::modes::Modes;

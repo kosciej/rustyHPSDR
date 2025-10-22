@@ -18,14 +18,11 @@
 use nix::sys::socket::setsockopt;
 use nix::sys::socket::sockopt::{ReuseAddr, ReusePort};
 use std::net::{UdpSocket};
-use std::os::raw::c_int;
-use std::sync::{Arc, Mutex};
 
 use crate::discovery::Device;
 use crate::modes::Modes;
 use crate::receiver::{AudioOutput, Receiver};
 use crate::radio::{Keyer, RadioMutex};
-use crate::wdsp::*;
 use crate::alex::*;
 
 const HEADER_SIZE: usize  = 16;  // 16 byte header
@@ -118,10 +115,10 @@ impl Protocol2 {
     pub fn run(&mut self, radio_mutex: &RadioMutex) {
         let r = radio_mutex.radio.lock().unwrap();
         let mut buffer = vec![0; 65536];
-        let mut microphone_buffer: Vec<f64> = vec![0.0; (r.transmitter.microphone_buffer_size * 2) as usize];
-        let mut microphone_samples: usize = 0;
-        let mut microphone_iq_buffer: Vec<f64> = vec![0.0; (r.transmitter.output_samples * 2) as usize];
-        let mut microphone_iq_buffer_offset: usize = 0;
+        let microphone_buffer: Vec<f64> = vec![0.0; (r.transmitter.microphone_buffer_size * 2) as usize];
+        let microphone_samples: usize = 0;
+        let microphone_iq_buffer: Vec<f64> = vec![0.0; (r.transmitter.output_samples * 2) as usize];
+        let microphone_iq_buffer_offset: usize = 0;
         let mut tx_iq_buffer: Vec<f64> = vec![0.0; IQ_BUFFER_SIZE*2];
         let mut tx_iq_buffer_offset: usize = 0;
         drop(r);
@@ -250,7 +247,7 @@ impl Protocol2 {
                                         for i in 0..r.receiver[ddc].output_samples {
                                             let ix = i * 2;
                                             let left_sample: i32 = (r.receiver[ddc].audio_buffer[ix] * 32767.0) as i32;
-                                            let mut right_sample: i32 = (r.receiver[ddc].audio_buffer[ix+1] * 32767.0) as i32;
+                                            let right_sample: i32 = (r.receiver[ddc].audio_buffer[ix+1] * 32767.0) as i32;
                                             let rox = r.receiver[ddc].remote_audio_buffer_offset;
 
                                             // always stereo to radio
@@ -734,7 +731,7 @@ impl Protocol2 {
         // send 240 24 bit I/Q samples
         let mut b = 4;
         for x in 0..IQ_BUFFER_SIZE {
-            let mut ix = x * 2;
+            let ix = x * 2;
             let mut isample = buffer[ix] * 8388607.0;
             if isample>=0.0 {
                 isample = (isample + 0.5).floor();

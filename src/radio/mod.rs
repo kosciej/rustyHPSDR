@@ -16,7 +16,6 @@
 */
 
 use gtk::prelude::*;
-use gtk::Label;
 use gtk::cairo::{Context, LineCap, LineJoin}; 
 use glib::source::SourceId;
 use gdk_pixbuf::Pixbuf;
@@ -37,7 +36,6 @@ use serde::{Deserialize, Serialize};
 
 
 use crate::discovery::{Boards,Device};
-use crate::bands::BandInfo;
 use crate::modes::Modes;
 use crate::receiver::Receiver;
 use crate::transmitter::Transmitter;

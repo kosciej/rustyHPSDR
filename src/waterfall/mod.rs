@@ -83,7 +83,7 @@ impl Waterfall {
             let mut B = 0.0;
             let mut max_percent = 0.0;
             for x in 0..waterfall_width {
-                let mut value: f32 = new_pixels[x as usize + pan as usize] as f32;
+                let value: f32 = new_pixels[x as usize + pan as usize] as f32;
                 if value < r.receiver[self.rx].band_info[b].spectrum_low {
                     average += r.receiver[self.rx].band_info[b].spectrum_low;
                 } else {
@@ -101,7 +101,7 @@ impl Waterfall {
                 } else {
                     let range = r.receiver[self.rx].band_info[b].waterfall_high - r.receiver[self.rx].band_info[b].waterfall_low;
                     let offset = value - r.receiver[self.rx].band_info[b].waterfall_low;
-                    let mut percent = 100.0 * offset / range;
+                    let percent = 100.0 * offset / range;
                     if percent > max_percent {
                         max_percent = percent;
                     }
